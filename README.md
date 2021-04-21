@@ -1,17 +1,21 @@
-# matsim-example-project
+# matsim-kelheim
 
-A small example of how to use MATSim as a library.
+This is the MATSim model for the area of Kelheim.
 
-By default, this project uses the latest (pre-)release. In order to use a different version, edit `pom.xml`.
+This project is currently in state of the initial build-up.
+More information will be provided as soon as a first model version (release) is available.
 
-A recommended directory structure is as follows:
+Below, you can find some information on how to use this project, copied from the matsim-example-project.
+
+### Project structure
+
+Please note the project structure is as follows:
 * `src` for sources
 * `original-input-data` for original input data (typically not in MATSim format)
-* `scenarios` for MATSim scenarios, i.e. MATSim input and output data.  A good way is the following:
+* `scenarios` for MATSim scenario input and output data. A good way is the following:
   * One subdirectory for each scenario, e.g. `scenarios/mySpecialScenario01`.
   * This minimally contains a config file, a network file, and a population file.
   * Output goes one level down, e.g. `scenarios/mySpecialScenario01/output-from-a-good-run/...`.
-  
   
 ### Import into eclipse
 
