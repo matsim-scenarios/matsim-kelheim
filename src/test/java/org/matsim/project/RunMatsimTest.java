@@ -29,6 +29,7 @@ import org.matsim.core.events.EventsUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.examples.ExamplesUtils;
+import org.matsim.run.RunKelheimScenario;
 import org.matsim.testcases.MatsimTestUtils;
 import org.matsim.utils.eventsfilecomparison.EventsFileComparator;
 
@@ -52,7 +53,9 @@ public class RunMatsimTest {
 				  "--config:controler.outputDirectory", utils.getOutputDirectory(),
 				  "--config:controler.lastIteration", "1"
 			} ;
-			RunMatsim.main( args ) ;
+
+			RunKelheimScenario.main( args ) ;
+
 			{
 				Population expected = PopulationUtils.createPopulation( ConfigUtils.createConfig() ) ;
 				PopulationUtils.readPopulation( expected, utils.getInputDirectory() + "/output_plans.xml.gz" );

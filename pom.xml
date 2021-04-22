@@ -11,13 +11,13 @@
 
 	<properties>
 		<!-- release -->
-		<matsim.version>13.0</matsim.version>
+		<!-- <matsim.version>13.0</matsim.version> -->
 
 		<!-- PR-labelled release -->
 		<!--<matsim.version>14.0-PR1452</matsim.version>-->
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
-		<!--<matsim.version>14.0-SNAPSHOT</matsim.version>-->
+		<matsim.version>14.0-SNAPSHOT</matsim.version>
 
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -76,41 +76,17 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!--dependencies from here to where stated below are added as a service; they can be removed if you don't need them-->
-		<!--to get ExamplesUtils: -->
-		<dependency>
-			<groupId>org.matsim</groupId>
-			<artifactId>matsim-examples</artifactId>
-			<version>${matsim.version}</version>
-<!--			<scope>test</scope>-->
-<!--			I think that having it in the "main" scope is acceptable for a "leaf" project, and makes life easier.  move the-->
-<!--			matsim-examples dependency into "test" scope if you want to make other projects dependent on your this project here. kai,-->
-<!--			jan'21-->
-		</dependency>
-
 		<!--some contribs:-->
 		<dependency>
 			<groupId>org.matsim.contrib</groupId>
-			<artifactId>otfvis</artifactId>
+			<artifactId>application</artifactId>
 			<version>${matsim.version}</version>
 		</dependency>
-
-		<!--Dependencies from where stated above to here are added as a service; they can be removed if you don't need them-->
 
 	</dependencies>
 
 	<build>
 		<plugins>
-			<plugin>
-				<!-- This plugin makes source files and javadocs available inside eclipse.  In IntelliJ, this works without plugin.-->
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-eclipse-plugin</artifactId>
-				<version>2.10</version>
-				<configuration>
-					<downloadSources>true</downloadSources>
-					<downloadJavadocs>true</downloadJavadocs>
-				</configuration>
-			</plugin>
 			<plugin>
 <!--				The maven-shade-plugin replaces the maven-assembly-plugin to configure "mvn package". The assembly-plugin regularly-->
 <!--				creates problems when GeoTools are used, which the shade-plugin does not (see-->
@@ -130,7 +106,7 @@
 								<!-- The following sets the main class for the executable jar as you otherwise would with the assembly plugin -->
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
-										<Main-Class>org.matsim.gui.MATSimGUI</Main-Class>
+										<Main-Class>org.matsim.run.RunKelheimScenario</Main-Class>
 										<Specification-Vendor>org.matsim</Specification-Vendor>
 										<Implementation-Vendor>org.matsim</Implementation-Vendor>
 										<Implementation-Version>${project.version}</Implementation-Version>
