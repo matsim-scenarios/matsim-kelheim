@@ -28,7 +28,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.examples.ExamplesUtils;
+//import org.matsim.examples.ExamplesUtils;
 import org.matsim.run.RunKelheimScenario;
 import org.matsim.testcases.MatsimTestUtils;
 import org.matsim.utils.eventsfilecomparison.EventsFileComparator;
@@ -47,7 +47,9 @@ public class RunMatsimTest {
 	public final void test() {
 
 		try {
-			final URL baseUrl = ExamplesUtils.getTestScenarioURL( "equil" );
+			// TODO: this package must be somewhere else now
+			//final URL baseUrl = ExamplesUtils.getTestScenarioURL( "equil" );
+			final URL baseUrl = new URL("fails");
 			final String fullUrl = IOUtils.extendUrl( baseUrl, "config.xml" ).toString();
 			String [] args = {fullUrl,
 				  "--config:controler.outputDirectory", utils.getOutputDirectory(),

@@ -2,12 +2,12 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>org.matsim</groupId>
+	<groupId>com.github.matsim-scenarios</groupId>
 	<artifactId>matsim-kelheim</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0-SNAPSHOT</version>
 
 	<name>MATSim Kelheim Model</name>
-	<description>A transport model of the district of Kelheim and it's surroundings </description>
+	<description>A transport model of the district of Kelheim and it's surroundings</description>
 
 	<properties>
 		<!-- release -->
@@ -31,7 +31,6 @@
 			<!-- Geotools is not on Maven central -->
 			<id>osgeo</id>
 			<name>Geotools repository</name>
-			<!-- <url>http://download.osgeo.org/webdav/geotools</url> -->
 			<url>https://repo.osgeo.org/repository/release/</url>
 		</repository>
 		<repository>
