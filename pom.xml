@@ -82,6 +82,12 @@
 			<version>${matsim.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.matsim.contrib</groupId>
+			<artifactId>freight</artifactId>
+			<version>${matsim.version}</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
