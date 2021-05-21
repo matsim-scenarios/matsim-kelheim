@@ -111,10 +111,9 @@ public class ServiceAreaStopRouting {
 			e.printStackTrace();
 		}
 
-
-		Controler controler = new Controler(scenario);
-		Freight.configure(controler);
-		controler.run();
+//		Controler controler = new Controler(scenario);
+//		Freight.configure(controler);
+//		controler.run();
 
 		carriers.getCarriers().values().forEach(carrier -> printTotalCoveredDistance(carrier, network));
 	}
@@ -138,8 +137,9 @@ public class ServiceAreaStopRouting {
 					if(!coveredLinks.contains(linkId)){
 						coveredLinks.add(linkId);
 						Link link = network.getLinks().get(linkId);
-						Link opposite = NetworkUtils.findLinkInOppositeDirection(link);
-						if(opposite != null) coveredLinks.add(opposite.getId());
+						//fuer die Vermessung zaehlt die Fahrrichtung...
+//						Link opposite = NetworkUtils.findLinkInOppositeDirection(link);
+//						if(opposite != null) coveredLinks.add(opposite.getId());
 						coveredDistance += link.getLength();
 					}
 				}
