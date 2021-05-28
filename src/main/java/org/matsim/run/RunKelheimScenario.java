@@ -2,6 +2,7 @@ package org.matsim.run;
 
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
+import org.matsim.analysis.DefaultAnalysisMainModeIdentifier;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.application.MATSimApplication;
@@ -16,6 +17,8 @@ import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
+import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
+import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
@@ -89,6 +92,9 @@ public class RunKelheimScenario extends MATSimApplication {
 		config.qsim().setFlowCapFactor(sample.getSize() / 100.0);
 		config.qsim().setStorageCapFactor(sample.getSize() / 100.0);
 
+		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.info);
+		config.plansCalcRoute().setAccessEgressType(PlansCalcRouteConfigGroup.AccessEgressType.accessEgressModeToLink);
+
 		return config;
 	}
 
@@ -114,7 +120,7 @@ public class RunKelheimScenario extends MATSimApplication {
 			@Override
 			public void install() {
 				install(new SwissRailRaptorModule());
-				bind(AnalysisMainModeIdentifier.class).to(RoutingModeMainModeIdentifier.class);
+				bind(AnalysisMainModeIdentifier.class).to(DefaultAnalysisMainModeIdentifier.class);
 			}
 		});
 	}
