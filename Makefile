@@ -32,8 +32,13 @@ ${SHP_FILES} :
 scenarios/input/network.osm: scenarios/input/network.osm.pbf
 
 	$(osmosis) --rb file=$<\
+	 --tf accept-ways highway=motorway,motorway_link,trunk,trunk_link,primary,primary_link,secondary_link,secondary,tertiary,motorway_junction,residential,unclassified,living_street,service\
+	 --bounding-box top=48.977 left=11.779 bottom=48.854 right=12.019\
+	 --used-node --wb network-service.osm.pbf
+
+	$(osmosis) --rb file=$<\
 	 --tf accept-ways highway=motorway,motorway_link,trunk,trunk_link,primary,primary_link,secondary_link,secondary,tertiary,motorway_junction,residential,unclassified,living_street\
-	 --bounding-box top=49.003 left=11.556 bottom=48.591 right=12.119\
+	 --bounding-box top=48.994 left=11.574 bottom=48.584 right=12.095\
 	 --used-node --wb network-detailed.osm.pbf
 
 	$(osmosis) --rb file=$<\
@@ -45,9 +50,10 @@ scenarios/input/network.osm: scenarios/input/network.osm.pbf
 	 --tf accept-ways highway=motorway,motorway_link,motorway_junction,trunk,trunk_link,primary,primary_link\
 	 --used-node --wb network-germany.osm.pbf
 
-	$(osmosis) --rb file=network-germany.osm.pbf --rb file=network-coarse.osm.pbf --rb file=network-detailed.osm.pbf\
-  	 --merge --merge --wx $@
+	$(osmosis) --rb file=network-service.osm.pbf --rb file=network-germany.osm.pbf --rb file=network-coarse.osm.pbf --rb file=network-detailed.osm.pbf\
+  	 --merge --merge --merge --wx $@
 
+	rm network-service.osm.pbf
 	rm network-detailed.osm.pbf
 	rm network-coarse.osm.pbf
 	rm network-germany.osm.pbf
@@ -60,7 +66,7 @@ scenarios/input/sumo.net.xml: scenarios/input/network.osm
 	 --tls.guess-signals true --tls.discard-simple --tls.join --tls.default-type actuated\
 	 --junctions.join --junctions.corner-detail 5\
 	 --roundabouts.guess --remove-edges.isolated\
-	 --no-internal-links --keep-edges.by-vclass passenger,bicycle --remove-edges.by-type highway.track,highway.services,highway.unsurfaced\
+	 --no-internal-links --keep-edges.by-vclass passenger,bicycle\
 	 --remove-edges.by-vclass hov,tram,rail,rail_urban,rail_fast,pedestrian\
 	 --output.original-names --output.street-names\
 	 --proj "+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"\
@@ -76,11 +82,11 @@ scenarios/input/kelheim-$V-network.xml.gz: scenarios/input/sumo.net.xml
 #	 --name kelheim-$V --date "2019-06-05" --target-crs $(CRS)
 
 scenarios/input/freight-trips.xml.gz: scenarios/input/kelheim-$V-network.xml.gz
-	java -jar $(JAR) prepare extract-freight-trips ../../shared-svn/komodnext/data/freight/German-freight-25pct.plans.xml.gz\
-	 --network ../../shared-svn/komodnext/data/freight/original_data/german-primary-road.network.xml.gz\
+	java -jar $(JAR) prepare extract-freight-trips ../shared-svn/projects/german-wide-freight/v1.2/german-wide-freight-25pct.xml.gz\
+	 --network ../shared-svn/projects/german-wide-freight/original-data/german-primary-road.network.xml.gz\
 	 --input-crs EPSG:5677\
 	 --target-crs $(CRS)\
-	 --shp ../../shared-svn/NaMAV/data/freight-area/freight-area.shp --shp-crs $(CRS)\
+	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp --shp-crs $(CRS)\
 	 --output $@
 
 scenarios/input/landuse/landuse.shp: ${SHP_FILES}
@@ -89,26 +95,29 @@ scenarios/input/landuse/landuse.shp: ${SHP_FILES}
 	 --target-crs ${CRS}\
 	 --output $@
 
-scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml.gz scenarios/input/landuse/landuse.shp
+scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml.gz
 	java -jar $(JAR) prepare trajectory-to-plans\
 	 --name prepare --sample-size 0.25\
-	 --population ../../shared-svn/NaMAV/matsim-input-files/senozon/20210309_kelheim/optimizedPopulation_filtered.xml.gz\
-	 --attributes  ../../shared-svn/NaMAV/matsim-input-files/senozon/20210309_kelheim/personAttributes.xml.gz
+	 --population ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/population.xml.gz\
+	 --attributes  ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/personAttributes.xml.gz
 
 	java -jar $(JAR) prepare resolve-grid-coords\
 	 scenarios/input/prepare-25pct.plans.xml.gz\
 	 --input-crs $(CRS)\
-	 --grid-resolution 500\
-	 --landuse scenarios/input/landuse/landuse.shp\
+	 --grid-resolution 300\
+	 --landuse ../matsim-leipzig/scenarios/input/landuse/landuse.shp\
 	 --output scenarios/input/prepare-25pct.plans.xml.gz
 
-	java -jar $(JAR) prepare generate-short-distance-trips\
- 	 --population scenarios/input/prepare-25pct.plans.xml.gz\
- 	 --input-crs $(CRS)\
- 	 --shp ../../shared-svn/NaMAV/data/kelheim-utm32n/kelheim-utm32n.shp --shp-crs $(CRS)\
- 	 --num-trips 49200
+	java -jar $(JAR) prepare population scenarios/input/prepare-25pct.plans.xml.gz\
+	 --output scenarios/input/prepare-25pct.plans.xml.gz
 
-	java -jar $(JAR) prepare merge-populations scenarios/input/prepare-25pct.plans-with-trips-with-trips.xml.gz $<\
+#	java -jar $(JAR) prepare generate-short-distance-trips\
+# 	 --population scenarios/input/prepare-25pct.plans.xml.gz\
+# 	 --input-crs $(CRS)\
+# 	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp\
+# 	 --num-trips 49200
+
+	java -jar $(JAR) prepare merge-populations scenarios/input/prepare-25pct.plans.xml.gz $<\
      --output scenarios/input/kelheim-$V-25pct.plans.xml.gz
 
 	java -jar $(JAR) prepare downsample-population scenarios/input/kelheim-$V-25pct.plans.xml.gz\
@@ -119,8 +128,8 @@ scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml
 check: scenarios/input/kelheim-$V-25pct.plans.xml.gz
 	java -jar $(JAR) analysis check-population $<\
  	 --input-crs $(CRS)\
- 	 --shp ../../shared-svn/NaMAV/data/kelheim-utm32n/kelheim-utm32n.shp\
+ 	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp --shp-crs $(CRS)
 
 # Aggregated target
-prepare: scenarios/input/kelheim-$V-25pct.plans.xml.gz scenarios/input/kelheim-$V-network-with-pt.xml.gz
+prepare: scenarios/input/kelheim-$V-25pct.plans.xml.gz scenarios/input/kelheim-$V-network.xml.gz
 	echo "Done"
