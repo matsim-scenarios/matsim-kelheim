@@ -18,6 +18,8 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.router.AnalysisMainModeIdentifier;
+import org.matsim.core.router.RoutingModeMainModeIdentifier;
 import org.matsim.run.prepare.PreparePopulation;
 import picocli.CommandLine;
 
@@ -112,6 +114,7 @@ public class RunKelheimScenario extends MATSimApplication {
 			@Override
 			public void install() {
 				install(new SwissRailRaptorModule());
+				bind(AnalysisMainModeIdentifier.class).to(RoutingModeMainModeIdentifier.class);
 			}
 		});
 	}
