@@ -111,13 +111,13 @@ scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml
 	java -jar $(JAR) prepare population scenarios/input/prepare-25pct.plans.xml.gz\
 	 --output scenarios/input/prepare-25pct.plans.xml.gz
 
-#	java -jar $(JAR) prepare generate-short-distance-trips\
-# 	 --population scenarios/input/prepare-25pct.plans.xml.gz\
-# 	 --input-crs $(CRS)\
-# 	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp\
-# 	 --num-trips 49200
+	java -jar $(JAR) prepare generate-short-distance-trips\
+ 	 --population scenarios/input/prepare-25pct.plans.xml.gz\
+ 	 --input-crs $(CRS)\
+ 	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp --shp-crs $(CRS)\
+ 	 --num-trips 11747
 
-	java -jar $(JAR) prepare merge-populations scenarios/input/prepare-25pct.plans.xml.gz $<\
+	java -jar $(JAR) prepare merge-populations scenarios/input/prepare-25pct.plans-with-trips.xml.gz $<\
      --output scenarios/input/kelheim-$V-25pct.plans.xml.gz
 
 	java -jar $(JAR) prepare downsample-population scenarios/input/kelheim-$V-25pct.plans.xml.gz\
