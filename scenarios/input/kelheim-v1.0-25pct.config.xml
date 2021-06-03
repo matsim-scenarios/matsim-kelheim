@@ -23,7 +23,7 @@
     </module>
 
     <module name="network">
-        <param name="inputNetworkFile" value="kelheim-v1.0-network.xml.gz"/>
+        <param name="inputNetworkFile" value="kelheim-v1.0-network-with-pt.xml.gz"/>
         <param name="laneDefinitionsFile" value="null" />
     </module>
 
@@ -36,13 +36,12 @@
         <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/duesseldorf/duesseldorf-v1.0/input/duesseldorf-v1.0-vehicle-types.xml"/>
     </module>
 
-    <!--
+
     <module name="transit">
         <param name="transitScheduleFile" value="kelheim-v1.0-transitSchedule.xml.gz"/>
         <param name="vehiclesFile" value="kelheim-v1.0-transitVehicles.xml.gz"/>
         <param name="useTransit" value="true"/>
     </module>
-    -->
 
     <module name="planscalcroute">
         <param name="networkModes" value="car,ride,freight"/>
@@ -55,11 +54,6 @@
             <param name="beelineDistanceFactor" value="1.3"/>
             <param name="mode" value="bike"/>
             <param name="teleportedModeSpeed" value="3.1388889"/>
-        </parameterset>
-        <parameterset type="teleportedModeParameters">
-            <param name="beelineDistanceFactor" value="1.3"/>
-            <param name="mode" value="pt"/>
-            <param name="teleportedModeSpeed" value="8.33"/>
         </parameterset>
     </module>
 

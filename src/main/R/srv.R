@@ -29,7 +29,8 @@ trips <- read_delim(Sys.glob(file.path(f, "*.output_trips.csv.gz")) , delim = ";
                     )) %>%
         filter(main_mode!="freight") %>%
         semi_join(persons) %>%
-        mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels))
+        mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels)) %>%
+        filter(!is.na(dist_group))
 
 
 sim <- trips %>%

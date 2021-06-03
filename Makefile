@@ -77,9 +77,10 @@ scenarios/input/kelheim-$V-network.xml.gz: scenarios/input/sumo.net.xml
 	java -jar $(JAR) prepare network-from-sumo $<\
 	 --output $@
 
-#scenarios/input/kelheim-$V-network-with-pt.xml.gz: scenarios/input/kelheim-$V-network.xml.gz scenarios/input/gtfs-lvb.zip
-#	java -jar $(JAR) prepare transit-from-gtfs --network $< $(filter-out $<,$^)\
-#	 --name kelheim-$V --date "2019-06-05" --target-crs $(CRS)
+scenarios/input/kelheim-$V-network-with-pt.xml.gz: scenarios/input/kelheim-$V-network.xml.gz
+	java -Xmx20G -jar $(JAR) prepare transit-from-gtfs --network $< ../shared-svn/projects/KelRide/data/20210528_fahrplaene_gesamtdeutschland_gtfs.zip\
+	 --name kelheim-$V --date "2021-06-03" --target-crs $(CRS) \
+	 --shp ../shared-svn/projects/KelRide/data/pt-area/pt-area.shp
 
 scenarios/input/freight-trips.xml.gz: scenarios/input/kelheim-$V-network.xml.gz
 	java -jar $(JAR) prepare extract-freight-trips ../shared-svn/projects/german-wide-freight/v1.2/german-wide-freight-25pct.xml.gz\
@@ -115,7 +116,7 @@ scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml
  	 --population scenarios/input/prepare-25pct.plans.xml.gz\
  	 --input-crs $(CRS)\
  	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp --shp-crs $(CRS)\
- 	 --num-trips 11747
+ 	 --num-trips 13747
 
 	java -jar $(JAR) prepare merge-populations scenarios/input/prepare-25pct.plans-with-trips.xml.gz $<\
      --output scenarios/input/kelheim-$V-25pct.plans.xml.gz
@@ -131,5 +132,5 @@ check: scenarios/input/kelheim-$V-25pct.plans.xml.gz
  	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp --shp-crs $(CRS)
 
 # Aggregated target
-prepare: scenarios/input/kelheim-$V-25pct.plans.xml.gz scenarios/input/kelheim-$V-network.xml.gz
+prepare: scenarios/input/kelheim-$V-25pct.plans.xml.gz scenarios/input/kelheim-$V-network-with-pt.xml.gz
 	echo "Done"
