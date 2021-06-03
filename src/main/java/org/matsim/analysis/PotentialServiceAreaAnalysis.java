@@ -31,17 +31,22 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.contrib.freight.Freight;
+import org.matsim.api.core.v01.network.Node;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.freight.carrier.*;
 import org.matsim.contrib.freight.utils.FreightUtils;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.router.FastAStarLandmarksFactory;
+import org.matsim.core.router.util.LeastCostPathCalculator;
+import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
+import org.matsim.core.utils.geometry.GeometryUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.gis.ShapeFileReader;
@@ -54,26 +59,29 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
 
-public class ServiceAreaStopRouting {
+public class PotentialServiceAreaAnalysis {
 
 
 
-	private static final String INPUT_STOPS_FILE = "D:/svn/shared-svn/projects/KelRide/data/KEXI/KEXI_Haltestellen_Liste_Kelheim_utm32n.csv";
-	private static final String INPUT_NETWORK = "D:/svn/shared-svn/projects/matsim-kelheim/input/kelheim-v1.0-network.xml.gz";
+	private static final String INPUT_STOPS_FILE = "../../svn/shared-svn/projects/KelRide/data/KEXI/KEXI_Haltestellen_Liste_Kelheim_utm32n.csv";
+	private static final String INPUT_DEMAND_FILE = "../../svn/shared-svn/projects/KelRide/data/KEXI/IOKI_Rides_202006_202105.csv";
+	private static final String INPUT_NETWORK = "../../svn/shared-svn/projects/matsim-kelheim/input/kelheim-v1.0-network.xml.gz";
 	/**
 	 * shape file with multiple polygons each of which represents a possible service area
 	 */
 	private static final String INPUT_SERVICE_AREAS_SHAPE = "D:/svn/shared-svn/projects/KelRide/data/ServiceAreas/2021_05_possibleServiceAreasForAutomatedVehicles.shp";
 
+
+	private static final String OUTPUT_SERVICE_AREA_KPI_CSV = "";
+
 	public static void main(String[] args) {
 //		convertStopCoordinates(); already converted if you read in file ending on 'utm32'
 
-		Collection<Stop> stops = readStops(INPUT_STOPS_FILE);
+		Map<Id<Stop>, Stop> stops = readStopsAndAssignDemand();
 		Network network = NetworkUtils.readNetwork(INPUT_NETWORK);
 
 		//read in service area map
@@ -87,8 +95,96 @@ public class ServiceAreaStopRouting {
 				.mapToEntry(a -> a, a -> getAllStopsInArea(a,stops))
 				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+		//calculate round tours within each geometry (serving each stop once)
+		Carriers carriers = getCarriersWithPlannedRoundTours(network, serviceAreas, area2Stops);
 
+		// run the sim such that you can visualize the round tour
+//		Controler controler = new Controler(scenario);
+//		Freight.configure(controler);
+//		controler.run();
 
+		//calculate round tours
+		carriers.getCarriers().values().forEach(carrier -> getTotalCoveredDistanceOfCarrierTours(carrier, network));
+
+		//produce and dump output
+		writeStats(network, serviceAreas, area2Stops, carriers);
+	}
+
+	private static void writeStats(Network network, Map<String, PreparedGeometry> serviceAreas, Map<PreparedGeometry, Collection<Stop>> area2Stops, Carriers carriers) {
+		String outputFileName = INPUT_SERVICE_AREAS_SHAPE.substring(0, INPUT_SERVICE_AREAS_SHAPE.lastIndexOf(".")) + "_stats.csv";
+		LeastCostPathCalculator router = new FastAStarLandmarksFactory(4).createPathCalculator(network, new TravelDisutility() {
+			@Override
+			public double getLinkTravelDisutility(Link link, double time, Person person, Vehicle vehicle) {
+				return link.getLength();
+			}
+
+			@Override
+			public double getLinkMinimumTravelDisutility(Link link) {
+				return link.getLength();
+			}
+		}, new FreeSpeedTravelTime());
+
+		try {
+			System.out.println("will try to write to " + outputFileName);
+			BufferedWriter writer = IOUtils.getBufferedWriter(outputFileName);
+			writer.write("areaName;area[sqm];nrStops[1];totalRoadMeter[m];roundTourDistance[m];longestDistBetw2Stops[m];totalOriginatingTrips[1];totalEndingTrips[1]");
+			for (Map.Entry<String, PreparedGeometry> entry : serviceAreas.entrySet()) {
+				String name = entry.getKey();
+				PreparedGeometry geom = entry.getValue();
+				Collection<Stop> areaStops = area2Stops.get(geom);
+				double area = geom.getGeometry().getArea();
+				double totalCarNetworkMeter = getTotalNetworkCarKMInsideGeom(geom, network);
+				double roundTourMeter = getTotalCoveredDistanceOfCarrierTours(carriers.getCarriers().get(Id.create(name, Carrier.class)), network);
+				double longestRouteBetween2Stops = getLongestRouteDistanceBetweenStops(areaStops, network, router);
+				double totalOriginatingTrips = areaStops.stream()
+						.mapToDouble(stop -> stop.originatingTrips)
+						.sum();
+				double totalEndingTrips = areaStops.stream()
+						.mapToDouble(stop -> stop.endingTrips)
+						.sum();
+				System.out.println(name + "\t" + totalCarNetworkMeter + "\t" + roundTourMeter + "\t" + longestRouteBetween2Stops + "\t" + totalOriginatingTrips + "\t" + totalEndingTrips);
+				writer.newLine();
+				writer.write(name + ";" + area + ";" + areaStops.size() + ";" + totalCarNetworkMeter + ";" + roundTourMeter + ";" + longestRouteBetween2Stops  + ";" + totalOriginatingTrips + ";" + totalEndingTrips);
+			}
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * route from every stop to every other stop. return the longest route distance between two stops
+	 *
+	 * @param stops
+	 * @param network
+	 * @param router
+	 * @return
+	 */
+	private static double getLongestRouteDistanceBetweenStops(Collection<Stop> stops, Network network, LeastCostPathCalculator router){
+		double longestDistance = Double.NEGATIVE_INFINITY;
+		for (Stop stop : stops) {
+			ArrayList<Stop> otherStops = new ArrayList<>(stops);
+			otherStops.remove(stop);
+			Node stopNode = NetworkUtils.getNearestNode(network, stop.coord);
+			for (Stop otherStop : otherStops){
+				//link travel disutility was set to link length
+				double distance = router.calcLeastCostPath(stopNode, NetworkUtils.getNearestNode(network, otherStop.coord), 0, null, null).travelCost;
+				longestDistance = distance > longestDistance ? distance : longestDistance;
+			}
+		}
+		return longestDistance;
+	}
+
+	/**
+	 * Creates a {@code Carrier} object per entry in {@code serviceAreas} that has to serve each stop in the corresponding geometry once.
+	 * Then runs jsprit to solve the VRP (thus, we create a round tour) and returns the Carriers container object.
+	 *
+	 * @param network
+	 * @param serviceAreas
+	 * @param area2Stops
+	 * @return
+	 */
+	private static Carriers getCarriersWithPlannedRoundTours(Network network, Map<String, PreparedGeometry> serviceAreas, Map<PreparedGeometry, Collection<Stop>> area2Stops) {
 		Config config = ConfigUtils.createConfig();
 		config.controler().setLastIteration(0);
 		config.network().setInputFile(INPUT_NETWORK);
@@ -110,15 +206,10 @@ public class ServiceAreaStopRouting {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-//		Controler controler = new Controler(scenario);
-//		Freight.configure(controler);
-//		controler.run();
-
-		carriers.getCarriers().values().forEach(carrier -> printTotalCoveredDistance(carrier, network));
+		return carriers;
 	}
 
-	private static void printTotalCoveredDistance(Carrier carrier, Network network) {
+	private static double getTotalCoveredDistanceOfCarrierTours(Carrier carrier, Network network) {
 
 		Set<Id<Link>> coveredLinks = new HashSet<>();
 		double coveredDistance = 0.;
@@ -146,9 +237,22 @@ public class ServiceAreaStopRouting {
 			}
 		}
 
-		System.out.println("A tour to all stops in " + carrier.getId() + " covers " + coveredDistance + " m of road");
+//		System.out.println("A tour to all stops in " + carrier.getId() + " covers " + coveredDistance + " m of road");
+		return coveredDistance;
 	}
 
+	private static double getTotalNetworkCarKMInsideGeom(PreparedGeometry geom, Network network){
+		return network.getLinks().values().stream()
+				.filter(link -> link.getAllowedModes().contains(TransportMode.car))
+				.filter(l -> isLinkInsideGeom(l, geom))
+				.mapToDouble(l -> l.getLength())
+				.sum();
+	}
+
+
+	private static boolean isLinkInsideGeom(Link l, PreparedGeometry geom){
+		return geom.contains(MGC.coord2Point(l.getFromNode().getCoord())) && geom.contains(MGC.coord2Point(l.getToNode().getCoord()));
+	}
 
 	private static Carrier buildCarrier(String areaName, Collection<Stop> stops, Network network, VehicleType vehicleType) {
 		//carrier
@@ -161,11 +265,11 @@ public class ServiceAreaStopRouting {
 		//CarrierVehicle
 		Id<Link> depotLink;
 		if(areaName.contains("Donaupark")){
-			depotLink = Id.createLinkId("376292334#1");
+			depotLink = Id.createLinkId("485579462#0");
 		} else if(areaName.contains("Altstadt")) {
-			depotLink = Id.createLinkId("-131546911");
+			depotLink = Id.createLinkId("-96590898");
 		} else {
-			depotLink = Id.createLinkId("26526533#1");
+			depotLink = Id.createLinkId("26526533#9");
 		}
 		Link l = network.getLinks().get(depotLink);
 		CarrierVehicle.Builder vBuilder = CarrierVehicle.Builder.newInstance(Id.create((areaName + "_shuttle"), Vehicle.class), depotLink);
@@ -198,8 +302,8 @@ public class ServiceAreaStopRouting {
 	}
 
 
-	private static Collection<Stop> getAllStopsInArea(PreparedGeometry a, Collection<Stop> stops) {
-		return stops.stream()
+	private static Collection<Stop> getAllStopsInArea(PreparedGeometry a, Map<Id<Stop>,Stop> stops) {
+		return stops.values().stream()
 				.filter(stop -> {
 					Point point = MGC.coord2Point(stop.coord);
 					return a.contains(point);
@@ -207,21 +311,38 @@ public class ServiceAreaStopRouting {
 				.collect(Collectors.toList());
 	}
 
-	private static Collection<Stop> readStops(String inputStopsFile) {
-		BufferedReader reader = IOUtils.getBufferedReader(inputStopsFile);
-		List<Stop> stops = new ArrayList<>();
+	private static Map<Id<Stop>, Stop> readStopsAndAssignDemand() {
+		BufferedReader stopsReader = IOUtils.getBufferedReader(INPUT_STOPS_FILE);
+		BufferedReader demandReader = IOUtils.getBufferedReader(INPUT_DEMAND_FILE);
+		Map<Id<Stop>,Stop> stops = new HashMap<>();
 		try {
-			String[] header = reader.readLine().split(";");
-			String line = reader.readLine();
+			//read stops first
+			String[] header = stopsReader.readLine().split(";");
+			String line = stopsReader.readLine();
 
 			while (line != null) {
 				String[] lineArr = line.split(";");
 				Coord c = new Coord(Double.parseDouble(lineArr[2]), Double.parseDouble(lineArr[3]));
 				//transform coord
 
-				stops.add(new Stop(Integer.parseInt(lineArr[0]), lineArr[1], c));
-				line = reader.readLine();
+				Id<Stop> id = Id.create(Integer.parseInt(lineArr[0]), Stop.class);
+				stops.put(id, new Stop(id, lineArr[1], c));
+				line = stopsReader.readLine();
 			}
+
+			//now read in demand
+			header = demandReader.readLine().split(";");
+			line = demandReader.readLine();
+
+			while (line != null) {
+				String[] lineArr = line.split(";");
+				Id<Stop> from = Id.create(Integer.parseInt(lineArr[14]), Stop.class);
+				Id<Stop> to = Id.create(Integer.parseInt(lineArr[19]), Stop.class);
+				stops.get(from).originatingTrips += 1;
+				stops.get(to).endingTrips += 1;
+				line = demandReader.readLine();
+			}
+
 		} catch (IOException e){
 			e.printStackTrace();
 		}
@@ -261,11 +382,14 @@ public class ServiceAreaStopRouting {
 	}
 
 	private static class Stop{
-		int id;
+		Id<Stop> id;
 		String lage;
 		Coord coord;
 
-		Stop(int id, String lage, Coord coord) {
+		double originatingTrips = 0;
+		double endingTrips = 0;
+
+		Stop(Id<Stop> id, String lage, Coord coord) {
 			this.id = id;
 			this.lage = lage;
 			this.coord = coord;
