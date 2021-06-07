@@ -45,8 +45,8 @@ import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
+import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
-import org.matsim.core.utils.geometry.GeometryUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.gis.ShapeFileReader;
@@ -81,7 +81,10 @@ public class PotentialServiceAreaAnalysis {
 	public static void main(String[] args) {
 //		convertStopCoordinates(); already converted if you read in file ending on 'utm32'
 
-		Map<Id<Stop>, Stop> stops = readStopsAndAssignDemand();
+
+		Map<Id<Stop>, Stop> stops = readStops();
+		Map<Tuple<Id<Stop>, Id<Stop>>, Integer> relations = readDemandAndGetRelations(stops);
+
 		Network network = NetworkUtils.readNetwork(INPUT_NETWORK);
 
 		//read in service area map
@@ -107,10 +110,10 @@ public class PotentialServiceAreaAnalysis {
 		carriers.getCarriers().values().forEach(carrier -> getTotalCoveredDistanceOfCarrierTours(carrier, network));
 
 		//produce and dump output
-		writeStats(network, serviceAreas, area2Stops, carriers);
+		writeStats(network, serviceAreas, area2Stops, carriers, relations);
 	}
 
-	private static void writeStats(Network network, Map<String, PreparedGeometry> serviceAreas, Map<PreparedGeometry, Collection<Stop>> area2Stops, Carriers carriers) {
+	private static void writeStats(Network network, Map<String, PreparedGeometry> serviceAreas, Map<PreparedGeometry, Collection<Stop>> area2Stops, Carriers carriers, Map<Tuple<Id<Stop>, Id<Stop>>, Integer> relations) {
 		String outputFileName = INPUT_SERVICE_AREAS_SHAPE.substring(0, INPUT_SERVICE_AREAS_SHAPE.lastIndexOf(".")) + "_stats.csv";
 		LeastCostPathCalculator router = new FastAStarLandmarksFactory(4).createPathCalculator(network, new TravelDisutility() {
 			@Override
@@ -127,7 +130,7 @@ public class PotentialServiceAreaAnalysis {
 		try {
 			System.out.println("will try to write to " + outputFileName);
 			BufferedWriter writer = IOUtils.getBufferedWriter(outputFileName);
-			writer.write("areaName;area[sqm];nrStops[1];totalRoadMeter[m];roundTourDistance[m];longestDistBetw2Stops[m];totalOriginatingTrips[1];totalEndingTrips[1]");
+			writer.write("areaName;area[sqm];nrStops[1];totalRoadMeter[m];roundTourDistance[m];longestDistBetw2Stops[m];totalOriginatingTrips[1];totalEndingTrips[1];totalTripsWithin[1]");
 			for (Map.Entry<String, PreparedGeometry> entry : serviceAreas.entrySet()) {
 				String name = entry.getKey();
 				PreparedGeometry geom = entry.getValue();
@@ -136,20 +139,36 @@ public class PotentialServiceAreaAnalysis {
 				double totalCarNetworkMeter = getTotalNetworkCarKMInsideGeom(geom, network);
 				double roundTourMeter = getTotalCoveredDistanceOfCarrierTours(carriers.getCarriers().get(Id.create(name, Carrier.class)), network);
 				double longestRouteBetween2Stops = getLongestRouteDistanceBetweenStops(areaStops, network, router);
-				double totalOriginatingTrips = areaStops.stream()
-						.mapToDouble(stop -> stop.originatingTrips)
+				int totalOriginatingTrips = areaStops.stream()
+						.mapToInt(stop -> stop.originatingTrips)
 						.sum();
-				double totalEndingTrips = areaStops.stream()
-						.mapToDouble(stop -> stop.endingTrips)
+				int totalEndingTrips = areaStops.stream()
+						.mapToInt(stop -> stop.endingTrips)
 						.sum();
+				int totalTripsWithin = getTotalTripsWithin(areaStops, relations);
 				System.out.println(name + "\t" + totalCarNetworkMeter + "\t" + roundTourMeter + "\t" + longestRouteBetween2Stops + "\t" + totalOriginatingTrips + "\t" + totalEndingTrips);
 				writer.newLine();
-				writer.write(name + ";" + area + ";" + areaStops.size() + ";" + totalCarNetworkMeter + ";" + roundTourMeter + ";" + longestRouteBetween2Stops  + ";" + totalOriginatingTrips + ";" + totalEndingTrips);
+				writer.write(name + ";" + area + ";" + areaStops.size() + ";"
+						+ totalCarNetworkMeter + ";" + roundTourMeter + ";" + longestRouteBetween2Stops
+						+ ";" + totalOriginatingTrips + ";" + totalEndingTrips + ";" + totalTripsWithin);
 			}
 			writer.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private static int getTotalTripsWithin(Collection<Stop> areaStops, Map<Tuple<Id<Stop>, Id<Stop>>, Integer> relations) {
+		int cnt = 0;
+		for (Stop stop : areaStops) {
+			ArrayList<Stop> otherStops = new ArrayList<>(areaStops);
+			otherStops.remove(stop);
+			for(Stop otherStop : otherStops){
+				Integer add = relations.get(new Tuple<>(stop.id, otherStop.id));
+				cnt = add == null ? cnt : cnt + add;
+			}
+		}
+		return cnt;
 	}
 
 	/**
@@ -311,9 +330,8 @@ public class PotentialServiceAreaAnalysis {
 				.collect(Collectors.toList());
 	}
 
-	private static Map<Id<Stop>, Stop> readStopsAndAssignDemand() {
+	private static Map<Id<Stop>, Stop> readStops() {
 		BufferedReader stopsReader = IOUtils.getBufferedReader(INPUT_STOPS_FILE);
-		BufferedReader demandReader = IOUtils.getBufferedReader(INPUT_DEMAND_FILE);
 		Map<Id<Stop>,Stop> stops = new HashMap<>();
 		try {
 			//read stops first
@@ -330,9 +348,18 @@ public class PotentialServiceAreaAnalysis {
 				line = stopsReader.readLine();
 			}
 
-			//now read in demand
-			header = demandReader.readLine().split(";");
-			line = demandReader.readLine();
+		} catch (IOException e){
+			e.printStackTrace();
+		}
+		return stops;
+	}
+
+	private static Map<Tuple<Id<Stop>,Id<Stop>>,Integer> readDemandAndGetRelations(Map<Id<Stop>,Stop> stops){
+		BufferedReader demandReader = IOUtils.getBufferedReader(INPUT_DEMAND_FILE);
+		Map<Tuple<Id<Stop>,Id<Stop>>,Integer> relations = new HashMap<>();
+		try {
+			String[] header = demandReader.readLine().split(";");
+			String line = demandReader.readLine();
 
 			while (line != null) {
 				String[] lineArr = line.split(";");
@@ -340,13 +367,15 @@ public class PotentialServiceAreaAnalysis {
 				Id<Stop> to = Id.create(Integer.parseInt(lineArr[19]), Stop.class);
 				stops.get(from).originatingTrips += 1;
 				stops.get(to).endingTrips += 1;
+				relations.compute(new Tuple<>(from, to), (k,v) -> v == null ? 1 : v+1);
+
 				line = demandReader.readLine();
 			}
 
 		} catch (IOException e){
 			e.printStackTrace();
 		}
-		return stops;
+		return relations;
 	}
 
 	private static void convertStopCoordinates() {
@@ -386,8 +415,8 @@ public class PotentialServiceAreaAnalysis {
 		String lage;
 		Coord coord;
 
-		double originatingTrips = 0;
-		double endingTrips = 0;
+		int originatingTrips = 0;
+		int endingTrips = 0;
 
 		Stop(Id<Stop> id, String lage, Coord coord) {
 			this.id = id;
