@@ -81,27 +81,27 @@
             <param name="weight" value="0.85"/>
         </parameterset>
         <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="250"/>
+            <param name="disableAfterIteration" value="300"/>
             <param name="strategyName" value="ReRoute"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.10"/>
         </parameterset>
         <!-- Fade out subtour mode choice strategy -->
         <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="190"/>
-            <param name="strategyName" value="SubtourModeChoice"/>
+            <param name="disableAfterIteration" value="240"/>
+            <param name="strategyName" value="ChangeSingleTripMode"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.05"/>
         </parameterset>
         <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="220"/>
-            <param name="strategyName" value="SubtourModeChoice"/>
+            <param name="disableAfterIteration" value="270"/>
+            <param name="strategyName" value="ChangeSingleTripMode"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.05"/>
         </parameterset>
         <!-- Also disabled in end phase of runs -->
         <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="190"/>
+            <param name="disableAfterIteration" value="240"/>
             <param name="strategyName" value="TimeAllocationMutator"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.025"/>
@@ -114,7 +114,7 @@
 			<param name="weight" value="0.95" />
 		</parameterset>
 		<parameterset type="strategysettings" >
-			<param name="disableAfterIteration" value="250"/>
+			<param name="disableAfterIteration" value="300"/>
 			<param name="strategyName" value="ReRoute" />
 			<param name="subpopulation" value="freight" />
 			<param name="weight" value="0.05" />
@@ -125,6 +125,11 @@
         <param name="chainBasedModes" value="car,bike"/>
         <param name="modes" value="car,pt,bike,walk"/>
         <param name="considerCarAvailability" value="true"/>
+    </module>
+
+    <module name="changeMode">
+        <param name="modes" value="car,pt,bike,walk" />
+        <param name="ignoreCarAvailability" value="false" />
     </module>
 
     <module name="transitRouter">
