@@ -16,6 +16,7 @@ import org.matsim.application.prepare.CreateTransitScheduleFromGtfs;
 import org.matsim.application.prepare.freight.ExtractRelevantFreightTrips;
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
+import org.matsim.contrib.drt.run.DrtControlerCreator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
@@ -47,6 +48,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
 	@CommandLine.Mixin
 	private SampleOptions sample = new SampleOptions(25, 10, 1);
+
+	@CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
+	private boolean drt;
 
 	public RunKelheimScenario() {
 		super(String.format("scenarios/input/kelheim-v%s-25pct.config.xml", VERSION));
@@ -125,5 +129,6 @@ public class RunKelheimScenario extends MATSimApplication {
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 			}
 		});
+
 	}
 }
