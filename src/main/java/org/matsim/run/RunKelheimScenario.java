@@ -16,7 +16,12 @@ import org.matsim.application.prepare.CreateTransitScheduleFromGtfs;
 import org.matsim.application.prepare.freight.ExtractRelevantFreightTrips;
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
+import org.matsim.contrib.drt.routing.DrtRoute;
+import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtControlerCreator;
+import org.matsim.contrib.drt.run.MultiModeDrtModule;
+import org.matsim.contrib.dvrp.run.DvrpModule;
+import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
@@ -117,6 +122,14 @@ public class RunKelheimScenario extends MATSimApplication {
 				link.setAllowedModes(newModes);
 			}
 		}
+
+		if (drt){
+			scenario.getPopulation()
+					.getFactory()
+					.getRouteFactories()
+					.setRouteFactory(DrtRoute.class, new DrtRouteFactory());
+		}
+
 	}
 
 	@Override
@@ -129,6 +142,12 @@ public class RunKelheimScenario extends MATSimApplication {
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 			}
 		});
+
+		if (drt){
+			controler.addOverridingModule(new DvrpModule());
+			controler.addOverridingModule(new MultiModeDrtModule());
+//			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig)); //TODO
+		}
 
 	}
 }

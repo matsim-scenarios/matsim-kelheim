@@ -88,7 +88,7 @@ public class RunDrtTestingScenario {
         MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
         DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
 
-        org.matsim.core.controler.Controler controller = new Controler(scenario);
+        Controler controller = new Controler(scenario);
         controller.addOverridingModule(new DvrpModule());
         controller.addOverridingModule(new MultiModeDrtModule());
         controller.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
