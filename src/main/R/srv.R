@@ -1,5 +1,6 @@
 
 
+library(gridExtra)
 library(tidyverse)
 library(lubridate)
 library(viridis)
@@ -16,10 +17,14 @@ breaks = c(0, 1000, 2000, 5000, 10000, 20000, Inf)
 
 shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp", crs=25832)
 
+#########
+# Read simulation data
+#########
+
 f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\005"
 sim_scale <- 4
 
-persons <- read_delim(Sys.glob(file.path(f, "*.output_persons.csv.gz")) , delim = ";", trim_ws = T, 
+persons <- read_delim(list.files(f, pattern = "*.output_persons.csv.gz", full.names = T, include.dirs = F), delim = ";", trim_ws = T, 
                      col_types = cols(
                        person = col_character(),
                        good_type = col_integer()
@@ -27,7 +32,7 @@ persons <- read_delim(Sys.glob(file.path(f, "*.output_persons.csv.gz")) , delim 
           st_as_sf(coords = c("first_act_x", "first_act_y"), crs = 25832) %>%
           st_filter(shape)
 
-trips <- read_delim(Sys.glob(file.path(f, "*.output_trips.csv.gz")) , delim = ";", trim_ws = T, 
+trips <- read_delim(list.files(f, pattern = "*.output_trips.csv.gz", full.names = T, include.dirs = F), delim = ";", trim_ws = T, 
                     col_types = cols(
                       person = col_character()
                     )) %>%
@@ -41,36 +46,60 @@ sim <- trips %>%
   group_by(dist_group, main_mode) %>%
   summarise(trips=n()) %>%
   mutate(mode = fct_relevel(main_mode, "walk", "bike", "pt", "ride", "car")) %>%
-  mutate(scaled_trips=sim_scale * trips)
+  mutate(scaled_trips=sim_scale * trips) %>%
   mutate(source = "sim")
 
+########
+# Read survey data
+########
 
-ggplot(sim, aes(fill=mode, y=trips, x=dist_group)) +
-  labs(subtitle = "Simulated scenario", x="distance [m]") +
-  geom_bar(position="stack", stat="identity")
+srv <- read_csv("mid.csv") %>%
+    mutate(main_mode=mode) %>%
+    mutate(scaled_trips=122258 * 3.2 * share) %>% # not final yet
+    mutate(source = "srv")
 
-#g <- arrangeGrob(p1, p2, ncol = 2)
-#ggsave(filename = "modal-split.png", path = ".", g,
-#       width = 15, height = 5, device='png', dpi=300)
-
+######
 # Total modal split
+#######
+
+srv_aggr <- srv %>%
+    group_by(mode) %>%
+    summarise(share=sum(share))  # assume shares sum to 1
 
 aggr <- sim %>%
     group_by(mode) %>%
     summarise(share=sum(trips) / sum(sim$trips))
 
-ggplot(data=aggr, mapping =  aes(x=1, y=share, fill=mode)) +
+p1_aggr <- ggplot(data=srv_aggr, mapping =  aes(x=1, y=share, fill=mode)) +
   labs(subtitle = "Survey data") +
+  geom_bar(position="fill", stat="identity") +
+  coord_flip() +
+  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 5, position=position_fill(vjust=0.5)) +
+  scale_fill_locuszoom() +
+  theme_void() +
+  theme(legend.position="none")
+
+p2_aggr <- ggplot(data=aggr, mapping =  aes(x=1, y=share, fill=mode)) +
+  labs(subtitle = "Simulation") +
   geom_bar(position="fill", stat="identity") +
   coord_flip() +
   geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 5, position=position_fill(vjust=0.5)) +
   scale_fill_locuszoom() +
   theme_void()
 
+g <- arrangeGrob(p1_aggr, p2_aggr, ncol = 2)
+ggsave(filename = "modal-split.png", path = ".", g,
+       width = 12, height = 2, device='png', dpi=300)
 
-# Combined plot
+#########
+# Combined plot by distance
+##########
 
 total <- bind_rows(srv, sim)
+
+# Maps left overgroups
+dist_order <- factor(total$dist_group, level = levels)
+dist_order <- fct_explicit_na(dist_order, "20000+")
 
 ggplot(total, aes(fill=mode, y=scaled_trips, x=source)) +
   labs(subtitle = paste("Kelheim scenario", f), x="distance [m]") +
