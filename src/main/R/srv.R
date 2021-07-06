@@ -2,7 +2,11 @@
 
 library(tidyverse)
 library(lubridate)
+library(viridis)
+library(ggsci)
 library(sf)
+
+source("https://raw.githubusercontent.com/matsim-scenarios/matsim-duesseldorf/master/src/main/R/theme.R")
 
 # setwd("C:/Users/chris/Development/matsim-scenarios/matsim-kelheim/src/main/R")
 
@@ -12,7 +16,7 @@ breaks = c(0, 1000, 2000, 5000, 10000, 20000, Inf)
 
 shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp", crs=25832)
 
-f <- "../../../output/output-kelheim-25pct"
+f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\005"
 sim_scale <- 4
 
 persons <- read_delim(Sys.glob(file.path(f, "*.output_persons.csv.gz")) , delim = ";", trim_ws = T, 
@@ -37,6 +41,7 @@ sim <- trips %>%
   group_by(dist_group, main_mode) %>%
   summarise(trips=n()) %>%
   mutate(mode = fct_relevel(main_mode, "walk", "bike", "pt", "ride", "car")) %>%
+  mutate(scaled_trips=sim_scale * trips)
   mutate(source = "sim")
 
 
@@ -47,6 +52,20 @@ ggplot(sim, aes(fill=mode, y=trips, x=dist_group)) +
 #g <- arrangeGrob(p1, p2, ncol = 2)
 #ggsave(filename = "modal-split.png", path = ".", g,
 #       width = 15, height = 5, device='png', dpi=300)
+
+# Total modal split
+
+aggr <- sim %>%
+    group_by(mode) %>%
+    summarise(share=sum(trips) / sum(sim$trips))
+
+ggplot(data=aggr, mapping =  aes(x=1, y=share, fill=mode)) +
+  labs(subtitle = "Survey data") +
+  geom_bar(position="fill", stat="identity") +
+  coord_flip() +
+  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 5, position=position_fill(vjust=0.5)) +
+  scale_fill_locuszoom() +
+  theme_void()
 
 
 # Combined plot
