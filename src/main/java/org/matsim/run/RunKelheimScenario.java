@@ -25,6 +25,7 @@ import org.matsim.core.controler.Controler;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.router.RoutingModeMainModeIdentifier;
 import org.matsim.run.prepare.PreparePopulation;
+import org.matsim.run.utils.TuneModeChoice;
 import picocli.CommandLine;
 
 import javax.annotation.Nullable;
@@ -123,6 +124,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				install(new SwissRailRaptorModule());
 				bind(AnalysisMainModeIdentifier.class).to(DefaultAnalysisMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
+				addControlerListenerBinding().to(TuneModeChoice.class);
 			}
 		});
 	}
