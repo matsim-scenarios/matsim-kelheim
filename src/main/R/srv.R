@@ -21,7 +21,7 @@ shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/202
 # Read simulation data
 #########
 
-f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\005"
+f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\009"
 sim_scale <- 4
 
 persons <- read_delim(list.files(f, pattern = "*.output_persons.csv.gz", full.names = T, include.dirs = F), delim = ";", trim_ws = T, 
@@ -64,8 +64,9 @@ srv <- read_csv("mid.csv") %>%
 
 srv_aggr <- srv %>%
     group_by(mode) %>%
-    summarise(share=sum(share))  # assume shares sum to 1
-
+    summarise(share=sum(share)) %>%  # assume shares sum to 1
+    mutate(mode=fct_relevel(mode, "walk", "bike", "pt", "ride", "car"))  
+  
 aggr <- sim %>%
     group_by(mode) %>%
     summarise(share=sum(trips) / sum(sim$trips))

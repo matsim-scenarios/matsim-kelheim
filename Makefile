@@ -18,7 +18,7 @@ $(JAR):
 
 # Required files
 scenarios/input/network.osm.pbf:
-	curl https://download.geofabrik.de/europe/germany-210101.osm.pbf\
+	curl https://download.geofabrik.de/europe/germany-210701.osm.pbf\
 	  -o scenarios/input/network.osm.pbf
 
 ${SHP_FILES} :
