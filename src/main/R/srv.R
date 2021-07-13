@@ -55,8 +55,10 @@ sim <- trips %>%
 
 srv <- read_csv("mid.csv") %>%
     mutate(main_mode=mode) %>%
-    mutate(scaled_trips=122258 * 3.2 * share) %>% # not final yet
-    mutate(source = "srv")
+    mutate(scaled_trips=122258 * 3.2 * share) %>%
+    mutate(source = "srv") %>%
+    mutate(dist_group=fct_relevel(dist_group, levels)) %>%
+    arrange(dist_group)
 
 ######
 # Total modal split
@@ -119,6 +121,3 @@ sim_aggr <- sim %>%
 tripShare <- 0.19
 shortDistance <- sum(filter(sim, dist_group=="0 - 1000")$trips)
 numTrips = (shortDistance - sim_sum * tripShare) / (tripShare - 1)
-
-
-
