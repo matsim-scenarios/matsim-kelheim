@@ -53,5 +53,7 @@ if __name__ == "__main__":
     print("Result")
     print(res)
     df = f(res.x, True)
+    
+    df.to_csv("../R/mid_adj.csv", index=False)
 
     print(df.groupby("mode").sum())

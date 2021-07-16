@@ -73,8 +73,14 @@ public final class TuneModeChoice implements IterationStartsListener {
 			initialWeight = modeChoice.getWeight();
 			// TODO: start fade-out at 0.8 hard-coded
 			startAt = (int) (config.controler().getLastIteration() * 0.8);
-			endAt = (int) (config.controler().getLastIteration() * config.strategy().getFractionOfIterationsToDisableInnovation());
-			log.info("Mode-choice fadeout starting at iteration {} with value {}", startAt, initialWeight);
+			double disable = config.strategy().getFractionOfIterationsToDisableInnovation();
+
+			if (Double.isFinite(disable) && disable < Integer.MAX_VALUE)
+				endAt = (int) (config.controler().getLastIteration() * disable);
+			else
+				endAt = modeChoice.getDisableAfter();
+
+			log.info("Mode-choice fadeout from iteration {} to {} with value {}", startAt, endAt, initialWeight);
 		}
 
 

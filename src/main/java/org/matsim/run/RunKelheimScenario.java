@@ -29,6 +29,7 @@ import org.matsim.run.utils.TuneModeChoice;
 import picocli.CommandLine;
 
 import javax.annotation.Nullable;
+import javax.inject.Singleton;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -124,7 +125,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				install(new SwissRailRaptorModule());
 				bind(AnalysisMainModeIdentifier.class).to(DefaultAnalysisMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
-				addControlerListenerBinding().to(TuneModeChoice.class);
+				addControlerListenerBinding().to(TuneModeChoice.class).in(Singleton.class);
 			}
 		});
 	}

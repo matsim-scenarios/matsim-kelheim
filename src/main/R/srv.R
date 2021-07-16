@@ -21,7 +21,7 @@ shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/202
 # Read simulation data
 #########
 
-f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\009"
+f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\003"
 sim_scale <- 4
 
 persons <- read_delim(list.files(f, pattern = "*.output_persons.csv.gz", full.names = T, include.dirs = F), delim = ";", trim_ws = T, 
@@ -53,7 +53,7 @@ sim <- trips %>%
 # Read survey data
 ########
 
-srv <- read_csv("mid.csv") %>%
+srv <- read_csv("mid_adj.csv") %>%
     mutate(main_mode=mode) %>%
     mutate(scaled_trips=122258 * 3.2 * share) %>%
     mutate(source = "srv") %>%
