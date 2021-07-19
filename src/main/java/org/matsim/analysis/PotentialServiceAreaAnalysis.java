@@ -73,10 +73,9 @@ public class PotentialServiceAreaAnalysis {
 	/**
 	 * shape file with multiple polygons each of which represents a possible service area
 	 */
-	private static final String INPUT_SERVICE_AREAS_SHAPE = "D:/svn/shared-svn/projects/KelRide/data/ServiceAreas/2021_05_possibleServiceAreasForAutomatedVehicles.shp";
+	private static final String INPUT_SERVICE_AREAS_SHAPE = "D:/svn/shared-svn/projects/KelRide/data/ServiceAreas/2021_07_possibleServiceAreasForAutomatedVehicles.shp";
 
 
-	private static final String OUTPUT_SERVICE_AREA_KPI_CSV = "";
 
 	public static void main(String[] args) {
 //		convertStopCoordinates(); already converted if you read in file ending on 'utm32'
