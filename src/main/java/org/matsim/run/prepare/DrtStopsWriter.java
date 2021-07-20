@@ -3,8 +3,10 @@ package org.matsim.run.prepare;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.utils.collections.Tuple;
+import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.io.UncheckedIOException;
 
@@ -13,7 +15,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class DrtStopsWriter extends MatsimXmlWriter {
 
@@ -42,6 +46,7 @@ public class DrtStopsWriter extends MatsimXmlWriter {
         csvWriter.append("\n");
 
         // Read original data csv
+        System.out.println("Start processing the network. This may take some time...");
         BufferedReader csvReader = new BufferedReader(new FileReader("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/KEXI_Haltestellen_Liste_Kelheim_utm32n.csv"));
         csvReader.readLine();
         while (true) {
@@ -56,7 +61,8 @@ public class DrtStopsWriter extends MatsimXmlWriter {
             attributes.add(createTuple("id", stopData[0]));
             attributes.add(createTuple("x", stopData[2]));
             attributes.add(createTuple("y", stopData[3]));
-            Link link = NetworkUtils.getNearestLink(network,coord);
+//            Link link = NetworkUtils.getNearestLink(network, coord);
+            Link link = getStopLink(coord, network);
             attributes.add(createTuple("linkRefId", link.getId().toString()));
             this.writeStartTag("stopFacility", attributes, true);
 
@@ -70,5 +76,36 @@ public class DrtStopsWriter extends MatsimXmlWriter {
             csvWriter.append("\n");
         }
         csvWriter.close();
+    }
+
+    private Link getStopLink(Coord coord, Network network) {
+        double shortestDistance = Double.MAX_VALUE;
+        Link nearestLink = null;
+        for (Link link : network.getLinks().values()) {
+            double dist = CoordUtils.distancePointLinesegment(link.getFromNode().getCoord(), link.getToNode().getCoord(), coord);
+            if (dist < shortestDistance) {
+                shortestDistance = dist;
+                nearestLink = link;
+            }
+        }
+
+
+        double distanceToFromNode = CoordUtils.calcEuclideanDistance(nearestLink.getFromNode().getCoord(), coord);
+        double distanceToToNode = CoordUtils.calcEuclideanDistance(nearestLink.getToNode().getCoord(), coord);
+
+        // If to node is closer to the stop coordinate, we will use this link as the stop location
+        if (distanceToToNode < distanceToFromNode){
+            return nearestLink;
+        }
+
+        // Otherwise, we will use the opposite link as the stop location
+        Set<Link> linksConnectToToNode = new HashSet<>(nearestLink.getToNode().getOutLinks().values());
+        linksConnectToToNode.retainAll(nearestLink.getFromNode().getInLinks().values());
+        if (!linksConnectToToNode.isEmpty()){
+            return linksConnectToToNode.iterator().next();
+        }
+
+        // However, if this link does not have an opposite direction counterpart, we will use it anyway.
+        return nearestLink;
     }
 }
