@@ -18,11 +18,14 @@ import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
+import org.matsim.contrib.drt.run.DrtConfigs;
 import org.matsim.contrib.drt.run.DrtControlerCreator;
+import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtModule;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
@@ -40,114 +43,119 @@ import java.util.Set;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION)
 @MATSimApplication.Prepare({
-		CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
-		MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class,
-		CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class
+        CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
+        MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class,
+        CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class
 })
 @MATSimApplication.Analysis({
-		AnalysisSummary.class, TravelTimeAnalysis.class, CheckPopulation.class
+        AnalysisSummary.class, TravelTimeAnalysis.class, CheckPopulation.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-	static final String VERSION = "1.0";
+    static final String VERSION = "1.0";
 
-	@CommandLine.Mixin
-	private SampleOptions sample = new SampleOptions(25, 10, 1);
+    @CommandLine.Mixin
+    private SampleOptions sample = new SampleOptions(25, 10, 1);
 
-	@CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
-	private boolean drt;
+    @CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
+    private boolean drt;
 
-	public RunKelheimScenario() {
-		super(String.format("scenarios/input/kelheim-v%s-25pct.config.xml", VERSION));
-	}
+    public RunKelheimScenario() {
+        super(String.format("scenarios/input/kelheim-v%s-25pct.config.xml", VERSION));
+    }
 
-	public static void main(String[] args) {
-		MATSimApplication.run(RunKelheimScenario.class, args);
-	}
+    public static void main(String[] args) {
+        MATSimApplication.run(RunKelheimScenario.class, args);
+    }
 
-	@Nullable
-	@Override
-	protected Config prepareConfig(Config config) {
+    @Nullable
+    @Override
+    protected Config prepareConfig(Config config) {
 
-		for (long ii = 600; ii <= 97200; ii += 600) {
+        for (long ii = 600; ii <= 97200; ii += 600) {
 
-			for (String act : List.of("home", "restaurant", "other", "visit", "errands",
-					"educ_higher", "educ_secondary", "educ_primary", "educ_tertiary", "educ_kiga", "educ_other")) {
-				config.planCalcScore()
-						.addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams(act + "_" + ii + ".0").setTypicalDuration(ii));
-			}
+            for (String act : List.of("home", "restaurant", "other", "visit", "errands",
+                    "educ_higher", "educ_secondary", "educ_primary", "educ_tertiary", "educ_kiga", "educ_other")) {
+                config.planCalcScore()
+                        .addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams(act + "_" + ii + ".0").setTypicalDuration(ii));
+            }
 
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("work_" + ii + ".0").setTypicalDuration(ii)
-					.setOpeningTime(6. * 3600.).setClosingTime(20. * 3600.));
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("business_" + ii + ".0").setTypicalDuration(ii)
-					.setOpeningTime(6. * 3600.).setClosingTime(20. * 3600.));
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("leisure_" + ii + ".0").setTypicalDuration(ii)
-					.setOpeningTime(9. * 3600.).setClosingTime(27. * 3600.));
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("work_" + ii + ".0").setTypicalDuration(ii)
+                    .setOpeningTime(6. * 3600.).setClosingTime(20. * 3600.));
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("business_" + ii + ".0").setTypicalDuration(ii)
+                    .setOpeningTime(6. * 3600.).setClosingTime(20. * 3600.));
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("leisure_" + ii + ".0").setTypicalDuration(ii)
+                    .setOpeningTime(9. * 3600.).setClosingTime(27. * 3600.));
 
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_daily_" + ii + ".0").setTypicalDuration(ii)
-					.setOpeningTime(8. * 3600.).setClosingTime(20. * 3600.));
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_other_" + ii + ".0").setTypicalDuration(ii)
-					.setOpeningTime(8. * 3600.).setClosingTime(20. * 3600.));
-		}
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_daily_" + ii + ".0").setTypicalDuration(ii)
+                    .setOpeningTime(8. * 3600.).setClosingTime(20. * 3600.));
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_other_" + ii + ".0").setTypicalDuration(ii)
+                    .setOpeningTime(8. * 3600.).setClosingTime(20. * 3600.));
+        }
 
-		config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("car interaction").setTypicalDuration(60));
-		config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("other").setTypicalDuration(600 * 3));
+        config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("car interaction").setTypicalDuration(60));
+        config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("other").setTypicalDuration(600 * 3));
 
-		config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("freight_start").setTypicalDuration(60 * 15));
-		config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("freight_end").setTypicalDuration(60 * 15));
+        config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("freight_start").setTypicalDuration(60 * 15));
+        config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("freight_end").setTypicalDuration(60 * 15));
 
-		config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
-		config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
+        config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
+        config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
 
-		config.qsim().setFlowCapFactor(sample.getSize() / 100.0);
-		config.qsim().setStorageCapFactor(sample.getSize() / 100.0);
+        config.qsim().setFlowCapFactor(sample.getSize() / 100.0);
+        config.qsim().setStorageCapFactor(sample.getSize() / 100.0);
 
-		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.info);
-		config.plansCalcRoute().setAccessEgressType(PlansCalcRouteConfigGroup.AccessEgressType.accessEgressModeToLink);
+        config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.info);
+        config.plansCalcRoute().setAccessEgressType(PlansCalcRouteConfigGroup.AccessEgressType.accessEgressModeToLink);
 
-		return config;
-	}
+        MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
+        DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
 
-	@Override
-	protected void prepareScenario(Scenario scenario) {
+        return config;
+    }
 
-		for (Link link : scenario.getNetwork().getLinks().values()) {
-			Set<String> modes = link.getAllowedModes();
+    @Override
+    protected void prepareScenario(Scenario scenario) {
 
-			// allow freight traffic together with cars
-			if (modes.contains("car")) {
-				HashSet<String> newModes = Sets.newHashSet(modes);
-				newModes.add("freight");
+        for (Link link : scenario.getNetwork().getLinks().values()) {
+            Set<String> modes = link.getAllowedModes();
 
-				link.setAllowedModes(newModes);
-			}
-		}
+            // allow freight traffic together with cars
+            if (modes.contains("car")) {
+                HashSet<String> newModes = Sets.newHashSet(modes);
+                newModes.add("freight");
 
-		if (drt){
-			scenario.getPopulation()
-					.getFactory()
-					.getRouteFactories()
-					.setRouteFactory(DrtRoute.class, new DrtRouteFactory());
-		}
+                link.setAllowedModes(newModes);
+            }
+        }
 
-	}
+        if (drt) {
+            scenario.getPopulation()
+                    .getFactory()
+                    .getRouteFactories()
+                    .setRouteFactory(DrtRoute.class, new DrtRouteFactory());
+        }
 
-	@Override
-	protected void prepareControler(Controler controler) {
-		controler.addOverridingModule(new AbstractModule() {
-			@Override
-			public void install() {
-				install(new SwissRailRaptorModule());
-				bind(AnalysisMainModeIdentifier.class).to(DefaultAnalysisMainModeIdentifier.class);
-				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
-			}
-		});
+    }
 
-		if (drt){
-			controler.addOverridingModule(new DvrpModule());
-			controler.addOverridingModule(new MultiModeDrtModule());
-//			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig)); //TODO
-		}
+    @Override
+    protected void prepareControler(Controler controler) {
+        controler.addOverridingModule(new AbstractModule() {
+            @Override
+            public void install() {
+                install(new SwissRailRaptorModule());
+                bind(AnalysisMainModeIdentifier.class).to(DefaultAnalysisMainModeIdentifier.class);
+                addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
+            }
+        });
 
-	}
+        if (drt) {
+            Config config = controler.getConfig();
+            MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
+            controler.addOverridingModule(new DvrpModule());
+            controler.addOverridingModule(new MultiModeDrtModule());
+            controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
+        }
+
+    }
 }

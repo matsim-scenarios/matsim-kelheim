@@ -16,6 +16,6 @@ public class PrepareDrtStops {
         Network network = scenario.getNetwork();
 
         DrtStopsWriter drtStopsWriter = new DrtStopsWriter();
-        drtStopsWriter.write("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/drtStops.xml", network);
+        drtStopsWriter.write("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/drt-stops.xml", network);
     }
 }

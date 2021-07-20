@@ -1,6 +1,7 @@
 package org.matsim.run.prepare;
 
 import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.utils.collections.Tuple;
@@ -9,6 +10,7 @@ import org.matsim.core.utils.io.UncheckedIOException;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,8 +30,19 @@ public class DrtStopsWriter extends MatsimXmlWriter {
     }
 
     private void writeTransitStops(Network network) throws IOException {
+        // Write csv file for adjusted stop location
+        FileWriter csvWriter = new FileWriter("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/drt-stops-locations.csv");
+        csvWriter.append("Stop ID");
+        csvWriter.append(",");
+        csvWriter.append("Link ID");
+        csvWriter.append(",");
+        csvWriter.append("X");
+        csvWriter.append(",");
+        csvWriter.append("Y");
+        csvWriter.append("\n");
+
         // Read original data csv
-        BufferedReader csvReader = new BufferedReader(new FileReader("/Users/luchengqi/Downloads/KEXI_Haltestellen_Liste_Kelheim_utm32n.csv"));
+        BufferedReader csvReader = new BufferedReader(new FileReader("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/KEXI_Haltestellen_Liste_Kelheim_utm32n.csv"));
         csvReader.readLine();
         while (true) {
             String stopEntry = csvReader.readLine();
@@ -43,8 +56,19 @@ public class DrtStopsWriter extends MatsimXmlWriter {
             attributes.add(createTuple("id", stopData[0]));
             attributes.add(createTuple("x", stopData[2]));
             attributes.add(createTuple("y", stopData[3]));
-            attributes.add(createTuple("linkRefId", NetworkUtils.getNearestLink(network,coord).getId().toString()));
+            Link link = NetworkUtils.getNearestLink(network,coord);
+            attributes.add(createTuple("linkRefId", link.getId().toString()));
             this.writeStartTag("stopFacility", attributes, true);
+
+            csvWriter.append(stopData[0]);
+            csvWriter.append(",");
+            csvWriter.append(link.getId().toString());
+            csvWriter.append(",");
+            csvWriter.append(Double.toString(link.getToNode().getCoord().getX()));
+            csvWriter.append(",");
+            csvWriter.append(Double.toString(link.getToNode().getCoord().getY()));
+            csvWriter.append("\n");
         }
+        csvWriter.close();
     }
 }
