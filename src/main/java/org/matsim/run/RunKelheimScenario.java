@@ -36,9 +36,9 @@ import java.util.Set;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION)
 @MATSimApplication.Prepare({
-		CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
-		MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class,
-		CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class
+		CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class,
+		GenerateShortDistanceTrips.class, MergePopulations.class, ExtractRelevantFreightTrips.class,
+		DownSamplePopulation.class, CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class
 })
 @MATSimApplication.Analysis({
 		AnalysisSummary.class, TravelTimeAnalysis.class, CheckPopulation.class
@@ -48,7 +48,7 @@ public class RunKelheimScenario extends MATSimApplication {
 	static final String VERSION = "1.0";
 
 	@CommandLine.Mixin
-	private SampleOptions sample = new SampleOptions(25, 10, 1);
+	private final SampleOptions sample = new SampleOptions(25, 10, 1);
 
 	public RunKelheimScenario() {
 		super(String.format("scenarios/input/kelheim-v%s-25pct.config.xml", VERSION));
