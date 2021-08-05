@@ -2,10 +2,10 @@ package org.matsim.run;
 
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
-import org.matsim.analysis.DefaultAnalysisMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.application.analysis.DefaultAnalysisMainModeIdentifier;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigs;
