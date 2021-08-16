@@ -21,7 +21,7 @@ shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/202
 # Read simulation data
 #########
 
-f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\003"
+f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\028"
 sim_scale <- 4
 
 persons <- read_delim(list.files(f, pattern = "*.output_persons.csv.gz", full.names = T, include.dirs = F), delim = ";", trim_ws = T, 

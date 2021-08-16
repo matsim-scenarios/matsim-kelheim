@@ -2,13 +2,12 @@ package org.matsim.run;
 
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
-import org.matsim.analysis.DefaultAnalysisMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.application.MATSimApplication;
-import org.matsim.application.analysis.AnalysisSummary;
 import org.matsim.application.analysis.CheckPopulation;
+import org.matsim.application.analysis.DefaultAnalysisMainModeIdentifier;
 import org.matsim.application.analysis.TravelTimeAnalysis;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
@@ -23,7 +22,6 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
-import org.matsim.core.router.RoutingModeMainModeIdentifier;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.TuneModeChoice;
 import picocli.CommandLine;
@@ -41,7 +39,7 @@ import java.util.Set;
 		DownSamplePopulation.class, CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class
 })
 @MATSimApplication.Analysis({
-		AnalysisSummary.class, TravelTimeAnalysis.class, CheckPopulation.class
+		TravelTimeAnalysis.class, CheckPopulation.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
