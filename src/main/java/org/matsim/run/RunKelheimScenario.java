@@ -46,7 +46,7 @@ import java.util.Set;
         CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class
 })
 @MATSimApplication.Analysis({
-       TravelTimeAnalysis.class, CheckPopulation.class
+        TravelTimeAnalysis.class, CheckPopulation.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
@@ -106,7 +106,7 @@ public class RunKelheimScenario extends MATSimApplication {
         config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.info);
         config.plansCalcRoute().setAccessEgressType(PlansCalcRouteConfigGroup.AccessEgressType.accessEgressModeToLink);
 
-        if(drt){
+        if (drt) {
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
             ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
             DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());

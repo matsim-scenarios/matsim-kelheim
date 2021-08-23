@@ -11,11 +11,11 @@ import java.io.IOException;
 public class PrepareDrtStops {
     public static void main(String[] args) throws IOException {
         Config config = ConfigUtils.createConfig();
-        config.network().setInputFile("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/kelheim-v1.0-network.xml.gz");
+        config.network().setInputFile("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/kelheim-v1.0-network-with-pt.xml.gz");
         Scenario scenario = ScenarioUtils.loadScenario(config);
         Network network = scenario.getNetwork();
 
         DrtStopsWriter drtStopsWriter = new DrtStopsWriter();
-        drtStopsWriter.write("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/drt-stops.xml", network);
+        drtStopsWriter.write("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/kelheim-v1.0-drt-stops.xml", network);
     }
 }

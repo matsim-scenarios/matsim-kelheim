@@ -80,6 +80,9 @@ public class DrtStopsWriter extends MatsimXmlWriter {
         double shortestDistance = Double.MAX_VALUE;
         Link nearestLink = null;
         for (Link link : network.getLinks().values()) {
+            if (!link.getAllowedModes().contains("car")) {
+                continue;
+            }
             double dist = CoordUtils.distancePointLinesegment(link.getFromNode().getCoord(), link.getToNode().getCoord(), coord);
             if (dist < shortestDistance) {
                 shortestDistance = dist;
@@ -92,14 +95,14 @@ public class DrtStopsWriter extends MatsimXmlWriter {
         double distanceToToNode = CoordUtils.calcEuclideanDistance(nearestLink.getToNode().getCoord(), coord);
 
         // If to node is closer to the stop coordinate, we will use this link as the stop location
-        if (distanceToToNode < distanceToFromNode){
+        if (distanceToToNode < distanceToFromNode) {
             return nearestLink;
         }
 
         // Otherwise, we will use the opposite link as the stop location
         Set<Link> linksConnectToToNode = new HashSet<>(nearestLink.getToNode().getOutLinks().values());
         linksConnectToToNode.retainAll(nearestLink.getFromNode().getInLinks().values());
-        if (!linksConnectToToNode.isEmpty()){
+        if (!linksConnectToToNode.isEmpty()) {
             return linksConnectToToNode.iterator().next();
         }
 
