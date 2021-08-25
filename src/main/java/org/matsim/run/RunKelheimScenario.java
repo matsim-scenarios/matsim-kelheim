@@ -5,6 +5,7 @@ import com.google.common.collect.Sets;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.DefaultAnalysisMainModeIdentifier;
@@ -17,6 +18,7 @@ import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
+import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.DrtConfigs;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtModule;
@@ -31,6 +33,8 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
+import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.run.prepare.PreparePopulation;
 import picocli.CommandLine;
 
@@ -152,10 +156,16 @@ public class RunKelheimScenario extends MATSimApplication {
 
         if (drt) {
             Config config = controler.getConfig();
+            Scenario scenario = ScenarioUtils.loadScenario(config);
+            Network network = scenario.getNetwork();
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
             controler.addOverridingModule(new DvrpModule());
             controler.addOverridingModule(new MultiModeDrtModule());
             controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
+            for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
+                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network));
+            }
+
         }
 
     }
