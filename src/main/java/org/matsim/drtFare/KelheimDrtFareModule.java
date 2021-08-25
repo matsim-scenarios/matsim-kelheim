@@ -21,7 +21,7 @@ public class KelheimDrtFareModule extends AbstractDvrpModeModule {
         kelheimDrtFareParams.setShapeFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/shp/KEXI-fare-shp/DrtFareZonalSystem2.shp");
 
         // Special price for Autonomous vehicles
-        if (getMode().equals("AV")){
+        if (getMode().equals("av")){
             kelheimDrtFareParams.setBaseFare(1.0);
             kelheimDrtFareParams.setZone2Surcharge(0.0);
             kelheimDrtFareParams.setMode("AV");
