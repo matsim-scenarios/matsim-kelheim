@@ -9,17 +9,19 @@ import org.matsim.core.scenario.ScenarioUtils;
 import java.io.IOException;
 
 public class PrepareDrtStops {
-    private static final String mode = "av"; // drt, av or other modes...
-    private static final String shapefilePath = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/shape-file/AvOperatingArea-all.shp";
+//    private static final String mode = "av"; // drt, av or other modes...
+//    private static final String shapefilePath = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/shape-file/AvOperatingArea-all.shp";
 
+    private static final String mode = "drt"; // drt, av or other modes...
+    private static final String shapefilePath = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/shape-file/dilutionArea.shp";
 
     public static void main(String[] args) throws IOException {
         Config config = ConfigUtils.createConfig();
-        config.network().setInputFile("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/kelheim-v1.0-network-with-pt.xml.gz");
+        config.network().setInputFile("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/kelheim-v1.1-network-with-pt.xml.gz");
         Scenario scenario = ScenarioUtils.loadScenario(config);
         Network network = scenario.getNetwork();
 
         DrtStopsWriter drtStopsWriter = new DrtStopsWriter(mode, shapefilePath);
-        drtStopsWriter.write("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/kelheim-v1.0-" + mode + "-stops.xml", network);
+        drtStopsWriter.write("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/kelheim-v1.1-" + mode + "-stops.xml", network);
     }
 }
