@@ -11,10 +11,10 @@ import org.matsim.application.analysis.DefaultAnalysisMainModeIdentifier;
 import org.matsim.application.analysis.TravelTimeAnalysis;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
-import org.matsim.application.prepare.CreateTransitScheduleFromGtfs;
 import org.matsim.application.prepare.freight.ExtractRelevantFreightTrips;
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
+import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
@@ -35,7 +35,7 @@ import java.util.Set;
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION)
 @MATSimApplication.Prepare({
 		CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class,
-		GenerateShortDistanceTrips.class, MergePopulations.class, ExtractRelevantFreightTrips.class,
+		GenerateShortDistanceTrips.class, MergePopulations.class, ExtractRelevantFreightTrips.class, CleanPopulation.class,
 		DownSamplePopulation.class, CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class
 })
 @MATSimApplication.Analysis({
