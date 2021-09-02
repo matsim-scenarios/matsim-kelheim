@@ -12,10 +12,10 @@ import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.TravelTimeAnalysis;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
-import org.matsim.application.prepare.CreateTransitScheduleFromGtfs;
 import org.matsim.application.prepare.freight.ExtractRelevantFreightTrips;
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
+import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
@@ -169,4 +169,5 @@ public class RunKelheimScenario extends MATSimApplication {
         }
 
     }
+
 }
