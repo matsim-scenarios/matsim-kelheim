@@ -156,7 +156,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
         if (drt) {
             Config config = controler.getConfig();
-            Scenario scenario = ScenarioUtils.loadScenario(config);
+            Scenario scenario = controler.getScenario();
             Network network = scenario.getNetwork();
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
             controler.addOverridingModule(new DvrpModule());
