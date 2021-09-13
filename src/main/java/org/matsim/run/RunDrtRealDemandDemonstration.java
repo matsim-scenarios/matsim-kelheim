@@ -21,6 +21,10 @@ import org.matsim.drtFare.KelheimDrtFareModule;
 public class RunDrtRealDemandDemonstration {
     public static void main(String[] args) {
         String configPath = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/drt-only-scenario/kelheim-v1.1-drt-only.config.xml";
+        if (args.length!=0){
+            configPath = args[0];
+        }
+
         Config config = ConfigUtils.loadConfig(configPath, new MultiModeDrtConfigGroup(), new DvrpConfigGroup());
 
         config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.info);
