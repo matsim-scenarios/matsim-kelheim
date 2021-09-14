@@ -48,6 +48,10 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Mixin
 	private final SampleOptions sample = new SampleOptions(25, 10, 1);
 
+	public RunKelheimScenario(@Nullable Config config) {
+		super(config);
+	}
+
 	public RunKelheimScenario() {
 		super(String.format("scenarios/input/kelheim-v%s-25pct.config.xml", VERSION));
 	}
