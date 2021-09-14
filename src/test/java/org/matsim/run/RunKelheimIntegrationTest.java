@@ -13,14 +13,23 @@ public class RunKelheimIntegrationTest {
 	public MatsimTestUtils utils = new MatsimTestUtils();
 
 	@Test
-	public final void runToyExamplePopulationTest() {
+	public final void runExamplePopulationTest() {
 		Config config = ConfigUtils.loadConfig("scenarios/input/test.config.xml");
 		config.controler().setLastIteration(1);
 		config.controler()
 				.setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
-//		config.controler().setOutputDirectory(utils.getOutputDirectory());
 		MATSimApplication.execute(RunKelheimScenario.class, config,
 				"run", "--1pct");
+	}
+
+	@Test
+	public final void runDrtExamplePopulationTest() {
+		Config config = ConfigUtils.loadConfig("scenarios/input/test.with-drt.config.xml");
+		config.controler().setLastIteration(1);
+		config.controler()
+				.setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
+		MATSimApplication.execute(RunKelheimScenario.class, config,
+				"run", "--1pct", "--with-drt");
 	}
 
 }
