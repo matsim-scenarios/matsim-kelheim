@@ -23,12 +23,12 @@
     </module>
 
     <module name="network">
-        <param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/network-with-pt.xml"/>
+        <param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/network-with-pt.xml.gz"/>
         <param name="laneDefinitionsFile" value="null" />
     </module>
 
     <module name="plans">
-        <param name="inputPlansFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/test.plans.xml.gz"/>
+        <param name="inputPlansFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/test.plans.xml"/>
         <param name="removingUnnecessaryPlanAttributes" value="true"/>
     </module>
 
