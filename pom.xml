@@ -99,6 +99,19 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.0.0-M5</version>
+				<configuration>
+					<forkMode>once</forkMode>
+					<!-- avoid out of memory errors: -->
+					<argLine>-Xmx9500m -Djava.awt.headless=true -Dmatsim.preferLocalDtds=true</argLine>
+					<!--necessary in tu berlin gitlab. BUT not good in other places, so solve by command line switch only where needed.  kai, nov'18-->
+					<!--<useSystemClassLoader>false</useSystemClassLoader>-->
+				</configuration>
+			</plugin>
+
+			<plugin>
 <!--				The maven-shade-plugin replaces the maven-assembly-plugin to configure "mvn package". The assembly-plugin regularly-->
 <!--				creates problems when GeoTools are used, which the shade-plugin does not (see-->
 <!--				https://stackoverflow.com/questions/27429097/geotools-cannot-find-hsql-epsg-db-throws-error-nosuchauthoritycodeexception/27431381#27431381)-->
