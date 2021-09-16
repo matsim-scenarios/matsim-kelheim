@@ -12,19 +12,21 @@ import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.opengis.feature.simple.SimpleFeature;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.net.URL;
 import java.util.*;
 
 public class DrtStopsWriter extends MatsimXmlWriter {
     private final String mode;
     private Geometry serviceArea;
+    private final String outputFolder;
+    private final Network network;
 
-    DrtStopsWriter(String mode, String serviceAreaPath) {
+    DrtStopsWriter(Network network, String mode, String serviceAreaPath, String outputFolder) {
+        this.network = network;
         this.mode = mode;
-        if (serviceAreaPath != null){
+        this.outputFolder = outputFolder;
+        if (serviceAreaPath != null) {
             Collection<SimpleFeature> features = ShapeFileReader.getAllFeatures(serviceAreaPath);
             if (features.size() < 1) {
                 throw new RuntimeException("No features in the shapefile! Please check the shapefile.");
@@ -38,8 +40,8 @@ public class DrtStopsWriter extends MatsimXmlWriter {
         }
     }
 
-    public void write(final String filename, Network network) throws UncheckedIOException, IOException {
-        this.openFile(filename);
+    public void write() throws UncheckedIOException, IOException {
+        this.openFile(outputFolder + "/" + mode + "-stops.xml");
         this.writeXmlHead();
         this.writeDoctype("transitSchedule", "http://www.matsim.org/files/dtd/transitSchedule_v1.dtd");
         this.writeStartTag("transitSchedule", null);
@@ -52,7 +54,7 @@ public class DrtStopsWriter extends MatsimXmlWriter {
 
     private void writeTransitStops(Network network) throws IOException {
         // Write csv file for adjusted stop location
-        FileWriter csvWriter = new FileWriter("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/"
+        FileWriter csvWriter = new FileWriter(outputFolder + "/"
                 + mode + "-stops-locations.csv");
         csvWriter.append("Stop ID");
         csvWriter.append(",");
@@ -65,8 +67,11 @@ public class DrtStopsWriter extends MatsimXmlWriter {
 
         // Read original data csv
         System.out.println("Start processing the network. This may take some time...");
-        BufferedReader csvReader = new BufferedReader(new FileReader("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/KEXI_Haltestellen_Liste_Kelheim_utm32n.csv"));
-        //TODO change it to a online location (e.g. public SVN)
+        URL data = new URL("https://svn.vsp.tu-berlin.de/" +
+                "repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
+                "KEXI_Haltestellen_Liste_Kelheim_utm32n.csv");
+
+        BufferedReader csvReader = new BufferedReader(new InputStreamReader(data.openStream()));
         csvReader.readLine();
         while (true) {
             String stopEntry = csvReader.readLine();
@@ -77,7 +82,7 @@ public class DrtStopsWriter extends MatsimXmlWriter {
             // write stop
             Coord coord = new Coord(Double.parseDouble(stopData[2]), Double.parseDouble(stopData[3]));
 
-            if (MGC.coord2Point(coord).within(serviceArea) || serviceArea == null) {
+            if (serviceArea == null || MGC.coord2Point(coord).within(serviceArea)) {
                 List<Tuple<String, String>> attributes = new ArrayList<Tuple<String, String>>(5);
                 attributes.add(createTuple("id", stopData[0]));
                 attributes.add(createTuple("x", stopData[2]));

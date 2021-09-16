@@ -2,26 +2,50 @@ package org.matsim.run.prepare;
 
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.application.MATSimAppCommand;
+import org.matsim.application.options.ShpOptions;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
+import picocli.CommandLine;
 
 import java.io.IOException;
 
-public class PrepareDrtStops {
-//    private static final String mode = "av"; // drt, av or other modes...
-//    private static final String shapefilePath = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/shape-file/AvOperatingArea-all.shp";
+public class PrepareDrtStops implements MATSimAppCommand {
 
-    private static final String mode = "drt"; // drt, av or other modes...
-    private static final String shapefilePath = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/shape-file/dilutionArea.shp";
+    @CommandLine.Mixin
+    private ShpOptions shp = new ShpOptions();
+
+    @CommandLine.Option(names = "--network", description = "network file", required = true)
+    private String network;
+
+    @CommandLine.Option(names = "--mode", description = "mode of the drt", required = true)
+    private String mode;
+    // mode = "drt", "av" or other specific drt operator mode
+
+    @CommandLine.Option(names = "--output-folder", description = "path to output folder", required = true)
+    private String outputFolder;
+
+//    private static final String shapefilePath = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/shape-file/dilutionArea.shp";
 
     public static void main(String[] args) throws IOException {
+        new PrepareDrtStops().execute(args);
+    }
+
+    @Override
+    public Integer call() throws Exception {
         Config config = ConfigUtils.createConfig();
-        config.network().setInputFile("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/kelheim-v1.1-network-with-pt.xml.gz");
+        config.network().setInputFile(network);
         Scenario scenario = ScenarioUtils.loadScenario(config);
         Network network = scenario.getNetwork();
 
-        DrtStopsWriter drtStopsWriter = new DrtStopsWriter(mode, shapefilePath);
-        drtStopsWriter.write("/Users/luchengqi/Documents/MATSimScenarios/Kelheim/kelheim-v1.1-" + mode + "-stops.xml", network);
+        String shapeFilePath = null;
+        if (shp.getShapeFile() != null) {
+            shapeFilePath = shp.getShapeFile().toString();
+        }
+
+        DrtStopsWriter drtStopsWriter = new DrtStopsWriter(network, mode, shapeFilePath, outputFolder);
+        drtStopsWriter.write();
+        return 0;
     }
 }
