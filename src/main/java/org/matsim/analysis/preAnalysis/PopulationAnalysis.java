@@ -1,5 +1,7 @@
 package org.matsim.analysis.preAnalysis;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
@@ -24,6 +26,11 @@ public class PopulationAnalysis implements MATSimAppCommand {
         new PopulationAnalysis().execute(args);
     }
 
+    @CommandLine.Command(
+            name = "analyze-population",
+            description = "Extract the home location of the persons in the population file"
+    )
+
     @CommandLine.Option(names= "--population", description = "Path to input population", required = true)
     private String populationPath;
 
@@ -45,13 +52,8 @@ public class PopulationAnalysis implements MATSimAppCommand {
         }
         Geometry kelheim = (Geometry) features.iterator().next().getDefaultGeometry();
 
-        FileWriter csvWriter = new FileWriter(outputPath);
-        csvWriter.append("person");
-        csvWriter.append(",");
-        csvWriter.append("home_x");
-        csvWriter.append(",");
-        csvWriter.append("home_y");
-        csvWriter.append("\n");
+        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputPath), CSVFormat.DEFAULT);
+        csvWriter.printRecord("person", "home_x","home_y");
 
         System.out.println("Start processing population file...");
         int counter = 0;
@@ -65,12 +67,8 @@ public class PopulationAnalysis implements MATSimAppCommand {
                         Coord homeCoord = ((Activity) planElement).getCoord();
                         homeless = false;
 //                        if (kelheim.contains(MGC.coord2Point(homeCoord))) {
-                        csvWriter.append(person.getId().toString());
-                        csvWriter.append(",");
-                        csvWriter.append(Double.toString(homeCoord.getX()));
-                        csvWriter.append(",");
-                        csvWriter.append(Double.toString(homeCoord.getY()));
-                        csvWriter.append("\n");
+                        csvWriter.printRecord(person.getId().toString(),
+                                Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()));
                         counter += 1;
 //                        }
                         break;

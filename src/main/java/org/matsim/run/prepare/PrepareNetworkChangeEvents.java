@@ -18,6 +18,11 @@ import java.util.List;
 
 public class PrepareNetworkChangeEvents implements MATSimAppCommand {
 
+    @CommandLine.Command(
+            name = "prepare-network-change-events",
+            description = "Write network change events based on output events"
+    )
+
     @CommandLine.Option(names= "--network", description = "path to drt stop xml file", required = true)
     private String networkFile;
 
