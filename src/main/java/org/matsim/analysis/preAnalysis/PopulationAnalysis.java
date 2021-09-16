@@ -10,16 +10,14 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.application.MATSimAppCommand;
+import org.matsim.application.options.ShpOptions;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.gis.ShapeFileReader;
-import org.opengis.feature.simple.SimpleFeature;
 import picocli.CommandLine;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Collection;
 
 public class PopulationAnalysis implements MATSimAppCommand {
     public static void main(String[] args) throws IOException {
@@ -37,20 +35,18 @@ public class PopulationAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names= "--output", description = "Path to analysis output", required = true)
     private String outputPath;
 
+    @CommandLine.Mixin
+    private ShpOptions shp = new ShpOptions();
+
     @Override
     public Integer call() throws Exception {
-        String shapeFilePath = "./scenarios/input/shp/dilutionArea.shp";
         Config config = ConfigUtils.createConfig();
         config.global().setCoordinateSystem("EPSG:25832");
         config.plans().setInputFile(populationPath);
         Scenario scenario = ScenarioUtils.loadScenario(config);
         Population population = scenario.getPopulation();
 
-        Collection<SimpleFeature> features = ShapeFileReader.getAllFeatures(shapeFilePath);
-        if (features.size() != 1) {
-            throw new RuntimeException("Please use the shapefile that only contain Kelheim region");
-        }
-        Geometry kelheim = (Geometry) features.iterator().next().getDefaultGeometry();
+        Geometry kelheim = shp.getGeometry();
 
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputPath), CSVFormat.DEFAULT);
         csvWriter.printRecord("person", "home_x","home_y");
