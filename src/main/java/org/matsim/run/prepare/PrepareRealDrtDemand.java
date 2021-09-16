@@ -7,9 +7,11 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
+import org.matsim.application.MATSimAppCommand;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
+import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,21 +19,32 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PrepareRealDrtDemand {
-    private final static String DRT_STOPS = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/drt-stops-locations.csv";
-    private final static String REAL_DEMANDS = "/Users/luchengqi/Documents/RStudio-workspace/Kelheim/20201126-demand.csv";
-    private final static String OUTPUT_PATH = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/drt-only-scenario/20201126-drt-only.plans.xml";
+public class PrepareRealDrtDemand implements MATSimAppCommand {
+
+    @CommandLine.Option(names= "--drt-stops", description = "path to drt stop xml file", required = true)
+    private String drtStops;
+
+    @CommandLine.Option(names= "--demands", description = "path to real drt demand csv file", required = true)
+    private String demands;
+
+    @CommandLine.Option(names= "--output", description = "output path of drt only plans", required = true)
+    private String output;
 
     public static void main(String[] args) throws IOException {
+        new PrepareRealDrtDemand().execute(args);
+    }
+
+    @Override
+    public Integer call() throws Exception {
         Config config = ConfigUtils.createConfig();
         config.global().setCoordinateSystem("EPSG:25832");
         Scenario scenario = ScenarioUtils.loadScenario(config);
         Population population = scenario.getPopulation();
         PopulationFactory populationFactory = population.getFactory();
 
-        Map<String, Coord> stationCoordMap = loadStationCoordinates(DRT_STOPS);
+        Map<String, Coord> stationCoordMap = loadStationCoordinates();
 
-        try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(REAL_DEMANDS)),
+        try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(demands)),
                 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
             int counter = 0;
             for (CSVRecord record : parser) {
@@ -59,11 +72,12 @@ public class PrepareRealDrtDemand {
 
         // Write DRT plans
         PopulationWriter populationWriter = new PopulationWriter(population);
-        populationWriter.write(OUTPUT_PATH);
+        populationWriter.write(output);
 
+        return 0;
     }
 
-    private static Map<String, Coord> loadStationCoordinates(String drtStops) throws IOException {
+    private Map<String, Coord> loadStationCoordinates() throws IOException {
         Map<String, Coord> stationCoordMap = new HashMap<>();
         try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(drtStops)),
                 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {

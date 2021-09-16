@@ -1,8 +1,8 @@
 package org.matsim.run.prepare;
 
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.application.MATSimAppCommand;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
@@ -11,18 +11,29 @@ import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.io.NetworkChangeEventsWriter;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
+import picocli.CommandLine;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class PrepareNetworkChangeEvents {
-    private static final String NETWORK = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/output/047/047.output_network.xml.gz"; // TODO
-    private static final String EVENTS_FILE = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/output/047/047.output_events.xml.gz"; //TODO
-    private static final String OUTPUT = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/output/047/network-change-events.xml.gz"; // TODO
+public class PrepareNetworkChangeEvents implements MATSimAppCommand {
 
+    @CommandLine.Option(names= "--network", description = "path to drt stop xml file", required = true)
+    private String networkFile;
+
+    @CommandLine.Option(names= "--events", description = "path to real drt demand csv file", required = true)
+    private String eventsFile;
+
+    @CommandLine.Option(names= "--output", description = "path to real drt demand csv file", required = true)
+    private String output;
 
     public static void main(String[] args) {
-        Network network = NetworkUtils.readNetwork(NETWORK);
+        new PrepareNetworkChangeEvents().execute(args);
+    }
+
+    @Override
+    public Integer call() throws Exception {
+        Network network = NetworkUtils.readNetwork(networkFile);
         TravelTimeCalculator.Builder builder = new TravelTimeCalculator.Builder(network);
         TravelTimeCalculator travelTimeCalculator = builder.build();
 
@@ -30,20 +41,10 @@ public class PrepareNetworkChangeEvents {
         EventsManager eventsManager = EventsUtils.createEventsManager();
         eventsManager.addHandler(travelTimeCalculator);
         MatsimEventsReader eventsReader = new MatsimEventsReader(eventsManager);
-        eventsReader.readFile(EVENTS_FILE);
+        eventsReader.readFile(eventsFile);
 
         // Actual TravelTime based on the events file
         TravelTime travelTime = travelTimeCalculator.getLinkTravelTimes();
-
-        //TODO delete afterwards
-        // STARTS
-        double freeTravelTime1 = network.getLinks().get(Id.createLinkId("26526533#0")).getLength()/ network.getLinks().get(Id.createLinkId("26526533#0")).getFreespeed();
-        System.out.println("Free speed of link 26526533#0 is " + freeTravelTime1);
-        System.out.println("Travel time at link 26526533#0 at 02:00:00 is " + travelTime.getLinkTravelTime(network.getLinks().get(Id.createLinkId("26526533#0")), 7200, null, null));
-        System.out.println("Travel time at link 26526533#0 at 08:20:00 is " + travelTime.getLinkTravelTime(network.getLinks().get(Id.createLinkId("26526533#0")), 30000, null, null));
-        System.out.println("Travel time at link 26526533#0 at 08:30:00 is " + travelTime.getLinkTravelTime(network.getLinks().get(Id.createLinkId("26526533#0")), 30600, null, null));
-        System.out.println("Travel time at link 26526533#0 at 08:35:00 is " + travelTime.getLinkTravelTime(network.getLinks().get(Id.createLinkId("26526533#0")), 30900, null, null));
-        // TODO ENDS
 
         // write network change events
         List<NetworkChangeEvent> networkChangeEvents = new ArrayList<>();
@@ -66,7 +67,8 @@ public class PrepareNetworkChangeEvents {
 
         // write network change events
         NetworkChangeEventsWriter writer = new NetworkChangeEventsWriter();
-        writer.write(OUTPUT, networkChangeEvents);
+        writer.write(output, networkChangeEvents);
 
+        return 0;
     }
 }
