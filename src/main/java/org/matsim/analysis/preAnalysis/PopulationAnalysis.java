@@ -14,6 +14,7 @@ import org.matsim.application.options.ShpOptions;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.geometry.geotools.MGC;
 import picocli.CommandLine;
 
 import java.io.FileWriter;
@@ -29,10 +30,10 @@ public class PopulationAnalysis implements MATSimAppCommand {
             description = "Extract the home location of the persons in the population file"
     )
 
-    @CommandLine.Option(names= "--population", description = "Path to input population", required = true)
+    @CommandLine.Option(names = "--population", description = "Path to input population", required = true)
     private String populationPath;
 
-    @CommandLine.Option(names= "--output", description = "Path to analysis output", required = true)
+    @CommandLine.Option(names = "--output", description = "Path to analysis output", required = true)
     private String outputPath;
 
     @CommandLine.Mixin
@@ -46,10 +47,13 @@ public class PopulationAnalysis implements MATSimAppCommand {
         Scenario scenario = ScenarioUtils.loadScenario(config);
         Population population = scenario.getPopulation();
 
-        Geometry kelheim = shp.getGeometry();
+        Geometry kelheim = null;
+        if (shp.getShapeFile() != null) {
+            kelheim = shp.getGeometry();
+        }
 
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputPath), CSVFormat.DEFAULT);
-        csvWriter.printRecord("person", "home_x","home_y");
+        csvWriter.printRecord("person", "home_x", "home_y");
 
         System.out.println("Start processing population file...");
         int counter = 0;
@@ -62,11 +66,11 @@ public class PopulationAnalysis implements MATSimAppCommand {
                     if (actType.startsWith("home")) {
                         Coord homeCoord = ((Activity) planElement).getCoord();
                         homeless = false;
-//                        if (kelheim.contains(MGC.coord2Point(homeCoord))) {
-                        csvWriter.printRecord(person.getId().toString(),
-                                Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()));
-                        counter += 1;
-//                        }
+                        if (kelheim == null || kelheim.contains(MGC.coord2Point(homeCoord))) {
+                            csvWriter.printRecord(person.getId().toString(),
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()));
+                            counter += 1;
+                        }
                         break;
                     }
                 }
@@ -77,8 +81,11 @@ public class PopulationAnalysis implements MATSimAppCommand {
             }
         }
         csvWriter.close();
-//        System.out.println("There are " + counter + " persons living in Kelheim area (with home location within the Kelheim and its neighboring area)");
-        System.out.println("There are " + counter + " persons with home activity");
+        if (kelheim==null){
+            System.out.println("There are " + counter + " persons with home activity");
+        } else
+            System.out.println("There are " + counter + " persons living in Kelheim (with home activity in Landkreis Kelheim");
+
         System.out.println("There are " + homelessPersons + " persons without any home activity");
 
         return 0;
