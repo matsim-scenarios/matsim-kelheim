@@ -11,13 +11,11 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 
+@CommandLine.Command(
+        name = "prepare-drt-stops",
+        description = "Write drt stops"
+)
 public class PrepareDrtStops implements MATSimAppCommand {
-
-    @CommandLine.Command(
-            name = "prepare-drt-stops",
-            description = "Write drt stops"
-    )
-
     @CommandLine.Mixin
     private ShpOptions shp = new ShpOptions();
 

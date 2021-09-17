@@ -19,13 +19,11 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+@CommandLine.Command(
+        name = "generate-real-drt-demand",
+        description = "Prepare drt only population based on real data"
+)
 public class PrepareRealDrtDemand implements MATSimAppCommand {
-
-    @CommandLine.Command(
-            name = "generate-real-drt-demand",
-            description = "Prepare drt only population based on real data"
-    )
-
     @CommandLine.Option(names= "--drt-stops", description = "path to drt stop xml file", required = true)
     private String drtStops;
 

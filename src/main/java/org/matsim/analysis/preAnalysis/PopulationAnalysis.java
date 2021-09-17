@@ -20,16 +20,12 @@ import picocli.CommandLine;
 import java.io.FileWriter;
 import java.io.IOException;
 
+
+@CommandLine.Command(
+        name = "analyze-population",
+        description = "Extract the home location of the persons in the population file"
+)
 public class PopulationAnalysis implements MATSimAppCommand {
-    public static void main(String[] args) throws IOException {
-        new PopulationAnalysis().execute(args);
-    }
-
-    @CommandLine.Command(
-            name = "analyze-population",
-            description = "Extract the home location of the persons in the population file"
-    )
-
     @CommandLine.Option(names = "--population", description = "Path to input population", required = true)
     private String populationPath;
 
@@ -38,6 +34,10 @@ public class PopulationAnalysis implements MATSimAppCommand {
 
     @CommandLine.Mixin
     private ShpOptions shp = new ShpOptions();
+
+    public static void main(String[] args) throws IOException {
+        new PopulationAnalysis().execute(args);
+    }
 
     @Override
     public Integer call() throws Exception {
