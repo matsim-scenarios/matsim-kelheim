@@ -33,9 +33,11 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
+import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.run.prepare.PreparePopulation;
 import picocli.CommandLine;
+import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
@@ -153,6 +155,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				install(new SwissRailRaptorModule());
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
+				bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
 			}
 		});
 
