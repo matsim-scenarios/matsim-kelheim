@@ -11,45 +11,96 @@ import picocli.CommandLine;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Random;
 
 @CommandLine.Command(
-		name = "population",
-		description = "Set the car availability attribute in the population"
+        name = "population",
+        description = "Set the car availability attribute in the population"
 )
 public class PreparePopulation implements MATSimAppCommand {
 
-	private static final Logger log = LogManager.getLogger(PreparePopulation.class);
+    public static void main(String[] args) {
+        new PreparePopulation().execute(args);
+    }
 
-	@CommandLine.Parameters(arity = "1", paramLabel = "INPUT", description = "Path to input population")
-	private Path input;
+    private static final Logger log = LogManager.getLogger(PreparePopulation.class);
 
-	@CommandLine.Option(names= "--output", description = "Path to output population", required = true)
-	private Path output;
+    @CommandLine.Parameters(arity = "1", paramLabel = "INPUT", description = "Path to input population")
+    private Path input;
 
-	@Override
-	public Integer call() throws Exception {
+    @CommandLine.Option(names = "--output", description = "Path to output population", required = true)
+    private Path output;
 
-		if (!Files.exists(input)) {
-			log.error("Input population does not exist: {}",  input);
-			return 2;
-		}
+    @Override
+    public Integer call() throws Exception {
 
-		Population population = PopulationUtils.readPopulation(input.toString());
+        if (!Files.exists(input)) {
+            log.error("Input population does not exist: {}", input);
+            return 2;
+        }
 
-		for (Person person : population.getPersons().values()) {
+        Population population = PopulationUtils.readPopulation(input.toString());
 
-			Object age = person.getAttributes().getAttribute("microm:modeled:age");
+        for (Person person : population.getPersons().values()) {
+            // Set car availability to "never" for agents below 18 years old
+            Object age = person.getAttributes().getAttribute("microm:modeled:age");
+            String avail = "always";
+            if (age != null && (int) age < 18)
+                avail = "never";
+            PersonUtils.setCarAvail(person, avail);
 
-			String avail = "always";
-			if ((int) age < 18)
-				avail = "never";
+            // Assign income to person
+            String incomeGroupString = (String) person.getAttributes().getAttribute("MiD:hheink_gr2");
+            String householdSizeString = (String) person.getAttributes().getAttribute("MiD:hhgr_gr");
+            int incomeGroup = 0;
+            double householdSize = 1;
+            if (incomeGroupString != null && householdSizeString != null) {
+                incomeGroup = Integer.parseInt(incomeGroupString);
+                householdSize = Double.parseDouble(householdSizeString);
+            }
 
-			PersonUtils.setCarAvail(person, avail);
-		}
+            double income = 0;
+            Random rnd = new Random(1234);
+            switch (incomeGroup) {
+                case 1:
+                    income = 500 / householdSize;
+                    break;
+                case 2:
+                    income = (rnd.nextInt(400) + 500) / householdSize;
+                    break;
+                case 3:
+                    income = (rnd.nextInt(600) + 900) / householdSize;
+                    break;
+                case 4:
+                    income = (rnd.nextInt(500) + 1500) / householdSize;
+                    break;
+                case 5:
+                    income = (rnd.nextInt(1000) + 2000) / householdSize;
+                    break;
+                case 6:
+                    income = (rnd.nextInt(1000) + 3000) / householdSize;
+                    break;
+                case 7:
+                    income = (rnd.nextInt(1000) + 4000) / householdSize;
+                    break;
+                case 8:
+                    income = (rnd.nextInt(1000) + 5000) / householdSize;
+                    break;
+                case 9:
+                    income = (rnd.nextInt(1000) + 6000) / householdSize;
+                    break;
+                case 10:
+                    income = (rnd.nextInt(3000) + 7000) / householdSize;
+                    break;
+                default:
+                    income = 2389.0; // Average monthly household income per Capita (2018)
+                    break;
+            }
+            person.getAttributes().putAttribute("income", Double.toString(income));
+        }
 
+        PopulationUtils.writePopulation(population, output.toString());
 
-		PopulationUtils.writePopulation(population, output.toString());
-
-		return 0;
-	}
+        return 0;
+    }
 }
