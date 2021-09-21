@@ -50,6 +50,10 @@ public class PreparePopulation implements MATSimAppCommand {
             PersonUtils.setCarAvail(person, avail);
 
             // Assign income to person
+            if (person.getId().toString().startsWith("freight")){
+                continue;
+            }
+
             String incomeGroupString = (String) person.getAttributes().getAttribute("MiD:hheink_gr2");
             String householdSizeString = (String) person.getAttributes().getAttribute("MiD:hhgr_gr");
             int incomeGroup = 0;
@@ -93,12 +97,18 @@ public class PreparePopulation implements MATSimAppCommand {
                     income = (rnd.nextInt(3000) + 7000) / householdSize;
                     break;
                 default:
-                    income = 2389.0; // Average monthly household income per Capita (2018)
+                    income = 2364; // Average monthly household income per Capita (2021). See comments below for details
                     break;
+                    // Average Gross household income: 4734 Euro
+                    // Average household size: 83.1M persons /41.5M households = 2.0 persons / household
+                    // Average household income per capita: 4734/2.0 = 2364 Euro
+                    // Source (Access date: 21 Sep. 2021):
+                    // https://www.destatis.de/EN/Themes/Society-Environment/Income-Consumption-Living-Conditions/Income-Receipts-Expenditure/_node.html
+                    // https://www.destatis.de/EN/Themes/Society-Environment/Population/Households-Families/_node.html
+                    // https://www.destatis.de/EN/Themes/Society-Environment/Population/Current-Population/_node.html;jsessionid=E0D7A060D654B31C3045AAB1E884CA75.live711
             }
             person.getAttributes().putAttribute("income", income);
         }
-
         PopulationUtils.writePopulation(population, output.toString());
 
         return 0;
