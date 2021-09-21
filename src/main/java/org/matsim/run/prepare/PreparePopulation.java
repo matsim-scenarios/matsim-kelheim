@@ -96,7 +96,7 @@ public class PreparePopulation implements MATSimAppCommand {
                     income = 2389.0; // Average monthly household income per Capita (2018)
                     break;
             }
-            person.getAttributes().putAttribute("income", Double.toString(income));
+            person.getAttributes().putAttribute("income", income);
         }
 
         PopulationUtils.writePopulation(population, output.toString());
