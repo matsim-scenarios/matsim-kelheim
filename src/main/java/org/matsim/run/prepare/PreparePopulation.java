@@ -94,17 +94,7 @@ public class PreparePopulation implements MATSimAppCommand {
                     income = (rnd.nextInt(1000) + 6000) / householdSize;
                     break;
                 case 10:
-                    income = (rnd.nextInt(3000) + 7000) / householdSize;
-                    double superRichFactor = rnd.nextDouble();
-                    if (superRichFactor < 0.01){
-                        income += rnd.nextInt(10000);
-                    }
-                    if (superRichFactor < 0.001){
-                        income += rnd.nextInt(100000);
-                    }
-                    if (superRichFactor < 0.0001){
-                        income += rnd.nextInt(1000000);
-                    }
+                    income = (Math.abs(rnd.nextGaussian()) * 1000 + 7000) / householdSize;
                     break;
                 default:
                     income = 2364; // Average monthly household income per Capita (2021). See comments below for details
