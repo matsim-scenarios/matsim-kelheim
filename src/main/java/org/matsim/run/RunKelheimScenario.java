@@ -37,7 +37,6 @@ import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.run.prepare.PreparePopulation;
 import picocli.CommandLine;
-import playground.vsp.pt.fare.PtFareModule;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
@@ -166,9 +165,7 @@ public class RunKelheimScenario extends MATSimApplication {
                 }
             }
         });
-
-        // PT fare module
-        controler.addOverridingModule(new PtFareModule());
+        
 
         if (drt) {
             Config config = controler.getConfig();
