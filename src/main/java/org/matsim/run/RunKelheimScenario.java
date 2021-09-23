@@ -37,6 +37,7 @@ import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.run.prepare.PreparePopulation;
 import picocli.CommandLine;
+import playground.vsp.pt.fare.PtFareModule;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
@@ -152,6 +153,8 @@ public class RunKelheimScenario extends MATSimApplication {
 
     @Override
     protected void prepareControler(Controler controler) {
+        Network network = controler.getScenario().getNetwork();
+
         controler.addOverridingModule(new AbstractModule() {
             @Override
             public void install() {
@@ -164,10 +167,11 @@ public class RunKelheimScenario extends MATSimApplication {
             }
         });
 
+        // PT fare module
+        controler.addOverridingModule(new PtFareModule());
+
         if (drt) {
             Config config = controler.getConfig();
-            Scenario scenario = controler.getScenario();
-            Network network = scenario.getNetwork();
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
             controler.addOverridingModule(new DvrpModule());
             controler.addOverridingModule(new MultiModeDrtModule());
