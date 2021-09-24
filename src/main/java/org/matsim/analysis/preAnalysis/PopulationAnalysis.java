@@ -59,7 +59,7 @@ public class PopulationAnalysis implements MATSimAppCommand {
 
     private void analyzeHomeLocation(Population population, Geometry kelheim) throws IOException {
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-home-locations.csv"), CSVFormat.DEFAULT);
-        csvWriter.printRecord("person", "home_x", "home_y", "home_within_Kelheim");
+        csvWriter.printRecord("person", "home_x", "home_y", "home_location");
 
         System.out.println("Start person home location analysis...");
         int counter = 0;
@@ -76,12 +76,12 @@ public class PopulationAnalysis implements MATSimAppCommand {
                                     Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "unknown");
                         } else if (kelheim.contains(MGC.coord2Point(homeCoord))) {
                             csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "true");
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "kelheim");
                             personsLivesInKelheim.add(person);
                             numPersonsLiveInKelheim++;
                         } else {
                             csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "false");
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "outside");
                         }
                         break;
                     }
