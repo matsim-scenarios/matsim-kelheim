@@ -24,6 +24,7 @@ public class PreparePopulation implements MATSimAppCommand {
     }
 
     private static final Logger log = LogManager.getLogger(PreparePopulation.class);
+    private final Random rnd = new Random(1234);
 
     @CommandLine.Parameters(arity = "1", paramLabel = "INPUT", description = "Path to input population")
     private Path input;
@@ -75,7 +76,6 @@ public class PreparePopulation implements MATSimAppCommand {
             }
 
             double income = 0;
-            Random rnd = new Random(1234);
             switch (incomeGroup) {
                 case 1:
                     income = 500 / householdSize;
