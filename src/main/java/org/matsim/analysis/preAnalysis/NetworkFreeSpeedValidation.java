@@ -55,6 +55,9 @@ public class NetworkFreeSpeedValidation implements MATSimAppCommand {
     @CommandLine.Option(names = "--trips", description = "Number of trips to validate", defaultValue = "500")
     private int trips;
 
+    @CommandLine.Option(names = "--detailed-record", description = "Write detailed record for the travel time validation", defaultValue = "false")
+    private boolean detailedRecord;
+
     @CommandLine.Mixin
     private ShpOptions shp = new ShpOptions();
 
@@ -110,6 +113,7 @@ public class NetworkFreeSpeedValidation implements MATSimAppCommand {
         int counter = 0;
         CoordinateTransformation transformation = TransformationFactory.getCoordinateTransformation(crs.getInputCRS(), TransformationFactory.WGS84);
         HereMapsRouteValidator validator = new HereMapsRouteValidator(outputFolder.toString(), apiKey, "2021-01-01", transformation);
+        validator.setWriteDetailedFiles(detailedRecord);
         Link fromLink;
         Link toLink;
         String tripType;
