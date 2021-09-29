@@ -4,21 +4,21 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.options.ShpOptions;
-import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.population.PersonUtils;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import picocli.CommandLine;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @CommandLine.Command(
@@ -29,11 +29,13 @@ public class PopulationAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--population", description = "Path to input population", required = true)
     private String populationPath;
 
-    @CommandLine.Option(names = "--output", description = "Path to analysis output", required = true)
-    private String outputPath;
+    @CommandLine.Option(names = "--output-folder", description = "Path to analysis output folder", required = true)
+    private String outputFolder;
 
     @CommandLine.Mixin
     private ShpOptions shp = new ShpOptions();
+
+    private final List<Person> personsLivesInKelheim = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
         new PopulationAnalysis().execute(args);
@@ -41,53 +43,88 @@ public class PopulationAnalysis implements MATSimAppCommand {
 
     @Override
     public Integer call() throws Exception {
-        Config config = ConfigUtils.createConfig();
-        config.global().setCoordinateSystem("EPSG:25832");
-        config.plans().setInputFile(populationPath);
-        Scenario scenario = ScenarioUtils.loadScenario(config);
-        Population population = scenario.getPopulation();
+        Population population = PopulationUtils.readPopulation(populationPath);
+        System.out.println("There are in total " + population.getPersons().size() + " persons in the population file");
 
         Geometry kelheim = null;
         if (shp.getShapeFile() != null) {
             kelheim = shp.getGeometry();
         }
 
-        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputPath), CSVFormat.DEFAULT);
-        csvWriter.printRecord("person", "home_x", "home_y");
+        analyzeHomeLocation(population, kelheim);
+        summarizePersonAttribute(population, kelheim);
 
-        System.out.println("Start processing population file...");
+        return 0;
+    }
+
+    private void analyzeHomeLocation(Population population, Geometry kelheim) throws IOException {
+        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-home-locations.csv"), CSVFormat.DEFAULT);
+        csvWriter.printRecord("person", "home_x", "home_y", "home_location");
+
+        System.out.println("Start person home location analysis...");
         int counter = 0;
-        int homelessPersons = 0;
+        int numPersonsLiveInKelheim = 0;
         for (Person person : population.getPersons().values()) {
-            boolean homeless = true;
             for (PlanElement planElement : person.getSelectedPlan().getPlanElements()) {
                 if (planElement instanceof Activity) {
                     String actType = ((Activity) planElement).getType();
                     if (actType.startsWith("home")) {
                         Coord homeCoord = ((Activity) planElement).getCoord();
-                        homeless = false;
-                        if (kelheim == null || kelheim.contains(MGC.coord2Point(homeCoord))) {
+                        counter++;
+                        if (kelheim == null) {
                             csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()));
-                            counter += 1;
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "unknown");
+                        } else if (kelheim.contains(MGC.coord2Point(homeCoord))) {
+                            csvWriter.printRecord(person.getId().toString(),
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "kelheim");
+                            personsLivesInKelheim.add(person);
+                            numPersonsLiveInKelheim++;
+                        } else {
+                            csvWriter.printRecord(person.getId().toString(),
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "outside");
                         }
                         break;
                     }
                 }
             }
-
-            if (homeless) {
-                homelessPersons += 1;
-            }
         }
         csvWriter.close();
-        if (kelheim==null){
-            System.out.println("There are " + counter + " persons with home activity");
-        } else
-            System.out.println("There are " + counter + " persons living in Kelheim (with home activity in Landkreis Kelheim");
 
-        System.out.println("There are " + homelessPersons + " persons without any home activity");
-
-        return 0;
+        System.out.println("There are " + counter + " persons with home activity");
+        if (kelheim != null) {
+            System.out.println("There are " + numPersonsLiveInKelheim + " persons living in Kelheim (with home activity in Landkreis Kelheim");
+        }
     }
+
+    private void summarizePersonAttribute(Population population, Geometry kelheim) throws IOException {
+        List<Person> personsToAnalyze = new ArrayList<>();
+        if (kelheim != null) {
+            personsToAnalyze.addAll(personsLivesInKelheim);
+        } else {
+            personsToAnalyze.addAll(population.getPersons().values());
+        }
+
+        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-attributes.csv"), CSVFormat.DEFAULT);
+        csvWriter.printRecord("person", "age", "sex", "household_size", "household_income_group", "estimated_personal_allowance");
+
+        for (Person person : personsToAnalyze) {
+            Double income = PersonUtils.getIncome(person); // This value may be null;
+            Integer age = PersonUtils.getAge(person); // THis value may be null;
+            String sex = PersonUtils.getSex(person);
+            String incomeGroup = (String) person.getAttributes().getAttribute("MiD:hheink_gr2");
+            String householdSize = (String) person.getAttributes().getAttribute("MiD:hhgr_gr");
+
+            if (income == null){
+                income = -1.0;
+            }
+
+            if (age == null){
+                age = -1;
+            }
+
+            csvWriter.printRecord(person.getId().toString(), age.toString(), sex,
+                    householdSize, incomeGroup, income.toString());
+        }
+    }
+
 }
