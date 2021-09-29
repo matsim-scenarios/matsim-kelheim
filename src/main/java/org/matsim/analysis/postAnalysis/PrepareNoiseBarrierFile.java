@@ -18,6 +18,7 @@ import org.matsim.core.utils.io.IOUtils;
 import picocli.CommandLine;
 
 import java.io.OutputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -76,7 +77,7 @@ public class PrepareNoiseBarrierFile implements MATSimAppCommand {
         if (!Files.exists(outputPath.getParent()))
             Files.createDirectories(outputPath.getParent());
 
-        try (OutputStream outputStream = IOUtils.getOutputStream(outputPath.toFile().toURL(), false)) {
+        try (OutputStream outputStream = IOUtils.getOutputStream(new URL(outputPath.toString()), false)) {
             json.writeGeometryCollection(collector.collect(), outputStream);
         }
 
