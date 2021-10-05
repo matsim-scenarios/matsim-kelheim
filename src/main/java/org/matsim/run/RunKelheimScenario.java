@@ -152,11 +152,13 @@ public class RunKelheimScenario extends MATSimApplication {
 
     @Override
     protected void prepareControler(Controler controler) {
+        Config config = controler.getConfig();
         Network network = controler.getScenario().getNetwork();
 
         controler.addOverridingModule(new AbstractModule() {
             @Override
             public void install() {
+                install(new KelheimPtFareModule());
                 install(new SwissRailRaptorModule());
                 bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
                 addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
@@ -165,10 +167,8 @@ public class RunKelheimScenario extends MATSimApplication {
                 }
             }
         });
-        
 
         if (drt) {
-            Config config = controler.getConfig();
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
             controler.addOverridingModule(new DvrpModule());
             controler.addOverridingModule(new MultiModeDrtModule());
