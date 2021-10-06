@@ -7,7 +7,6 @@ import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.geojson.feature.FeatureJSON;
-import org.geotools.geometry.jts.GeometryCollector;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -25,6 +24,8 @@ import picocli.CommandLine;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 @CommandLine.Command(
         name = "TODO",
@@ -45,7 +46,6 @@ public class PrepareNoiseBarrierFile implements MATSimAppCommand {
     public Integer call() throws Exception {
         Network network = NetworkUtils.readNetwork(networkFile);
         GeometryFactory geometryFactory = new GeometryFactory();
-        GeometryCollector collector = new GeometryCollector();
 
         DefaultFeatureCollection featureCollection = new DefaultFeatureCollection();
         SimpleFeatureTypeBuilder featureTypeBuilder = new SimpleFeatureTypeBuilder();
@@ -54,6 +54,7 @@ public class PrepareNoiseBarrierFile implements MATSimAppCommand {
         final SimpleFeatureType featureType = featureTypeBuilder.buildFeatureType();
 
         int counter = 0;
+        List<Link> includedLink = new ArrayList<>();
         try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(noiseBarrierFile)),
                 CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
             for (CSVRecord record : parser) {
@@ -69,6 +70,10 @@ public class PrepareNoiseBarrierFile implements MATSimAppCommand {
 
                     Coord noiseBarrierCoord = new Coord(x, y);
                     Link noiseBarrierLink = NetworkUtils.getNearestLink(network, noiseBarrierCoord);
+                    if (includedLink.contains(noiseBarrierLink)) {
+                        continue;
+                    }
+                    includedLink.add(noiseBarrierLink);
 
                     Coord coord1 = noiseBarrierLink.getFromNode().getCoord();
                     Coord coord2 = noiseBarrierLink.getToNode().getCoord();
@@ -76,7 +81,6 @@ public class PrepareNoiseBarrierFile implements MATSimAppCommand {
                     Coordinate[] coordinates = new Coordinate[]{MGC.coord2Coordinate(coord1), MGC.coord2Coordinate(coord2)};
                     Geometry line = geometryFactory.createLineString(coordinates);
                     Geometry polygon = line.buffer(5);
-                    collector.add(polygon);
 
                     SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(featureType);
                     featureBuilder.add(polygon);
