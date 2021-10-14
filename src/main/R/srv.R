@@ -21,14 +21,21 @@ shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/202
 # Read simulation data
 #########
 
-f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\028"
+f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\062"
 sim_scale <- 4
+
+homes <- read_csv("v1.2-persons-with-home-activity.csv", 
+                  col_types = cols(
+                    person = col_character()
+                  ))
 
 persons <- read_delim(list.files(f, pattern = "*.output_persons.csv.gz", full.names = T, include.dirs = F), delim = ";", trim_ws = T, 
                      col_types = cols(
                        person = col_character(),
                        good_type = col_integer()
                      )) %>%
+#          right_join(homes) %>%
+#          st_as_sf(coords = c("home_x", "home_y"), crs = 25832) %>%
           st_as_sf(coords = c("first_act_x", "first_act_y"), crs = 25832) %>%
           st_filter(shape)
 
@@ -77,7 +84,7 @@ p1_aggr <- ggplot(data=srv_aggr, mapping =  aes(x=1, y=share, fill=mode)) +
   labs(subtitle = "Survey data") +
   geom_bar(position="fill", stat="identity") +
   coord_flip() +
-  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 5, position=position_fill(vjust=0.5)) +
+  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 2, position=position_fill(vjust=0.5)) +
   scale_fill_locuszoom() +
   theme_void() +
   theme(legend.position="none")
@@ -86,7 +93,7 @@ p2_aggr <- ggplot(data=aggr, mapping =  aes(x=1, y=share, fill=mode)) +
   labs(subtitle = "Simulation") +
   geom_bar(position="fill", stat="identity") +
   coord_flip() +
-  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 5, position=position_fill(vjust=0.5)) +
+  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 2, position=position_fill(vjust=0.5)) +
   scale_fill_locuszoom() +
   theme_void()
 

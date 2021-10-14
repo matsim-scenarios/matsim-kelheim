@@ -2,6 +2,7 @@ package org.matsim.run;
 
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
+import com.google.inject.Singleton;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.api.core.v01.Scenario;
@@ -36,6 +37,7 @@ import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.run.prepare.PreparePopulation;
+import org.matsim.run.utils.TuneModeChoice;
 import picocli.CommandLine;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
@@ -63,7 +65,7 @@ public class RunKelheimScenario extends MATSimApplication {
     @CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
     private boolean drt;
 
-    @CommandLine.Option(names = "--income-dependent", defaultValue = "false", description = "enable income dependent monetary utility")
+    @CommandLine.Option(names = "--income-dependent", defaultValue = "true", description = "enable income dependent monetary utility")
     private boolean incomeDependent;
 
     public RunKelheimScenario(@Nullable Config config) {
@@ -87,19 +89,19 @@ public class RunKelheimScenario extends MATSimApplication {
             for (String act : List.of("home", "restaurant", "other", "visit", "errands",
                     "educ_higher", "educ_secondary", "educ_primary", "educ_tertiary", "educ_kiga", "educ_other")) {
                 config.planCalcScore()
-                        .addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams(act + "_" + ii + ".0").setTypicalDuration(ii));
+                        .addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams(act + "_" + ii).setTypicalDuration(ii));
             }
 
-            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("work_" + ii + ".0").setTypicalDuration(ii)
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("work_" + ii).setTypicalDuration(ii)
                     .setOpeningTime(6. * 3600.).setClosingTime(20. * 3600.));
-            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("business_" + ii + ".0").setTypicalDuration(ii)
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("business_" + ii).setTypicalDuration(ii)
                     .setOpeningTime(6. * 3600.).setClosingTime(20. * 3600.));
-            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("leisure_" + ii + ".0").setTypicalDuration(ii)
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("leisure_" + ii).setTypicalDuration(ii)
                     .setOpeningTime(9. * 3600.).setClosingTime(27. * 3600.));
 
-            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_daily_" + ii + ".0").setTypicalDuration(ii)
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_daily_" + ii).setTypicalDuration(ii)
                     .setOpeningTime(8. * 3600.).setClosingTime(20. * 3600.));
-            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_other_" + ii + ".0").setTypicalDuration(ii)
+            config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_other_" + ii).setTypicalDuration(ii)
                     .setOpeningTime(8. * 3600.).setClosingTime(20. * 3600.));
         }
 
@@ -162,6 +164,7 @@ public class RunKelheimScenario extends MATSimApplication {
                 install(new SwissRailRaptorModule());
                 bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
                 addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
+                addControlerListenerBinding().to(TuneModeChoice.class).in(Singleton.class);
                 if (incomeDependent) {
                     bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
                 }
