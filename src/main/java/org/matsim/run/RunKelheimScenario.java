@@ -65,7 +65,7 @@ public class RunKelheimScenario extends MATSimApplication {
     @CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
     private boolean drt;
 
-    @CommandLine.Option(names = "--income-dependent", defaultValue = "true", description = "enable income dependent monetary utility")
+    @CommandLine.Option(names = "--income-dependent", defaultValue = "true", description = "enable income dependent monetary utility", negatable = true)
     private boolean incomeDependent;
 
     public RunKelheimScenario(@Nullable Config config) {
