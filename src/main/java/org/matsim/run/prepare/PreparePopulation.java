@@ -2,8 +2,7 @@ package org.matsim.run.prepare;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
@@ -43,6 +42,19 @@ public class PreparePopulation implements MATSimAppCommand {
         Population population = PopulationUtils.readPopulation(input.toString());
 
         for (Person person : population.getPersons().values()) {
+            for (Plan plan : person.getPlans()) {
+                for (PlanElement planElement : plan.getPlanElements()) {
+                    if (planElement instanceof Activity) {
+                        String originalType = ((Activity) planElement).getType();
+                        String newType = originalType;
+                        if (originalType.endsWith(".0")) {
+                            newType = originalType.replace(".0", "");
+                        }
+                        ((Activity) planElement).setType(newType);
+                    }
+                }
+            }
+
             // Set car availability to "never" for agents below 18 years old
             String avail = "always";
             Object age = person.getAttributes().getAttribute("microm:modeled:age");
@@ -56,7 +68,7 @@ public class PreparePopulation implements MATSimAppCommand {
             PersonUtils.setCarAvail(person, avail);
 
             Object sex = person.getAttributes().getAttribute("microm:modeled:sex");
-            if (sex != null){
+            if (sex != null) {
                 PersonUtils.setSex(person, (String) sex);
                 person.getAttributes().removeAttribute("microm:modeled:sex");
             }
