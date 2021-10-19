@@ -2,7 +2,7 @@ package org.matsim.drtFare;
 
 import org.matsim.core.config.ReflectiveConfigGroup;
 
-import javax.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.util.Map;
 
 public final class KelheimDrtFareParams extends ReflectiveConfigGroup {
