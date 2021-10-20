@@ -10,6 +10,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.automatedCalibration.AutomaticScenarioCalibrator;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
@@ -22,6 +23,7 @@ import org.matsim.run.utils.TuneModeChoice;
 import picocli.CommandLine;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
@@ -35,10 +37,13 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
     @CommandLine.Option(names = "--config", description = "config file", required = true)
     private String configFile;
 
+    @CommandLine.Option(names = "--output", description = "output folder", defaultValue = "")
+    private String outputFolder;
+
     @CommandLine.Option(names = "--reference", description = "Path to reference data", required = true)
     private String referenceDataFile;
 
-    @CommandLine.Option(names = "--target", description = "target error", defaultValue = "0.005")
+    @CommandLine.Option(names = "--target", description = "target error", defaultValue = "0.001")
     private double targetError;
 
     @CommandLine.Option(names = "--time", description = "target error", defaultValue = "604800")
@@ -52,7 +57,7 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
 
     @Override
     public Integer call() throws Exception {
-        new KelheimAutoTuning(configFile, referenceDataFile, targetError, maxRunningTime,
+        new KelheimAutoTuning(configFile, outputFolder, referenceDataFile, targetError, maxRunningTime,
                 patience, relevantPersonsFile).calibrate();
         return 0;
     }
@@ -62,15 +67,19 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
     }
 
     private static class KelheimAutoTuning extends AutomaticScenarioCalibrator {
-        public KelheimAutoTuning(String configFile, String referenceDataFile, double targetError,
+        public KelheimAutoTuning(String configFile, String outputFolder, String referenceDataFile, double targetError,
                                  long maxRunningTime, int patience, String relevantPersonsFile) throws IOException {
-            super(configFile, referenceDataFile, targetError, maxRunningTime, patience, relevantPersonsFile);
+            super(configFile, outputFolder, referenceDataFile, targetError, maxRunningTime, patience, relevantPersonsFile);
         }
 
         @Override
         public void runSimulation() {
-            prepareConfig(config);
-            Scenario scenario = ScenarioUtils.loadScenario(config);
+            File inputConfigFile = new File(configFile);
+            String temporaryConfigPath = inputConfigFile.getParent() + "/auto-tune.config.xml";
+            ConfigUtils.writeConfig(config, temporaryConfigPath);
+            Config singleUseConfig = ConfigUtils.loadConfig(temporaryConfigPath);
+            prepareConfig(singleUseConfig);
+            Scenario scenario = ScenarioUtils.loadScenario(singleUseConfig);
             prepareScenario(scenario);
             Controler controler = new Controler(scenario);
             prepareController(controler);
