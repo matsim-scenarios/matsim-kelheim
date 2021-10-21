@@ -35,7 +35,7 @@ public class PopulationAnalysis implements MATSimAppCommand {
     @CommandLine.Mixin
     private ShpOptions shp = new ShpOptions();
 
-    private final List<Person> personsLivesInKelheim = new ArrayList<>();
+    private final List<Person> personsLivesInAnalyzedArea = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
         new PopulationAnalysis().execute(args);
@@ -46,18 +46,18 @@ public class PopulationAnalysis implements MATSimAppCommand {
         Population population = PopulationUtils.readPopulation(populationPath);
         System.out.println("There are in total " + population.getPersons().size() + " persons in the population file");
 
-        Geometry kelheim = null;
+        Geometry analyzedArea = null;
         if (shp.getShapeFile() != null) {
-            kelheim = shp.getGeometry();
+            analyzedArea = shp.getGeometry();
         }
 
-        analyzeHomeLocation(population, kelheim);
-        summarizePersonAttribute(population, kelheim);
+        analyzeHomeLocation(population, analyzedArea);
+        summarizePersonAttribute(population, analyzedArea);
 
         return 0;
     }
 
-    private void analyzeHomeLocation(Population population, Geometry kelheim) throws IOException {
+    private void analyzeHomeLocation(Population population, Geometry analyzedArea) throws IOException {
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-home-locations.csv"), CSVFormat.DEFAULT);
         csvWriter.printRecord("person", "home_x", "home_y", "home_location");
 
@@ -71,13 +71,13 @@ public class PopulationAnalysis implements MATSimAppCommand {
                     if (actType.startsWith("home")) {
                         Coord homeCoord = ((Activity) planElement).getCoord();
                         counter++;
-                        if (kelheim == null) {
+                        if (analyzedArea == null) {
                             csvWriter.printRecord(person.getId().toString(),
                                     Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "unknown");
-                        } else if (kelheim.contains(MGC.coord2Point(homeCoord))) {
+                        } else if (analyzedArea.contains(MGC.coord2Point(homeCoord))) {
                             csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "kelheim");
-                            personsLivesInKelheim.add(person);
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "inside");
+                            personsLivesInAnalyzedArea.add(person);
                             numPersonsLiveInKelheim++;
                         } else {
                             csvWriter.printRecord(person.getId().toString(),
@@ -91,15 +91,23 @@ public class PopulationAnalysis implements MATSimAppCommand {
         csvWriter.close();
 
         System.out.println("There are " + counter + " persons with home activity");
-        if (kelheim != null) {
-            System.out.println("There are " + numPersonsLiveInKelheim + " persons living in Kelheim (with home activity in Landkreis Kelheim");
+        if (analyzedArea != null) {
+            System.out.println("There are " + numPersonsLiveInKelheim +
+                    " persons living in the analyzed area (with home location inside the provided shape file");
+            // Write the list of persons live in the area
+            CSVPrinter csvWriter2 = new CSVPrinter(new FileWriter(outputFolder + "/relevant-persons.csv"), CSVFormat.DEFAULT);
+            csvWriter2.printRecord("person-id");
+            for (Person person: personsLivesInAnalyzedArea) {
+                csvWriter2.printRecord(person.getId().toString());
+            }
+            csvWriter2.close();
         }
     }
 
     private void summarizePersonAttribute(Population population, Geometry kelheim) throws IOException {
         List<Person> personsToAnalyze = new ArrayList<>();
         if (kelheim != null) {
-            personsToAnalyze.addAll(personsLivesInKelheim);
+            personsToAnalyze.addAll(personsLivesInAnalyzedArea);
         } else {
             personsToAnalyze.addAll(population.getPersons().values());
         }
