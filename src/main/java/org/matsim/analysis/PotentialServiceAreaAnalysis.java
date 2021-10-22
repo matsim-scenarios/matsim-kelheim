@@ -84,7 +84,7 @@ public class PotentialServiceAreaAnalysis {
 		Map<Id<Stop>, Stop> stops = readStops();
 		Map<Tuple<Id<Stop>, Id<Stop>>, Integer> relations = readDemandAndGetRelations(stops);
 
-		Network network = NetworkUtils.readNetwork(INPUT_NETWORK);
+		Network network = NetworkUtils.readTimeInvariantNetwork(INPUT_NETWORK);
 
 		//read in service area map
 		PreparedGeometryFactory factory = new PreparedGeometryFactory();
