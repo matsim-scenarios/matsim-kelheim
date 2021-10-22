@@ -201,5 +201,5 @@ public class ModeShareAnalysis implements MATSimAppCommand {
             modeCount.get(mode).get(20).increment();
         }
     }
-    
+
 }
