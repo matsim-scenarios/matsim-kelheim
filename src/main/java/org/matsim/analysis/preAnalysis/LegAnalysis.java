@@ -101,9 +101,9 @@ public class LegAnalysis implements MATSimAppCommand {
         for (String mode : modeCount.keySet()) {
             double sum = modeCount.get(mode).values().stream().mapToDouble(MutableDouble::doubleValue).sum();
             double share = sum / totalTrips;
-            csvWriter.printRecord(mode, sum, share);
+            csvWriter.printRecord(mode, (int) sum, share);
         }
-        csvWriter.printRecord("total", totalTrips, "1.0");
+        csvWriter.printRecord("total", (int) totalTrips, "1.0");
         csvWriter.close();
     }
 
@@ -119,9 +119,9 @@ public class LegAnalysis implements MATSimAppCommand {
             }
             double share = sum / totalTrips;
             String displayedDistanceGroup = convertToDisplayedDistanceGroup(distanceGroup);
-            csvWriter.printRecord(displayedDistanceGroup, sum, share);
+            csvWriter.printRecord(displayedDistanceGroup, (int) sum, share);
         }
-        csvWriter.printRecord("total", totalTrips, "1.0");
+        csvWriter.printRecord("total", (int) totalTrips, "1.0");
         csvWriter.close();
     }
 
