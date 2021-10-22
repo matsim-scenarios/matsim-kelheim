@@ -4,7 +4,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.commons.lang.mutable.MutableDouble;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
@@ -30,7 +30,7 @@ import java.util.Map;
         name = "analyze-leg",
         description = "Analyze the trip data of the input plans"
 )
-public class LegAnalysis implements MATSimAppCommand {
+public class ModeShareAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--plans", description = "Path to input population (plans) file", required = true)
     private String inputPlans;
 
@@ -40,8 +40,14 @@ public class LegAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--output-folder", description = "Path to analysis output folder", required = true)
     private String outputFolder;
 
+    @CommandLine.Option(names = "--distance-factor", description = "Multiply this factor to the euclidean distance to approximate network distance", defaultValue = "1.0")
+    private double distanceFactor;
+
+    private final String[] modes = new String[]{TransportMode.car, TransportMode.ride, TransportMode.pt, TransportMode.bike, TransportMode.walk};
+    private final int[] distanceGroups = new int[]{0, 1, 2, 5, 10, 20}; // Corresponds to distance grouping: 0-1, 1-2, 2-5, 5-10, 10-20, 20+
+
     public static void main(String[] args) {
-        new LegAnalysis().execute(args);
+        new ModeShareAnalysis().execute(args);
     }
 
     @Override
@@ -49,7 +55,7 @@ public class LegAnalysis implements MATSimAppCommand {
         MainModeIdentifier mainModeIdentifier = new DefaultAnalysisMainModeIdentifier();
         Population plans = PopulationUtils.readPopulation(inputPlans);
         List<Person> relevantPersons = new ArrayList<>();
-        Map<String, Map<Double, MutableDouble>> modeCount = initializeModeCount();
+        Map<String, Map<Integer, MutableInt>> modeCount = initializeModeCount();
 
         if (!relevantPersonsFile.equals("")) {
             List<String> relevantPersonsId = new ArrayList<>();
@@ -78,13 +84,13 @@ public class LegAnalysis implements MATSimAppCommand {
                 Coord toCoord = trip.getDestinationActivity().getCoord();
                 double euclideanDistance = CoordUtils.calcEuclideanDistance(fromCoord, toCoord);
                 String mode = mainModeIdentifier.identifyMainMode(trip.getTripElements());
-                addTripToModeCount(modeCount, mode, euclideanDistance);
+                addTripToModeCount(modeCount, mode, euclideanDistance * distanceFactor);
                 totalTrips++;
             }
             persons++;
         }
-        System.out.println("There are " + persons + " persons in the analysis");
-        System.out.println("They made " + totalTrips + " trips during the day");
+        System.out.println("There are " + (int) persons + " persons in the analysis");
+        System.out.println("They made " + (int) totalTrips + " trips during the day");
         System.out.println("Average trips per person = " + totalTrips / persons);
 
         // Write results
@@ -95,11 +101,11 @@ public class LegAnalysis implements MATSimAppCommand {
         return 0;
     }
 
-    private void writeTotalModeShare(Map<String, Map<Double, MutableDouble>> modeCount, double totalTrips) throws IOException {
+    private void writeTotalModeShare(Map<String, Map<Integer, MutableInt>> modeCount, double totalTrips) throws IOException {
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/total-mode-share.csv"), CSVFormat.DEFAULT);
         csvWriter.printRecord("mode", "number_of_trips", "share");
         for (String mode : modeCount.keySet()) {
-            double sum = modeCount.get(mode).values().stream().mapToDouble(MutableDouble::doubleValue).sum();
+            double sum = modeCount.get(mode).values().stream().mapToDouble(MutableInt::doubleValue).sum();
             double share = sum / totalTrips;
             csvWriter.printRecord(mode, (int) sum, share);
         }
@@ -107,12 +113,11 @@ public class LegAnalysis implements MATSimAppCommand {
         csvWriter.close();
     }
 
-    private void writeTotalDistanceDistribution(Map<String, Map<Double, MutableDouble>> modeCount, double totalTrips) throws IOException {
+    private void writeTotalDistanceDistribution(Map<String, Map<Integer, MutableInt>> modeCount, double totalTrips) throws IOException {
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/total-distance-distribution.csv"), CSVFormat.DEFAULT);
         csvWriter.printRecord("distance_group", "number_of_trips", "share");
-        double[] distanceGroups = new double[]{0.5, 1.5, 3.5, 7.5, 15.0, 35.0};
         List<String> modes = new ArrayList<>(modeCount.keySet());
-        for (double distanceGroup : distanceGroups) {
+        for (int distanceGroup : distanceGroups) {
             double sum = 0;
             for (String mode : modes) {
                 sum += modeCount.get(mode).get(distanceGroup).doubleValue();
@@ -125,8 +130,7 @@ public class LegAnalysis implements MATSimAppCommand {
         csvWriter.close();
     }
 
-    private void writeDetailedStatistics(Map<String, Map<Double, MutableDouble>> modeCount, double totalTrips) throws IOException {
-        double[] distanceGroups = new double[]{0.5, 1.5, 3.5, 7.5, 15.0, 35.0}; // Corresponds to distance grouping: 0-1, 1-2, 2-5, 5-10, 10-20, 20+
+    private void writeDetailedStatistics(Map<String, Map<Integer, MutableInt>> modeCount, double totalTrips) throws IOException {
         String[] modes = new String[]{TransportMode.car, TransportMode.ride, TransportMode.pt, TransportMode.bike, TransportMode.walk};
 
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/normalized-detailed-statistics.csv"), CSVFormat.DEFAULT);
@@ -139,7 +143,7 @@ public class LegAnalysis implements MATSimAppCommand {
             List<String> shareRow = new ArrayList<>();
             countRow.add(mode);
             shareRow.add(mode);
-            for (double distanceGroup : distanceGroups) {
+            for (int distanceGroup : distanceGroups) {
                 double count = modeCount.get(mode).get(distanceGroup).doubleValue();
                 double share = count / totalTrips;
                 countRow.add(Integer.toString((int) count));
@@ -153,52 +157,49 @@ public class LegAnalysis implements MATSimAppCommand {
     }
 
     private String convertToDisplayedDistanceGroup(double distanceGroup) {
-        if (distanceGroup == 0.5) {
+        if (distanceGroup == 0) {
             return "below 1km";
         }
-        if (distanceGroup == 1.5) {
+        if (distanceGroup == 1) {
             return "1km - 2km";
         }
-        if (distanceGroup == 3.5) {
+        if (distanceGroup == 2) {
             return "2km - 5km";
         }
-        if (distanceGroup == 7.5) {
+        if (distanceGroup == 5) {
             return "5km - 10km";
         }
-        if (distanceGroup == 15.0) {
+        if (distanceGroup == 10) {
             return "10km - 20km";
         }
         return "more than 20km";
     }
 
-    private Map<String, Map<Double, MutableDouble>> initializeModeCount() {
-        Map<String, Map<Double, MutableDouble>> modeCount = new HashMap<>();
-        double[] distanceGroups = new double[]{0.5, 1.5, 3.5, 7.5, 15.0, 35.0}; // Corresponds to distance grouping: 0-1, 1-2, 2-5, 5-10, 10-20, 20+
-        String[] modes = new String[]{TransportMode.car, TransportMode.ride, TransportMode.pt, TransportMode.bike, TransportMode.walk};
+    private Map<String, Map<Integer, MutableInt>> initializeModeCount() {
+        Map<String, Map<Integer, MutableInt>> modeCount = new HashMap<>();
         for (String mode : modes) {
             modeCount.put(mode, new HashMap<>());
-            for (double distanceGroup : distanceGroups) {
-                modeCount.get(mode).put(distanceGroup, new MutableDouble());
+            for (int distanceGroup : distanceGroups) {
+                modeCount.get(mode).put(distanceGroup, new MutableInt());
             }
         }
         return modeCount;
     }
 
-    private void addTripToModeCount(Map<String, Map<Double, MutableDouble>> modeCount, String mode, double distance) {
+    private void addTripToModeCount(Map<String, Map<Integer, MutableInt>> modeCount, String mode, double distance) {
         if (distance < 1000) {
-            modeCount.get(mode).get(0.5).increment();
+            modeCount.get(mode).get(0).increment();
         } else if (distance < 2000) {
-            modeCount.get(mode).get(1.5).increment();
+            modeCount.get(mode).get(1).increment();
         } else if (distance < 5000) {
-            modeCount.get(mode).get(3.5).increment();
+            modeCount.get(mode).get(2).increment();
         } else if (distance < 10000) {
-            modeCount.get(mode).get(7.5).increment();
+            modeCount.get(mode).get(5).increment();
         } else if (distance < 20000) {
-            modeCount.get(mode).get(15.0).increment();
+            modeCount.get(mode).get(10).increment();
         } else {
-            modeCount.get(mode).get(35.0).increment();
+            modeCount.get(mode).get(20).increment();
         }
     }
-
-
+    
 }
