@@ -36,7 +36,7 @@ public class PrepareNetworkChangeEvents implements MATSimAppCommand {
 
     @Override
     public Integer call() throws Exception {
-        Network network = NetworkUtils.readNetwork(networkFile);
+        Network network = NetworkUtils.readTimeInvariantNetwork(networkFile);
         TravelTimeCalculator.Builder builder = new TravelTimeCalculator.Builder(network);
         TravelTimeCalculator travelTimeCalculator = builder.build();
 
