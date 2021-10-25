@@ -16,8 +16,12 @@ public class RunKelheimIntegrationTest {
 	public final void runExamplePopulationTest() {
 		Config config = ConfigUtils.loadConfig("scenarios/input/test.config.xml");
 		config.controler().setLastIteration(1);
+		config.global().setNumberOfThreads(1);
+		config.qsim().setNumberOfThreads(1);
+
 		config.controler()
 				.setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
+
 		MATSimApplication.execute(RunKelheimScenario.class, config,
 				"run", "--1pct");
 	}
