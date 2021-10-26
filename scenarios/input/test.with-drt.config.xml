@@ -23,7 +23,7 @@
     </module>
 
     <module name="network">
-        <param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/network-with-pt.xml.gz"/>
+        <param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/network.xml.gz"/>
         <param name="laneDefinitionsFile" value="null" />
     </module>
 
@@ -329,12 +329,12 @@
 
     <module name="dvrp" >
         <!-- Mode of which the network will be used for routing vehicles, calculating travel times, etc. (fleet operator's perspective). If null, no mode filtering is done; the standard network (Scenario.getNetwork()) is used -->
-        <param name="networkModes" value="car"/>
+        <param name="networkModes" value="drt,av"/>
 
         <!-- Used for estimation of travel times for VrpOptimizer by means of the exponential moving average. The weighting decrease, alpha, must be in (0,1]. We suggest small values of alpha, e.g. 0.05. The averaging starts from the initial travel time estimates. If not provided, the free-speed TTs is used as the initial estimates For more info see comments in: VrpTravelTimeEstimator, VrpTravelTimeModules, DvrpModule. -->
         <param name="travelTimeEstimationAlpha" value="0.05" />
         <parameterset type="travelTimeMatrix">
-            <param name="cellSize" value="100000"/>
+            <param name="cellSize" value="200"/>
         </parameterset>
     </module>
     
