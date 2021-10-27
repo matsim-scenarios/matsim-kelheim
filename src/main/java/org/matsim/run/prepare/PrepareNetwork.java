@@ -1,4 +1,4 @@
-package org.matsim.prepare;
+package org.matsim.run.prepare;
 
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.network.Link;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 @CommandLine.Command(
-        name = "prepare-network",
+        name = "network",
         description = "Add network allowed mode for DRT and AV"
 )
 public class PrepareNetwork implements MATSimAppCommand {
