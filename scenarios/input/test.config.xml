@@ -23,7 +23,7 @@
     </module>
 
     <module name="network">
-        <param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/network.xml.gz"/>
+        <param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/kelheim-v1.3-network-with-pt.xml.gz"/>
         <param name="laneDefinitionsFile" value="null" />
     </module>
 
@@ -38,8 +38,8 @@
 
 
     <module name="transit">
-        <param name="transitScheduleFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/transitSchedule.xml.gz"/>
-        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/transitVehicles.xml.gz"/>
+        <param name="transitScheduleFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/kelheim-v1.3-transitSchedule.xml.gz"/>
+        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/kelheim-v1.3-transitVehicles.xml.gz"/>
         <param name="useTransit" value="true"/>
     </module>
 
