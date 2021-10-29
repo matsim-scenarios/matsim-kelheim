@@ -1,6 +1,6 @@
 
 JAR := matsim-kelheim-*.jar
-V := v1.2
+V := v1.3
 CRS := EPSG:25832
 
 export SUMO_HOME := $(abspath ../../sumo-1.8.0/)
@@ -76,6 +76,12 @@ scenarios/input/sumo.net.xml: scenarios/input/network.osm
 scenarios/input/kelheim-$V-network.xml.gz: scenarios/input/sumo.net.xml
 	java -jar $(JAR) prepare network-from-sumo $<\
 	 --output $@
+
+	java -jar $(JAR) prepare network\
+     --shp ../public-svn/matsim/scenarios/countries/de/kelheim/shp/prepare-network/av-and-drt-area.shp\
+	 --network $@\
+	 --output $@
+
 
 scenarios/input/kelheim-$V-network-with-pt.xml.gz: scenarios/input/kelheim-$V-network.xml.gz
 	java -Xmx20G -jar $(JAR) prepare transit-from-gtfs --network $<\
