@@ -57,10 +57,14 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
     @CommandLine.Option(names = "--persons", description = "Path to the list of persons to consider")
     private String relevantPersonsFile;
 
+    @CommandLine.Option(names = "--distance-interpretation", description = "Use [euclideanDistance, networkDistance]" +
+            " to categorize trips into different distance groups", defaultValue = "euclideanDistance")
+    private AutomaticScenarioCalibrator.DistanceInterpretations distanceInterpretations;
+
     @Override
     public Integer call() throws Exception {
         new KelheimAutoTuning(configFile, outputFolder, referenceDataFile, targetError, maxRunningTime,
-                patience, relevantPersonsFile).calibrate();
+                patience, relevantPersonsFile, distanceInterpretations).calibrate();
         return 0;
     }
 
@@ -70,8 +74,10 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
 
     private static class KelheimAutoTuning extends AutomaticScenarioCalibrator {
         public KelheimAutoTuning(String configFile, String outputFolder, String referenceDataFile, double targetError,
-                                 long maxRunningTime, int patience, String relevantPersonsFile) throws IOException {
-            super(configFile, outputFolder, referenceDataFile, targetError, maxRunningTime, patience, relevantPersonsFile);
+                                 long maxRunningTime, int patience, String relevantPersonsFile,
+                                 DistanceInterpretations distanceInterpretations) throws IOException {
+            super(configFile, outputFolder, referenceDataFile, targetError, maxRunningTime, patience,
+                    relevantPersonsFile, distanceInterpretations);
         }
 
         @Override
