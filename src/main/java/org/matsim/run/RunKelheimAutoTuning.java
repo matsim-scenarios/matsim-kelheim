@@ -45,7 +45,7 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
     @CommandLine.Option(names = "--reference", description = "Path to reference data", required = true)
     private String referenceDataFile;
 
-    @CommandLine.Option(names = "--target", description = "target error", defaultValue = "0.001")
+    @CommandLine.Option(names = "--target", description = "target error", defaultValue = "0.002")
     private double targetError;
 
     @CommandLine.Option(names = "--time", description = "target error", defaultValue = "604800")
