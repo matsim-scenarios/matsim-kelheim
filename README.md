@@ -1,6 +1,6 @@
 # The MATSim Open Kelheim Scenario
 
-![Build Status](https://github.com/matsim-scenarios/matsim-kehlheim/workflows/build/badge.svg?branch=main)
+![Build Status](https://github.com/matsim-scenarios/matsim-kehlheim/workflows/build/badge.svg?branch=master)
 ![license](https://img.shields.io/github/license/matsim-scenarios/matsim-kehlheim.svg)
 ![JDK](https://img.shields.io/badge/JDK-11+-green.svg)
 
