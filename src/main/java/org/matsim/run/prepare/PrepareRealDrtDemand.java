@@ -8,6 +8,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimAppCommand;
+import org.matsim.application.options.CrsOptions;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -24,14 +25,17 @@ import java.util.Map;
         description = "Prepare drt only population based on real data"
 )
 public class PrepareRealDrtDemand implements MATSimAppCommand {
-    @CommandLine.Option(names= "--drt-stops", description = "path to drt stop xml file", required = true)
+    @CommandLine.Option(names = "--drt-stops", description = "path to drt stop xml file", required = true)
     private String drtStops;
 
-    @CommandLine.Option(names= "--demands", description = "path to real drt demand csv file", required = true)
+    @CommandLine.Option(names = "--demands", description = "path to real drt demand csv file", required = true)
     private String demands;
 
-    @CommandLine.Option(names= "--output", description = "output path of drt only plans", required = true)
+    @CommandLine.Option(names = "--output", description = "output path of drt only plans", required = true)
     private String output;
+
+    @CommandLine.Mixin
+    private CrsOptions crs = new CrsOptions();
 
     public static void main(String[] args) throws IOException {
         new PrepareRealDrtDemand().execute(args);
@@ -45,24 +49,28 @@ public class PrepareRealDrtDemand implements MATSimAppCommand {
         Population population = scenario.getPopulation();
         PopulationFactory populationFactory = population.getFactory();
 
-        Map<String, Coord> stationCoordMap = loadStationCoordinates();
+//        Map<String, Coord> stationCoordMap = loadStationCoordinates();
 
         try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(demands)),
                 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
             int counter = 0;
             for (CSVRecord record : parser) {
-                String from = record.get(3);
-                String to = record.get(4);
-                Coord fromCoord = stationCoordMap.get(from);
-                Coord toCoord = stationCoordMap.get(to);
+                double fromX = Double.parseDouble(record.get(4));
+                double fromY = Double.parseDouble(record.get(5));
+                double toX = Double.parseDouble(record.get(7));
+                double toY = Double.parseDouble(record.get(8));
+                Coord fromCoord = new Coord(fromX, fromY);
+                Coord transformedFromCoord = crs.getTransformation().transform(fromCoord);
+                Coord toCoord = new Coord(toX, toY);
+                Coord transformedToCoord = crs.getTransformation().transform(toCoord);
                 double departureTime = Double.parseDouble(record.get(2));
 
                 Person person = populationFactory.createPerson(Id.createPersonId("drt_" + counter));
                 Plan plan = populationFactory.createPlan();
-                Activity activity0 = populationFactory.createActivityFromCoord("home", fromCoord);
+                Activity activity0 = populationFactory.createActivityFromCoord("home", transformedFromCoord);
                 activity0.setEndTime(departureTime);
                 Leg leg = populationFactory.createLeg("drt");
-                Activity activity1 = populationFactory.createActivityFromCoord("work", toCoord);
+                Activity activity1 = populationFactory.createActivityFromCoord("work", transformedToCoord);
                 plan.addActivity(activity0);
                 plan.addLeg(leg);
                 plan.addActivity(activity1);
