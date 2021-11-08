@@ -1,4 +1,4 @@
-package org.matsim.analysis.postAnalysis;
+package org.matsim.analysis.postAnalysis.trafficAnalysis;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -15,7 +15,6 @@ import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
-import org.matsim.core.utils.geometry.geotools.MGC;
 import picocli.CommandLine;
 
 import java.io.FileWriter;
@@ -29,7 +28,7 @@ import java.util.stream.Collectors;
         name = "analyze-traffic",
         description = "Write traffic condition"
 )
-public class TrafficAnalysis implements MATSimAppCommand {
+public class CongestionAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--network", description = "path to network file", required = true)
     private String networkFile;
 
@@ -42,13 +41,17 @@ public class TrafficAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--interval", description = "observation interval (in seconds). Default is 900 seconds (15 min)", defaultValue = "900")
     private double timeInterval;
 
+    @CommandLine.Option(names = "--min-daily-traffic-count", description = "Minimum traffic count throughout " +
+            "the day in order for the link to be considered", defaultValue = "1000")
+    private int minDailyTrafficCount;
+
     @CommandLine.Mixin
     private ShpOptions shp = new ShpOptions();
 
-    private static final Logger log = LogManager.getLogger(TrafficAnalysis.class);
+    private static final Logger log = LogManager.getLogger(CongestionAnalysis.class);
 
     public static void main(String[] args) {
-        new TrafficAnalysis().execute(args);
+        new CongestionAnalysis().execute(args);
     }
 
     @Override
@@ -57,20 +60,22 @@ public class TrafficAnalysis implements MATSimAppCommand {
         TravelTimeCalculator.Builder builder = new TravelTimeCalculator.Builder(network);
         TravelTimeCalculator travelTimeCalculator = builder.build();
 
+        Geometry studyArea = null;
+        if (shp.getShapeFile() != null && !shp.getShapeFile().toString().equals("")) {
+            studyArea = shp.getGeometry();
+        }
+        LinkFilter linkFilter = new LinkFilter(studyArea, minDailyTrafficCount);
+
         // event reader add event handeler travelTimeCalculator
         log.info("Begin analyzing travel time from events file...");
         EventsManager eventsManager = EventsUtils.createEventsManager();
         eventsManager.addHandler(travelTimeCalculator);
+        eventsManager.addHandler(linkFilter);
         MatsimEventsReader eventsReader = new MatsimEventsReader(eventsManager);
         eventsReader.readFile(eventsFile);
 
         // Actual TravelTime based on the events file
         TravelTime travelTime = travelTimeCalculator.getLinkTravelTimes();
-
-        Geometry studyArea = null;
-        if (shp.getShapeFile() != null && !shp.getShapeFile().toString().equals("")) {
-            studyArea = shp.getGeometry();
-        }
 
         log.info("Begin writing out results...");
         log.info("There are in total " + network.getLinks().size() + " links in the network");
@@ -85,7 +90,6 @@ public class TrafficAnalysis implements MATSimAppCommand {
             networkSpeedRatiosMap.put(i, new ArrayList<>());
             titleRow.add(Double.toString(i));
         }
-
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(output), CSVFormat.DEFAULT);
         csvWriter.printRecord(titleRow);
 
@@ -95,17 +99,8 @@ public class TrafficAnalysis implements MATSimAppCommand {
             if (processed % 10000 == 0) {
                 log.info("Processing: " + processed + " links have been processed");
             }
-            if (!link.getAllowedModes().contains("car")) {
-                continue;
-            }
 
-            if (link.getLength() < 10) {
-                continue; // Links that are too short can produce extreme values and make the analysis not accurate
-            }
-
-            boolean isLinkWithinStudyArea = MGC.coord2Point(link.getToNode().getCoord()).within(studyArea) ||
-                    MGC.coord2Point(link.getFromNode().getCoord()).within(studyArea);
-            if (!isLinkWithinStudyArea && studyArea != null) {
+            if (!linkFilter.checkIfConsiderTheLink(link)) {
                 continue;
             }
 
