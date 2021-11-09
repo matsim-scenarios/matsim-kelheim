@@ -90,7 +90,7 @@ public class CongestionAnalysis implements MATSimAppCommand {
             networkSpeedRatiosMap.put(i, new ArrayList<>());
             titleRow.add(Double.toString(i));
         }
-        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(output), CSVFormat.DEFAULT);
+        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(output), CSVFormat.TDF);
         csvWriter.printRecord(titleRow);
 
         int processed = 0;
