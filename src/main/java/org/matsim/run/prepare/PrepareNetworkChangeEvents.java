@@ -21,13 +21,13 @@ import java.util.List;
         description = "Write network change events based on output events"
 )
 public class PrepareNetworkChangeEvents implements MATSimAppCommand {
-    @CommandLine.Option(names= "--network", description = "path to drt stop xml file", required = true)
+    @CommandLine.Option(names= "--network", description = "path to network file", required = true)
     private String networkFile;
 
-    @CommandLine.Option(names= "--events", description = "path to real drt demand csv file", required = true)
+    @CommandLine.Option(names= "--events", description = "path to events file", required = true)
     private String eventsFile;
 
-    @CommandLine.Option(names= "--output", description = "path to real drt demand csv file", required = true)
+    @CommandLine.Option(names= "--output", description = "output path", required = true)
     private String output;
 
     public static void main(String[] args) {
