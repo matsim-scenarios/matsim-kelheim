@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @CommandLine.Command(
-        name = "analyze-traffic",
-        description = "Write traffic condition"
+        name = "analyze-congestion",
+        description = "Write traffic condition analysis and calculate congestion index of the network"
 )
 public class CongestionAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--network", description = "path to network file", required = true)
@@ -90,8 +90,8 @@ public class CongestionAnalysis implements MATSimAppCommand {
             networkSpeedRatiosMap.put(i, new ArrayList<>());
             titleRow.add(Double.toString(i));
         }
-        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(output), CSVFormat.TDF);
-        csvWriter.printRecord(titleRow);
+        CSVPrinter tsvWriter = new CSVPrinter(new FileWriter(output), CSVFormat.TDF);
+        tsvWriter.printRecord(titleRow);
 
         int processed = 0;
         for (Link link : network.getLinks().values()) {
@@ -128,7 +128,7 @@ public class CongestionAnalysis implements MATSimAppCommand {
             outputRow.add(Double.toString(linkCongestionIndex));
             outputRow.add(Double.toString(linkDailyAverageSpeed));
             outputRow.addAll(linksSpeedRatios.stream().map(s -> Double.toString(s)).collect(Collectors.toList()));
-            csvWriter.printRecord(outputRow);
+            tsvWriter.printRecord(outputRow);
 
             networkCongestionIndex += linkCongestionIndex * link.getLength();
             totalLength += link.getLength();
@@ -147,8 +147,8 @@ public class CongestionAnalysis implements MATSimAppCommand {
         lastRow.add(Double.toString(networkCongestionIndex));
         lastRow.add(Double.toString(networkSpeedRatios.stream().mapToDouble(s -> s).average().orElse(-1)));
         lastRow.addAll(networkSpeedRatios.stream().map(s -> Double.toString(s)).collect(Collectors.toList()));
-        csvWriter.printRecord(lastRow);
-        csvWriter.close();
+        tsvWriter.printRecord(lastRow);
+        tsvWriter.close();
 
         return 0;
     }
