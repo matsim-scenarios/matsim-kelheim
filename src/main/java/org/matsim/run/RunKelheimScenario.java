@@ -53,7 +53,7 @@ import java.util.Set;
 @MATSimApplication.Prepare({
         CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
         MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class,
-        CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class
+        CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class
 })
 @MATSimApplication.Analysis({
         TravelTimeAnalysis.class, CheckPopulation.class
