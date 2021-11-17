@@ -35,6 +35,12 @@ public class PopulationAnalysis implements MATSimAppCommand {
     @CommandLine.Mixin
     private ShpOptions shp = new ShpOptions();
 
+    public static String HOME_LOCATION = "home_location";
+
+    public enum HomeLocationCategory {inside, outside, unknown}
+
+    ;
+
     private final List<Person> personsLivesInAnalyzedArea = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
@@ -73,15 +79,15 @@ public class PopulationAnalysis implements MATSimAppCommand {
                         counter++;
                         if (analyzedArea == null) {
                             csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "unknown");
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), HomeLocationCategory.unknown);
                         } else if (analyzedArea.contains(MGC.coord2Point(homeCoord))) {
                             csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "inside");
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), HomeLocationCategory.inside);
                             personsLivesInAnalyzedArea.add(person);
                             numPersonsLiveInKelheim++;
                         } else {
                             csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), "outside");
+                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), HomeLocationCategory.outside);
                         }
                         break;
                     }
@@ -97,7 +103,7 @@ public class PopulationAnalysis implements MATSimAppCommand {
             // Write the list of persons live in the area
             CSVPrinter csvWriter2 = new CSVPrinter(new FileWriter(outputFolder + "/relevant-persons.csv"), CSVFormat.DEFAULT);
             csvWriter2.printRecord("person-id");
-            for (Person person: personsLivesInAnalyzedArea) {
+            for (Person person : personsLivesInAnalyzedArea) {
                 csvWriter2.printRecord(person.getId().toString());
             }
             csvWriter2.close();
@@ -122,11 +128,11 @@ public class PopulationAnalysis implements MATSimAppCommand {
             String incomeGroup = (String) person.getAttributes().getAttribute("MiD:hheink_gr2");
             String householdSize = (String) person.getAttributes().getAttribute("MiD:hhgr_gr");
 
-            if (income == null){
+            if (income == null) {
                 income = -1.0;
             }
 
-            if (age == null){
+            if (age == null) {
                 age = -1;
             }
 
@@ -135,4 +141,18 @@ public class PopulationAnalysis implements MATSimAppCommand {
         }
     }
 
+    public static boolean checkIfPersonLivesInArea(Person person, Geometry analyzedArea) {
+        for (PlanElement planElement : person.getSelectedPlan().getPlanElements()) {
+            if (planElement instanceof Activity) {
+                String actType = ((Activity) planElement).getType();
+                if (actType.startsWith("home")) {
+                    Coord homeCoord = ((Activity) planElement).getCoord();
+                    if (analyzedArea == null) {
+                        throw new RuntimeException("The analyzed area is null! ");
+                    } else return analyzedArea.contains(MGC.coord2Point(homeCoord));
+                }
+            }
+        }
+        return false; // Person with no home activity --> false
+    }
 }
