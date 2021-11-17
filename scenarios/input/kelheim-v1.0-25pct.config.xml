@@ -6,7 +6,7 @@
     </module>
 
     <module name="controler">
-        <param name="lastIteration" value="350"/>
+        <param name="lastIteration" value="500"/>
         <param name="overwriteFiles" value="failIfDirectoryExists"/>
         <param name="runId" value="kelheim"/>
         <param name="outputDirectory" value="./output/output-kelheim-25pct"/>
@@ -23,12 +23,12 @@
     </module>
 
     <module name="network">
-        <param name="inputNetworkFile" value="kelheim-v1.1-network-with-pt.xml.gz"/>
+        <param name="inputNetworkFile" value="kelheim-v1.3-network-with-pt.xml.gz"/>
         <param name="laneDefinitionsFile" value="null" />
     </module>
 
     <module name="plans">
-        <param name="inputPlansFile" value="kelheim-v1.2-25pct.plans.xml.gz"/>
+        <param name="inputPlansFile" value="kelheim-v1.3-25pct.plans-calib.xml.gz"/>
         <param name="removingUnnecessaryPlanAttributes" value="true"/>
     </module>
 
@@ -38,8 +38,8 @@
 
 
     <module name="transit">
-        <param name="transitScheduleFile" value="kelheim-v1.1-transitSchedule.xml.gz"/>
-        <param name="vehiclesFile" value="kelheim-v1.1-transitVehicles.xml.gz"/>
+        <param name="transitScheduleFile" value="kelheim-v1.3-transitSchedule.xml.gz"/>
+        <param name="vehiclesFile" value="kelheim-v1.3-transitVehicles.xml.gz"/>
         <param name="useTransit" value="true"/>
     </module>
 
@@ -74,51 +74,40 @@
     </module>
 
     <module name="strategy">
-        <param name="fractionOfIterationsToDisableInnovation" value="Infinity"/>
+        <param name="fractionOfIterationsToDisableInnovation" value="0.9"/>
         <parameterset type="strategysettings">
             <param name="strategyName" value="ChangeExpBeta"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.85"/>
         </parameterset>
         <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="300"/>
+            <param name="disableAfterIteration" value="420"/>
             <param name="strategyName" value="ReRoute"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.10"/>
         </parameterset>
-        <!-- Fade out subtour mode choice strategy -->
+        <!-- Fade out subtour mode choice strategy between 0.80 - 0.9  -->
         <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="240"/>
             <param name="strategyName" value="ChangeSingleTripMode"/>
             <param name="subpopulation" value="person"/>
-            <param name="weight" value="0.05"/>
+            <param name="weight" value="0.10"/>
         </parameterset>
         <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="270"/>
-            <param name="strategyName" value="ChangeSingleTripMode"/>
-            <param name="subpopulation" value="person"/>
-            <param name="weight" value="0.05"/>
-        </parameterset>
-        <!-- Also disabled in end phase of runs -->
-        <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="240"/>
             <param name="strategyName" value="TimeAllocationMutator"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.025"/>
         </parameterset>
 
-		
-		<parameterset type="strategysettings" >
-			<param name="strategyName" value="ChangeExpBeta" />
-			<param name="subpopulation" value="freight" />
-			<param name="weight" value="0.95" />
-		</parameterset>
-		<parameterset type="strategysettings" >
-			<param name="disableAfterIteration" value="300"/>
-			<param name="strategyName" value="ReRoute" />
-			<param name="subpopulation" value="freight" />
-			<param name="weight" value="0.05" />
-		</parameterset>
+        <parameterset type="strategysettings" >
+            <param name="strategyName" value="ChangeExpBeta" />
+            <param name="subpopulation" value="freight" />
+            <param name="weight" value="0.95" />
+        </parameterset>
+        <parameterset type="strategysettings" >
+            <param name="strategyName" value="ReRoute" />
+            <param name="subpopulation" value="freight" />
+            <param name="weight" value="0.05" />
+        </parameterset>
     </module>
 
     <module name="subtourModeChoice">
@@ -128,7 +117,7 @@
     </module>
 
     <module name="changeMode">
-        <param name="modes" value="car,pt,bike,walk" />
+        <param name="modes" value="car,ride,pt,bike,walk" />
         <param name="ignoreCarAvailability" value="false" />
     </module>
 
@@ -153,37 +142,40 @@
 
     <module name="planCalcScore">
         <param name="fractionOfIterationsToStartScoreMSA" value="1.0"/>
+        <param name="writeExperiencedPlans" value="true" />
+
         <parameterset type="scoringParameters">
 
-            <param name="performing" value="6.0" />
+            <param name="waitingPt" value="-2.0" />
 
             <parameterset type="modeParams">
-                <param name="constant" value="-2.0"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="-1.0"/>
+                <param name="constant" value="-0.26664052630892354"/>
+                <param name="marginalUtilityOfTraveling_util_hr" value="-0.5"/>
                 <param name="mode" value="car"/>
                 <param name="monetaryDistanceRate" value="-0.0002"/>
                 <param name="dailyMonetaryConstant" value="-5.3"/>
             </parameterset>
             <parameterset type="modeParams">
-                <param name="constant" value="-0.0"/>
+                <param name="constant" value="-3.233557088040455"/>
                 <param name="marginalUtilityOfTraveling_util_hr" value="0.0"/>
                 <param name="mode" value="ride"/>
                 <param name="monetaryDistanceRate" value="-0.0002"/>
                 <param name="dailyMonetaryConstant" value="-0.0"/>
             </parameterset>
             <parameterset type="modeParams">
-                <param name="constant" value="-2.0"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="-10.0"/>
+                <param name="constant" value="2.6879185316452343"/>
+                <param name="marginalUtilityOfTraveling_util_hr" value="-3.5"/>
                 <param name="mode" value="pt"/>
-                <param name="dailyMonetaryConstant" value="-2.3"/>
+                <!-- Pt fare module includes extra costs -->
+                <param name="dailyMonetaryConstant" value="0.0"/>
             </parameterset>
             <parameterset type="modeParams">
-                <param name="constant" value="-1.0"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="-10.0"/>
+                <param name="constant" value="-2.135915662097987"/>
+                <param name="marginalUtilityOfTraveling_util_hr" value="-5.0"/>
                 <param name="mode" value="bike"/>
             </parameterset>
             <parameterset type="modeParams">
-                <param name="marginalUtilityOfTraveling_util_hr" value="-10.0"/>
+                <param name="marginalUtilityOfTraveling_util_hr" value="-5.0"/>
                 <param name="mode" value="walk"/>
             </parameterset>
 

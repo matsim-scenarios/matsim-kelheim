@@ -11,6 +11,8 @@ source("https://raw.githubusercontent.com/matsim-scenarios/matsim-duesseldorf/ma
 
 # setwd("C:/Users/chris/Development/matsim-scenarios/matsim-kelheim/src/main/R")
 
+theme_set(theme_Publication(18))
+
 # trip distance groups
 levels = c("0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+")
 breaks = c(0, 1000, 2000, 5000, 10000, 20000, Inf)
@@ -21,7 +23,10 @@ shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/202
 # Read simulation data
 #########
 
-f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils4\\matsim-kelheim\\calibration\\runs\\062"
+f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\calibration3\\runs\\008"
+
+f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\auto-tuning\\output\\run-03\\run-5"
+
 sim_scale <- 4
 
 homes <- read_csv("v1.2-persons-with-home-activity.csv", 
@@ -78,7 +83,8 @@ srv_aggr <- srv %>%
   
 aggr <- sim %>%
     group_by(mode) %>%
-    summarise(share=sum(trips) / sum(sim$trips))
+    summarise(share=sum(trips) / sum(sim$trips)) %>%
+    mutate(mode=fct_relevel(mode, "walk", "bike", "pt", "ride", "car"))
 
 p1_aggr <- ggplot(data=srv_aggr, mapping =  aes(x=1, y=share, fill=mode)) +
   labs(subtitle = "Survey data") +
@@ -115,6 +121,9 @@ ggplot(total, aes(fill=mode, y=scaled_trips, x=source)) +
   labs(subtitle = paste("Kelheim scenario", f), x="distance [m]") +
   geom_bar(position="stack", stat="identity", width = 0.5) +
   facet_wrap(dist_order, nrow = 1)
+
+#ggsave(filename = "modal-split.png", path = ".", g,
+#       width = 12, height = 2, device='png', dpi=300)
 
 
 # Needed for adding short distance trips
