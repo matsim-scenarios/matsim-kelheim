@@ -1,4 +1,4 @@
-package org.matsim.analysis.postAnalysis.trafficAnalysis;
+package org.matsim.analysis.postAnalysis.traffic;
 
 import org.apache.commons.lang.mutable.MutableInt;
 import org.locationtech.jts.geom.Geometry;
