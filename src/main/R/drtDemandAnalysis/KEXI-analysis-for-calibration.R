@@ -9,13 +9,16 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 library(hrbrthemes)
+#library(sf)
+library(geosphere)
 
 #####################################################################
 ####################################################
 ### INPUT DEFINITIONS ###
 
 # set working directory
-setwd("D:/svn/shared-svn/projects/KelRide/data/KEXI/")
+#setwd("D:/svn/shared-svn/projects/KelRide/data/KEXI/")
+setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
 
 # read data
 allRides <- read.csv2("IOKI_Rides_202006_202105.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
@@ -56,6 +59,29 @@ ridesToConsider <- weekdayRides %>%
          ! date %within% holiday_pfingsten) %>%
   mutate( travelTime_s = Ankunftszeit - Abfahrtszeit)
 
+##########################################################################################################################################################
+#calculate Distance on an ellipsoid (the geodesic) between the calculated start and end points of each tour
+ridesToConsider <- ridesToConsider  %>%
+  rowwise() %>%
+  mutate(distance_m = as.double(distGeo(c(as.double(Kalkulierter.Abfahrtsort..lon.), as.double(Kalkulierter.Abfahrtsort..lat.)),
+                                              c(as.double(Kalkulierter.Ankunftsort..lon.), as.double(Kalkulierter.Ankunftsort..lat.)))))
+
+################################################################################################################################################################
+#tested the different distance-calculation functions on the geosphere package
+#result: variation is only about 1m
+# coord <- c(as.double(ridesToConsider$Kalkulierter.Abfahrtsort..lon.[1]), as.double(ridesToConsider$Kalkulierter.Abfahrtsort..lat.[1]))
+# coord2 <- c(as.double(ridesToConsider$Kalkulierter.Ankunftsort..lon.[1]), as.double(ridesToConsider$Kalkulierter.Ankunftsort..lat.[1]))
+#
+# coord
+#
+# dist <- distHaversine(coord, coord2)
+# dist2 <- distGeo(coord, coord2)
+# dist6 <- distCosine(coord, coord2)
+# dist7 <- distMeeus(coord, coord2)
+# dist8 <- distRhumb(coord, coord2)
+# dist8 <- distVincentyEllipsoid(coord, coord2)
+# dist9 <- distVincentySphere(coord, coord2)
+
 ############################################################################################################################################################
 ### it seems like we have corrupt data sets. for example, there are rides from that officially took less than 10 seconds, travelling from one station to a different station.
 ### have a look at 2020-12-17 16:11:46 and 2020-12-17 16:12:56 for example (requested by the same user actually). They point exactly in opposite directions and were booked by an admin.
@@ -78,6 +104,7 @@ avgTravelTime_s
 ridesToConsider <- ridesToConsider %>%
   filter(travelTime_s >= 120)
 
+#calculate avg travel time of all rides
 j <- ridesToConsider %>%
   mutate(travelTime_s = seconds(travelTime_s))
 hist(j$travelTime_s, plot = TRUE)
@@ -85,12 +112,20 @@ boxplot(j$travelTime_s)
 avgTravelTime_s <- mean(ridesToConsider$travelTime_s)
 avgTravelTime_s
 
+hist(ridesToConsider$distance_m)
+boxplot(ridesToConsider$distance_m)
+avgDistance_m <- mean(ridesToConsider$distance_m)
+avgDistance_m
+
 ############################################################################################################################################################
 
+#calculate avg rides per day
 ridesPerDay <- ridesToConsider %>%
   group_by(date) %>%
   tally()
 
 avgRides <- mean(ridesPerDay$n)
+avgRides
+
 
 
