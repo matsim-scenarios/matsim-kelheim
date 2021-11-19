@@ -1,16 +1,13 @@
 package org.matsim.run.prepare;
 
+import org.matsim.analysis.postAnalysis.traffic.TrafficAnalysis;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
-import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.events.EventsUtils;
-import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.network.NetworkChangeEvent;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.io.NetworkChangeEventsWriter;
 import org.matsim.core.router.util.TravelTime;
-import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
 import picocli.CommandLine;
 
 import java.util.ArrayList;
@@ -21,13 +18,13 @@ import java.util.List;
         description = "Write network change events based on output events"
 )
 public class PrepareNetworkChangeEvents implements MATSimAppCommand {
-    @CommandLine.Option(names= "--network", description = "path to network file", required = true)
+    @CommandLine.Option(names = "--network", description = "path to network file", required = true)
     private String networkFile;
 
-    @CommandLine.Option(names= "--events", description = "path to events file", required = true)
+    @CommandLine.Option(names = "--events", description = "path to events file", required = true)
     private String eventsFile;
 
-    @CommandLine.Option(names= "--output", description = "output path", required = true)
+    @CommandLine.Option(names = "--output", description = "output path", required = true)
     private String output;
 
     public static void main(String[] args) {
@@ -37,17 +34,7 @@ public class PrepareNetworkChangeEvents implements MATSimAppCommand {
     @Override
     public Integer call() throws Exception {
         Network network = NetworkUtils.readTimeInvariantNetwork(networkFile);
-        TravelTimeCalculator.Builder builder = new TravelTimeCalculator.Builder(network);
-        TravelTimeCalculator travelTimeCalculator = builder.build();
-
-        // event reader add event handeler travelTimeCalculator
-        EventsManager eventsManager = EventsUtils.createEventsManager();
-        eventsManager.addHandler(travelTimeCalculator);
-        MatsimEventsReader eventsReader = new MatsimEventsReader(eventsManager);
-        eventsReader.readFile(eventsFile);
-
-        // Actual TravelTime based on the events file
-        TravelTime travelTime = travelTimeCalculator.getLinkTravelTimes();
+        TravelTime travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventsFile);
 
         // write network change events
         List<NetworkChangeEvent> networkChangeEvents = new ArrayList<>();
