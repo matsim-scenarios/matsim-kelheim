@@ -34,16 +34,16 @@ import java.util.List;
 )
 public class DrtServiceQualityAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--network", description = "path to network file", required = true)
-    private String networkFile;
+    private Path networkFile;
 
     @CommandLine.Option(names = "--events", description = "path to events file", required = true)
-    private String eventsFile;
+    private Path eventsFile;
 
     @CommandLine.Option(names = "--drt-trips", description = "path to drt trips file", required = true)
-    private String drtTripsFile;
+    private Path drtTripsFile;
 
     @CommandLine.Option(names = "--output", description = "output path", required = true)
-    private String output;
+    private Path output;
 
     public static void main(String[] args) {
         new DrtServiceQualityAnalysis().execute(args);
@@ -51,8 +51,8 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
 
     @Override
     public Integer call() throws Exception {
-        Network network = NetworkUtils.readTimeInvariantNetwork(networkFile);
-        TravelTime travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventsFile);
+        Network network = NetworkUtils.readTimeInvariantNetwork(networkFile.toString());
+        TravelTime travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventsFile.toString());
         Config config = ConfigUtils.createConfig();
         config.plansCalcRoute().setRoutingRandomness(0);
         TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutilityFactory
@@ -61,13 +61,13 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
                 createPathCalculator(network, travelDisutility, travelTime);
 
         // Read drt trips and write it down as a TSV file
-        CSVPrinter tsvWriter = new CSVPrinter(new FileWriter(output), CSVFormat.TDF);
+        CSVPrinter tsvWriter = new CSVPrinter(new FileWriter(output.toString()), CSVFormat.TDF);
         List<String> titleRow = Arrays.asList
                 ("departure_time", "waiting_time", "in_vehicle_time", "total_travel_time",
                         "est_direct_in_vehicle_time", "actual_travel_distance", "est_direct_drive_distance",
                         "euclidean_distance", "detour_ratio_time", "detour_ratio_distance");
         tsvWriter.printRecord(titleRow);
-        try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(drtTripsFile)),
+        try (CSVParser parser = new CSVParser(Files.newBufferedReader(drtTripsFile),
                 CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
             for (CSVRecord record : parser.getRecords()) {
                 Link fromLink = network.getLinks().get(Id.createLinkId(record.get(3)));
