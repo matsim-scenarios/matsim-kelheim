@@ -12,6 +12,7 @@ import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.options.ShpOptions;
 import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
+import org.matsim.core.router.TripStructureUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import picocli.CommandLine;
 
@@ -39,8 +40,6 @@ public class PopulationAnalysis implements MATSimAppCommand {
 
     public enum HomeLocationCategory {inside, outside, unknown}
 
-    ;
-
     private final List<Person> personsLivesInAnalyzedArea = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
@@ -64,7 +63,7 @@ public class PopulationAnalysis implements MATSimAppCommand {
     }
 
     private void analyzeHomeLocation(Population population, Geometry analyzedArea) throws IOException {
-        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-home-locations.csv"), CSVFormat.DEFAULT);
+        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-home-locations.csv"), CSVFormat.TDF);
         csvWriter.printRecord("person", "home_x", "home_y", "home_location");
 
         System.out.println("Start person home location analysis...");
@@ -101,7 +100,7 @@ public class PopulationAnalysis implements MATSimAppCommand {
             System.out.println("There are " + numPersonsLiveInKelheim +
                     " persons living in the analyzed area (with home location inside the provided shape file");
             // Write the list of persons live in the area
-            CSVPrinter csvWriter2 = new CSVPrinter(new FileWriter(outputFolder + "/relevant-persons.csv"), CSVFormat.DEFAULT);
+            CSVPrinter csvWriter2 = new CSVPrinter(new FileWriter(outputFolder + "/relevant-persons.csv"), CSVFormat.TDF);
             csvWriter2.printRecord("person-id");
             for (Person person : personsLivesInAnalyzedArea) {
                 csvWriter2.printRecord(person.getId().toString());
@@ -118,8 +117,8 @@ public class PopulationAnalysis implements MATSimAppCommand {
             personsToAnalyze.addAll(population.getPersons().values());
         }
 
-        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-attributes.csv"), CSVFormat.DEFAULT);
-        csvWriter.printRecord("person", "age", "sex", "household_size", "household_income_group", "estimated_personal_allowance");
+        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-attributes.csv"), CSVFormat.TDF);
+        csvWriter.printRecord("person", "age", "sex", "household_size", "household_income_group", "estimated_personal_allowance", "number_of_trips_per_day");
 
         for (Person person : personsToAnalyze) {
             Double income = PersonUtils.getIncome(person); // This value may be null;
@@ -136,8 +135,11 @@ public class PopulationAnalysis implements MATSimAppCommand {
                 age = -1;
             }
 
+            List<TripStructureUtils.Trip> trips = TripStructureUtils.getTrips(person.getSelectedPlan());
+            int numOfTripsPerDay = trips.size();
+
             csvWriter.printRecord(person.getId().toString(), age.toString(), sex,
-                    householdSize, incomeGroup, income.toString());
+                    householdSize, incomeGroup, income.toString(), Integer.toString(numOfTripsPerDay));
         }
     }
 
