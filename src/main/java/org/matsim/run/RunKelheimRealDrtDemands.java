@@ -41,6 +41,9 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
     @CommandLine.Option(names = "--dates", description = "date of the actual request to run (yyyymmdd, separated with ,)", defaultValue = "")
     private String dates;
 
+    @CommandLine.Option(names = "--av-fare", description = "AV fare (euro per trips)", defaultValue = "2.0")
+    private double avFare;
+
     public static void main(String[] args) {
         new RunKelheimRealDrtDemands().execute(args);
     }
@@ -80,7 +83,7 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
             controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(MultiModeDrtConfigGroup.get(config)));
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
             for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network));
+                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
             }
             controler.run();
         }

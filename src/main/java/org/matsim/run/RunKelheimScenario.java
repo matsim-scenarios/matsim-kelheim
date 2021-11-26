@@ -71,6 +71,9 @@ public class RunKelheimScenario extends MATSimApplication {
     @CommandLine.Option(names = "--income-dependent", defaultValue = "true", description = "enable income dependent monetary utility", negatable = true)
     private boolean incomeDependent;
 
+    @CommandLine.Option(names = "--av-fare", defaultValue = "2.0", description = "AV fare (euro per trip)")
+    private double avFare;
+
     public RunKelheimScenario(@Nullable Config config) {
         super(config);
     }
@@ -186,7 +189,7 @@ public class RunKelheimScenario extends MATSimApplication {
             controler.addOverridingModule(new MultiModeDrtModule());
             controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
             for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network));
+                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
             }
 
         }
