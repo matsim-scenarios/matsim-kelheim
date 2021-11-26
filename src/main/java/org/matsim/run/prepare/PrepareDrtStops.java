@@ -29,8 +29,6 @@ public class PrepareDrtStops implements MATSimAppCommand {
     @CommandLine.Option(names = "--output-folder", description = "path to output folder", required = true)
     private String outputFolder;
 
-//    private static final String shapefilePath = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/shape-file/dilutionArea.shp";
-
     public static void main(String[] args) throws IOException {
         new PrepareDrtStops().execute(args);
     }
