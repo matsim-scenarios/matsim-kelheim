@@ -57,7 +57,7 @@ import java.util.Set;
         CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class
 })
 @MATSimApplication.Analysis({
-        TravelTimeAnalysis.class, CheckPopulation.class, LinkStats.class
+        TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
