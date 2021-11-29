@@ -24,6 +24,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * This function has already been moved to matsim-lib. Please use the org.matsim.application.analysis.LinkStats instead
+ */
+@Deprecated
 @CommandLine.Command(
         name = "analyze-congestion",
         description = "Write traffic condition analysis and calculate congestion index of the network"
