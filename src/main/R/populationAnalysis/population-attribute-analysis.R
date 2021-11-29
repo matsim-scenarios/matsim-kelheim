@@ -1,12 +1,13 @@
 library(tidyverse)
 
-population_attributes <- read.csv(file = '/Users/luchengqi/Documents/MATSimScenarios/Kelheim/population-analysis/persons-attributes.tsv', sep = "\t")
+population_attributes <- read.csv(file = 'C:/Users/Simon/Documents/KelRide/persons-attributes.tsv', sep = "\t")
 
 population_attributes <- population_attributes %>%
   mutate(household_total_income = household_size * estimated_personal_allowance) %>%
-  mutate(age_group = cut(age, 
-                         breaks = c(0, 18, 25, 35, 45, 55, 65, 75, Inf), 
-                         labels = c("0-18", "18-25", "25-35", "35-45", "45-55","55-65", "65-75","75+"))) %>%
+  #one could actually think about splitting up 0-18 grup into groups of 0-6,7-10,11-13,14-17 like MID data does; SM 11-21
+  mutate(age_group = cut(age,
+                         breaks = c(0, 18, 29, 39, 49, 59, 64, 74, 79, Inf),
+                         labels = c("0-18", "19-29", "30-39", "40-49", "50-59", "60-64", "65-74", "75-79","80+"))) %>%
   mutate(household_size_group = cut(household_size,
                                     breaks = c(0, 1, 2, 3, 4, Inf),
                                     labels = c("1", "2", "3", "4", "5 or more"))) 
@@ -37,7 +38,7 @@ ggplot(data=population_attributes, mapping = aes(x = sex, y = estimated_personal
 ggplot(data=population_attributes, mapping = aes(x = age_group, y = household_total_income)) + 
   geom_boxplot(outlier.shape = NA) +
   stat_summary(fun=mean, geom="point", shape=20, size=5, color="red", fill="red") +
-  ggtitle("Househod total income distribution per age groups") +
+  ggtitle("Household total income distribution per age groups") +
   theme(plot.title = element_text(hjust = 0.5)) + 
   xlab("Age group") +
   ylab("Household income")
