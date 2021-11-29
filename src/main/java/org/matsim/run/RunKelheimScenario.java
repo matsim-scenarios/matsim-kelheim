@@ -11,6 +11,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
+import org.matsim.application.analysis.LinkStats;
 import org.matsim.application.analysis.TravelTimeAnalysis;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
@@ -56,7 +57,7 @@ import java.util.Set;
         CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class
 })
 @MATSimApplication.Analysis({
-        TravelTimeAnalysis.class, CheckPopulation.class
+        TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
