@@ -6,6 +6,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.PersonMoneyEvent;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.contrib.drt.fare.DrtFareHandler;
 import org.matsim.contrib.drt.passenger.events.DrtRequestSubmittedEvent;
 import org.matsim.contrib.drt.passenger.events.DrtRequestSubmittedEventHandler;
 import org.matsim.contrib.dvrp.optimizer.Request;
@@ -29,7 +30,7 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
     @Inject
     private EventsManager events;
 
-    public static final String PERSON_MONEY_EVENT_PURPOSE_DRT_FARE = "drtFare";
+//    public static final String PERSON_MONEY_EVENT_PURPOSE_DRT_FARE = "drtFare"; // Use the public static String in the DrtFareHandler instead.
     private final double baseFare;
     private final double zone2Surcharge;
     private final String mode;
@@ -101,7 +102,7 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
             }
             events.processEvent(
                     new PersonMoneyEvent(event.getTime(), event.getPersonId(),
-                            -actualFare, PERSON_MONEY_EVENT_PURPOSE_DRT_FARE, mode, event.getRequestId().toString()));
+                            -actualFare, DrtFareHandler.PERSON_MONEY_EVENT_PURPOSE_DRT_FARE, mode, event.getRequestId().toString()));
             surchargeMap.remove(event.getRequestId());
         }
     }
