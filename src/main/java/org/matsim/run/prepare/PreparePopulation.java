@@ -2,8 +2,11 @@ package org.matsim.run.prepare;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.locationtech.jts.geom.Geometry;
+import org.matsim.analysis.preAnalysis.PopulationAnalysis;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimAppCommand;
+import org.matsim.application.options.ShpOptions;
 import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
 import picocli.CommandLine;
@@ -31,6 +34,9 @@ public class PreparePopulation implements MATSimAppCommand {
     @CommandLine.Option(names = "--output", description = "Path to output population", required = true)
     private Path output;
 
+    @CommandLine.Mixin
+    private ShpOptions shp = new ShpOptions();
+
     @Override
     public Integer call() throws Exception {
 
@@ -41,7 +47,14 @@ public class PreparePopulation implements MATSimAppCommand {
 
         Population population = PopulationUtils.readPopulation(input.toString());
 
+        Geometry studyArea = null;
+        if (shp.getShapeFile() != null) {
+            studyArea = shp.getGeometry();
+        }
+
+
         for (Person person : population.getPersons().values()) {
+            // Remove the trailing ".0" in the activity name
             for (Plan plan : person.getPlans()) {
                 for (PlanElement planElement : plan.getPlanElements()) {
                     if (planElement instanceof Activity) {
@@ -56,6 +69,7 @@ public class PreparePopulation implements MATSimAppCommand {
             }
 
             // Set car availability to "never" for agents below 18 years old
+            // Standardize the attribute "age"
             String avail = "always";
             Object age = person.getAttributes().getAttribute("microm:modeled:age");
             if (age != null) {
@@ -67,13 +81,23 @@ public class PreparePopulation implements MATSimAppCommand {
             }
             PersonUtils.setCarAvail(person, avail);
 
+            // Standardize the attribute "sex"
             Object sex = person.getAttributes().getAttribute("microm:modeled:sex");
             if (sex != null) {
                 PersonUtils.setSex(person, (String) sex);
                 person.getAttributes().removeAttribute("microm:modeled:sex");
             }
 
-            // Assign income to person
+            // Determine if an agent lives inside the study area
+            if (studyArea != null) {
+                if (PopulationAnalysis.checkIfPersonLivesInArea(person, studyArea)) {
+                    person.getAttributes().putAttribute(PopulationAnalysis.HOME_LOCATION, PopulationAnalysis.HomeLocationCategory.inside);
+                } else {
+                    person.getAttributes().putAttribute(PopulationAnalysis.HOME_LOCATION, PopulationAnalysis.HomeLocationCategory.outside);
+                }
+            }
+
+            // Assign income to person (skip the freight agents)
             if (person.getId().toString().startsWith("freight")) {
                 continue;
             }

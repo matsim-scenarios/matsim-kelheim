@@ -11,7 +11,8 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
-import org.matsim.application.analysis.TravelTimeAnalysis;
+import org.matsim.application.analysis.traffic.LinkStats;
+import org.matsim.application.analysis.travelTimeValidation.TravelTimeAnalysis;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
 import org.matsim.application.prepare.freight.ExtractRelevantFreightTrips;
@@ -56,7 +57,7 @@ import java.util.Set;
         CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class
 })
 @MATSimApplication.Analysis({
-        TravelTimeAnalysis.class, CheckPopulation.class
+        TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
@@ -70,6 +71,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
     @CommandLine.Option(names = "--income-dependent", defaultValue = "true", description = "enable income dependent monetary utility", negatable = true)
     private boolean incomeDependent;
+
+    @CommandLine.Option(names = "--av-fare", defaultValue = "2.0", description = "AV fare (euro per trip)")
+    private double avFare;
 
     public RunKelheimScenario(@Nullable Config config) {
         super(config);
@@ -186,7 +190,7 @@ public class RunKelheimScenario extends MATSimApplication {
             controler.addOverridingModule(new MultiModeDrtModule());
             controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
             for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network));
+                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
             }
 
         }
