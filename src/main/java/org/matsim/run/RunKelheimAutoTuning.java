@@ -2,14 +2,22 @@ package org.matsim.run;
 
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
+import org.matsim.api.core.v01.events.PersonDepartureEvent;
+import org.matsim.api.core.v01.events.PersonScoreEvent;
+import org.matsim.api.core.v01.events.handler.PersonDepartureEventHandler;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.automatedCalibration.AutomaticScenarioCalibrator;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
@@ -29,6 +37,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 @CommandLine.Command(
@@ -133,10 +142,17 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
                 if (modes.contains("car")) {
                     HashSet<String> newModes = Sets.newHashSet(modes);
                     newModes.add("freight");
-
                     link.setAllowedModes(newModes);
                 }
             }
+
+            Random bicycleRnd = new Random(8765);
+            for (Person person : scenario.getPopulation().getPersons().values()) {
+                double width = 3; //TODO this value is to be determined
+                double number = width * (bicycleRnd.nextGaussian() );
+                person.getAttributes().putAttribute("bicycleLove", number);
+            }
+
         }
 
         private void prepareController(Controler controler) {
@@ -151,6 +167,19 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
                     Multibinder<StrategyWeightFadeout.Schedule> schedules = Multibinder.newSetBinder(binder(), StrategyWeightFadeout.Schedule.class);
                     schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode, "person", 0.75, 0.85));
                     bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
+
+                    addEventHandlerBinding().toInstance(new PersonDepartureEventHandler() {
+                        @Inject EventsManager events;
+                        @Inject Population population;
+                        @Override public void handleEvent(PersonDepartureEvent event) {
+                            if ( event.getLegMode().equals(TransportMode.bike )) {
+                                double bicycleLove = (double) population.getPersons().get( event.getPersonId() ).getAttributes().getAttribute("bicycleLove");
+                               events.processEvent( new PersonScoreEvent( event.getTime(), event.getPersonId(), bicycleLove, "bicycleLove" ) );
+                            }
+                        }
+                    });
+
+
                 }
             });
         }
