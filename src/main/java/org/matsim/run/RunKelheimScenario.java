@@ -42,6 +42,7 @@ import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
+import org.matsim.run.utils.KelheimCaseStudyTool;
 import org.matsim.run.utils.StrategyWeightFadeout;
 import picocli.CommandLine;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
@@ -75,6 +76,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
     @CommandLine.Option(names = "--av-fare", defaultValue = "2.0", description = "AV fare (euro per trip)")
     private double avFare;
+
+    @CommandLine.Option(names = "--case-study", defaultValue = "BAUERNSIEDLUNG", description = "Case study for the av scenario")
+    private KelheimCaseStudyTool.AV_SERVICE_AREAS avServiceArea;
 
     public RunKelheimScenario(@Nullable Config config) {
         super(config);
@@ -193,6 +197,9 @@ public class RunKelheimScenario extends MATSimApplication {
             controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
             for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
                 controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
+                if (drtCfg.getMode().equals("av")){
+                    KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
+                }
             }
 
         }
