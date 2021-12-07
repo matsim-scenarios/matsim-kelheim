@@ -148,8 +148,8 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
 
             Random bicycleRnd = new Random(8765);
             for (Person person : scenario.getPopulation().getPersons().values()) {
-                double width = 3; //TODO this value is to be determined
-                double number = width * (bicycleRnd.nextGaussian() );
+                double width = 2; //TODO this value is to be determined
+                double number = width * (bicycleRnd.nextGaussian());
                 person.getAttributes().putAttribute("bicycleLove", number);
             }
 
@@ -169,12 +169,16 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
                     bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
 
                     addEventHandlerBinding().toInstance(new PersonDepartureEventHandler() {
-                        @Inject EventsManager events;
-                        @Inject Population population;
-                        @Override public void handleEvent(PersonDepartureEvent event) {
-                            if ( event.getLegMode().equals(TransportMode.bike )) {
-                                double bicycleLove = (double) population.getPersons().get( event.getPersonId() ).getAttributes().getAttribute("bicycleLove");
-                               events.processEvent( new PersonScoreEvent( event.getTime(), event.getPersonId(), bicycleLove, "bicycleLove" ) );
+                        @Inject
+                        EventsManager events;
+                        @Inject
+                        Population population;
+
+                        @Override
+                        public void handleEvent(PersonDepartureEvent event) {
+                            if (event.getLegMode().equals(TransportMode.bike)) {
+                                double bicycleLove = (double) population.getPersons().get(event.getPersonId()).getAttributes().getAttribute("bicycleLove");
+                                events.processEvent(new PersonScoreEvent(event.getTime(), event.getPersonId(), bicycleLove, "bicycleLove"));
                             }
                         }
                     });
