@@ -26,7 +26,7 @@ public class KelheimDrtFareModule extends AbstractDvrpModeModule {
         if (getMode().equals("av")) {
             kelheimDrtFareParams.setBaseFare(avFare);
             kelheimDrtFareParams.setZone2Surcharge(0.0);
-            kelheimDrtFareParams.setMode("AV");
+            kelheimDrtFareParams.setMode("av");
         }
         addEventHandlerBinding().toInstance(new KelheimDrtFareHandler(getMode(), network, kelheimDrtFareParams));
     }
