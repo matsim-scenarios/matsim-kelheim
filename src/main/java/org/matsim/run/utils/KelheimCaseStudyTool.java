@@ -4,7 +4,7 @@ import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.core.config.Config;
 
 public class KelheimCaseStudyTool {
-    public enum AV_SERVICE_AREAS {HOHENPFAHL, BAUERNSIEDLUNG}
+    public enum AV_SERVICE_AREAS {BASE, HOHENPFAHL, BAUERNSIEDLUNG} // BASE: do not change anything
 
     public static void setConfigFile(Config config, DrtConfigGroup drtConfig, AV_SERVICE_AREAS avServiceAreas) {
         // Set drt related things (vehicle file, stops file)
@@ -19,7 +19,9 @@ public class KelheimCaseStudyTool {
         }
 
         // Update output directory
-        String outputPath = config.controler().getOutputDirectory() + avServiceAreas.toString();
-        config.controler().setOutputDirectory(outputPath);
+        if (avServiceAreas != AV_SERVICE_AREAS.BASE){
+            String outputPath = config.controler().getOutputDirectory() + "-" + avServiceAreas.toString();
+            config.controler().setOutputDirectory(outputPath);
+        }
     }
 }
