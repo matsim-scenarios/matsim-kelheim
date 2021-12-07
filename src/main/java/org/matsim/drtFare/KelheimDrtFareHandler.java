@@ -6,6 +6,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.PersonMoneyEvent;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.contrib.drt.fare.DrtFareHandler;
 import org.matsim.contrib.drt.passenger.events.DrtRequestSubmittedEvent;
 import org.matsim.contrib.drt.passenger.events.DrtRequestSubmittedEventHandler;
 import org.matsim.contrib.dvrp.optimizer.Request;
@@ -29,7 +30,7 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
     @Inject
     private EventsManager events;
 
-    public static final String PERSON_MONEY_EVENT_PURPOSE_DRT_FARE = "drtFare";
+//    public static final String PERSON_MONEY_EVENT_PURPOSE_DRT_FARE = "drtFare"; // Use the public static String in the DrtFareHandler instead.
     private final double baseFare;
     private final double zone2Surcharge;
     private final String mode;
@@ -68,43 +69,49 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
 
     @Override
     public void handleEvent(DrtRequestSubmittedEvent drtRequestSubmittedEvent) {
-        Link fromLink = network.getLinks().get(drtRequestSubmittedEvent.getFromLinkId());
-        Link toLink = network.getLinks().get(drtRequestSubmittedEvent.getToLinkId());
-        if (!zonalSystem.isEmpty()) {
-            if (zonalSystem.get("1") == null) {
-                throw new RuntimeException("The shape file data entry is not prepared correctly. " +
-                        "Please make sure the attribute of the shape file are in the correct format: " +
-                        "Region_ID --> 1 or 2.");
-            }
-            boolean fromZone1 = zonalSystem.get("1").contains(MGC.coord2Point(fromLink.getToNode().getCoord()));
-            boolean toZone1 = zonalSystem.get("1").contains(MGC.coord2Point(toLink.getToNode().getCoord()));
-            if (fromZone1 && toZone1) {
-                surchargeMap.put(drtRequestSubmittedEvent.getRequestId(), false); // trip within zone 1
+        if (drtRequestSubmittedEvent.getMode().equals(mode)){
+            Link fromLink = network.getLinks().get(drtRequestSubmittedEvent.getFromLinkId());
+            Link toLink = network.getLinks().get(drtRequestSubmittedEvent.getToLinkId());
+            if (!zonalSystem.isEmpty()) {
+                if (zonalSystem.get("1") == null) {
+                    throw new RuntimeException("The shape file data entry is not prepared correctly. " +
+                            "Please make sure the attribute of the shape file are in the correct format: " +
+                            "Region_ID --> 1 or 2.");
+                }
+                boolean fromZone1 = zonalSystem.get("1").contains(MGC.coord2Point(fromLink.getToNode().getCoord()));
+                boolean toZone1 = zonalSystem.get("1").contains(MGC.coord2Point(toLink.getToNode().getCoord()));
+                if (fromZone1 && toZone1) {
+                    surchargeMap.put(drtRequestSubmittedEvent.getRequestId(), false); // trip within zone 1
+                } else {
+                    surchargeMap.put(drtRequestSubmittedEvent.getRequestId(), true); // otherwise
+                }
             } else {
-                surchargeMap.put(drtRequestSubmittedEvent.getRequestId(), true); // otherwise
+                surchargeMap.put(drtRequestSubmittedEvent.getRequestId(), false);
+                // If no shape file is provided, all the trip will be charged base price
             }
-        } else {
-            surchargeMap.put(drtRequestSubmittedEvent.getRequestId(), false);
-            // If no shape file is provided, all the trip will be charged base price
         }
     }
 
     @Override
     public void handleEvent(PassengerDroppedOffEvent event) {
-        double actualFare = baseFare;
-        boolean doesSurchargeApply = surchargeMap.get(event.getRequestId());
-        if (doesSurchargeApply) {
-            actualFare = actualFare + zone2Surcharge;
+        if (event.getMode().equals(mode)){
+            double actualFare = baseFare;
+            boolean doesSurchargeApply = surchargeMap.get(event.getRequestId());
+            if (doesSurchargeApply) {
+                actualFare = actualFare + zone2Surcharge;
+            }
+            events.processEvent(
+                    new PersonMoneyEvent(event.getTime(), event.getPersonId(),
+                            -actualFare, DrtFareHandler.PERSON_MONEY_EVENT_PURPOSE_DRT_FARE, mode, event.getRequestId().toString()));
+            surchargeMap.remove(event.getRequestId());
         }
-        events.processEvent(
-                new PersonMoneyEvent(event.getTime(), event.getPersonId(),
-                        -actualFare, PERSON_MONEY_EVENT_PURPOSE_DRT_FARE, mode, event.getRequestId().toString()));
-        surchargeMap.remove(event.getRequestId());
     }
 
     @Override
     public void handleEvent(PassengerRequestRejectedEvent passengerRequestRejectedEvent) {
-        surchargeMap.remove(passengerRequestRejectedEvent.getRequestId());
+        if (passengerRequestRejectedEvent.getMode().equals(mode)){
+            surchargeMap.remove(passengerRequestRejectedEvent.getRequestId());
+        }
     }
 
     @Override

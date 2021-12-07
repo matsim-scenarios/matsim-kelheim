@@ -6,6 +6,7 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
+import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -169,6 +170,8 @@ public class RunKelheimScenario extends MATSimApplication {
             public void install() {
                 install(new KelheimPtFareModule());
                 install(new SwissRailRaptorModule());
+                install(new PersonMoneyEventsAnalysisModule());
+
                 bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
                 addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
@@ -176,7 +179,6 @@ public class RunKelheimScenario extends MATSimApplication {
                 Multibinder<StrategyWeightFadeout.Schedule> schedules = Multibinder.newSetBinder(binder(), StrategyWeightFadeout.Schedule.class);
 
                 schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode, "person", 0.75, 0.85));
-
 
                 if (incomeDependent) {
                     bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
