@@ -7,6 +7,7 @@ import com.google.inject.multibindings.Multibinder;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -29,6 +30,7 @@ import org.matsim.contrib.drt.run.MultiModeDrtModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
+import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
@@ -44,6 +46,7 @@ import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
 import org.matsim.run.utils.StrategyWeightFadeout;
+import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
@@ -195,6 +198,17 @@ public class RunKelheimScenario extends MATSimApplication {
             controler.addOverridingModule(new DvrpModule());
             controler.addOverridingModule(new MultiModeDrtModule());
             controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
+
+            // Add speed limit to av vehicle
+            double maxSpeed = controler.getScenario()
+                    .getVehicles()
+                    .getVehicleTypes()
+                    .get(Id.create("autonomous_vehicle", VehicleType.class))
+                    .getMaximumVelocity();
+            controler.addOverridingModule(
+                    new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
+                            maxSpeed));
+
             for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
                 controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
                 if (drtCfg.getMode().equals("av")){
