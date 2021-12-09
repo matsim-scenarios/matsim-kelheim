@@ -33,9 +33,8 @@
     </module>
 
     <module name="vehicles">
-        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/duesseldorf/duesseldorf-v1.0/input/duesseldorf-v1.0-vehicle-types.xml"/>
+        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/kelheim-v1.3-vehicle-types-with-av.xml"/>
     </module>
-
 
     <module name="transit">
         <param name="transitScheduleFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/kelheim-v1.3-transitSchedule.xml.gz"/>
@@ -265,9 +264,6 @@
             <!-- Stop locations file (transit schedule format, but without lines) for DRT stops. Used only for the stopbased mode -->
             <param name="transitStopFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/drt-stops.xml"/>
 
-            <!-- An XML file specifying the vehicle fleet. The file format according to dvrp_vehicles_v1.dtd -->
-            <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/drt-vehicles.xml"/>
-
             <!-- Writes out detailed DRT customer stats in each iteration. True by default. -->
             <param name="writeDetailedCustomerStats" value="true"/>
 
@@ -306,9 +302,6 @@
 
             <!-- Stop locations file (transit schedule format, but without lines) for DRT stops. Used only for the stopbased mode -->
             <param name="transitStopFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/av-stops.xml"/>
-
-            <!-- An XML file specifying the vehicle fleet. The file format according to dvrp_vehicles_v1.dtd -->
-            <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/av-vehicles.xml"/>
 
             <!-- Writes out detailed DRT customer stats in each iteration. True by default. -->
             <param name="writeDetailedCustomerStats" value="true"/>
