@@ -28,22 +28,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.matsim.application.ApplicationUtils.globFile;
+
 @CommandLine.Command(
         name = "analyze-drt-service",
         description = "Analyze DRT service quality"
 )
 public class DrtServiceQualityAnalysis implements MATSimAppCommand {
-    @CommandLine.Option(names = "--network", description = "path to network file", required = true)
-    private Path networkFile;
+    @CommandLine.Option(names = "--directory", description = "path to network file", required = true)
+    private Path directory;
 
-    @CommandLine.Option(names = "--events", description = "path to events file", required = true)
-    private Path eventsFile;
-
-    @CommandLine.Option(names = "--drt-trips", description = "path to drt trips file", required = true)
-    private Path drtTripsFile;
-
-    @CommandLine.Option(names = "--output", description = "output path", required = true)
-    private Path output;
+    @CommandLine.Option(names = "--drt-modes", description = "drt modes in the scenario. Separate with , ", defaultValue = "drt")
+    private String drtModes;
 
     public static void main(String[] args) {
         new DrtServiceQualityAnalysis().execute(args);
@@ -51,58 +47,78 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
 
     @Override
     public Integer call() throws Exception {
-        Network network = NetworkUtils.readTimeInvariantNetwork(networkFile.toString());
-        TravelTime travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventsFile.toString());
-        Config config = ConfigUtils.createConfig();
+        String[] modes = drtModes.split(",");
+        Path configPath = globFile(directory, "*output_config.*");
+        Path networkPath = globFile(directory, "*output_network.*");
+        Path eventPath = globFile(directory, "*output_events.*");
+        Path outputFolder = Path.of(directory.toString() + "/drt-service-quality-analysis");
+
+        if (!Files.exists(outputFolder)) {
+            Files.createDirectory(outputFolder);
+        }
+
+        Config config = ConfigUtils.loadConfig(configPath.toString());
+        int lastIteration = config.controler().getLastIteration();
+        String runId = config.controler().getRunId();
+        Path folderOfLastIteration = Path.of(directory.toString() + "/ITERS/it." + lastIteration);
+
+
+        Network network = NetworkUtils.readTimeInvariantNetwork(networkPath.toString());
+        TravelTime travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventPath.toString());
         config.plansCalcRoute().setRoutingRandomness(0);
         TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutilityFactory
                 (TransportMode.car, config).createTravelDisutility(travelTime);
         LeastCostPathCalculator router = new SpeedyALTFactory().
                 createPathCalculator(network, travelDisutility, travelTime);
 
-        // Read drt trips and write it down as a TSV file
-        CSVPrinter tsvWriter = new CSVPrinter(new FileWriter(output.toString()), CSVFormat.TDF);
-        List<String> titleRow = Arrays.asList
-                ("departure_time", "waiting_time", "in_vehicle_time", "total_travel_time",
-                        "est_direct_in_vehicle_time", "actual_travel_distance", "est_direct_drive_distance",
-                        "euclidean_distance", "detour_ratio_time", "detour_ratio_distance");
-        tsvWriter.printRecord(titleRow);
-        try (CSVParser parser = new CSVParser(Files.newBufferedReader(drtTripsFile),
-                CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
-            for (CSVRecord record : parser.getRecords()) {
-                Link fromLink = network.getLinks().get(Id.createLinkId(record.get(3)));
-                Link toLink = network.getLinks().get(Id.createLinkId(record.get(6)));
-                double departureTime = Double.parseDouble(record.get(0));
-                LeastCostPathCalculator.Path path = router.calcLeastCostPath(fromLink.getToNode(), toLink.getToNode(),
-                        departureTime, null, null);
 
-                double estimatedDirectInVehicleTime = path.travelTime;
-                double estimatedDirectTravelDistance = path.links.stream().map(Link::getLength).mapToDouble(l -> l).sum();
-                double waitingTime = Double.parseDouble(record.get(9));
-                double actualInVehicleTime = Double.parseDouble(record.get(11));
-                double totalTravelTime = waitingTime + actualInVehicleTime;
-                double actualTravelDistance = Double.parseDouble(record.get(12));
-                double euclideanDistance = DistanceUtils.calculateDistance(fromLink.getToNode().getCoord(), toLink.getToNode().getCoord());
-                double detourRatioTime = actualInVehicleTime / estimatedDirectInVehicleTime;
-                double detourRatioDistance = actualTravelDistance / estimatedDirectTravelDistance;
+        for (String mode : modes) {
+            Path tripsFile = globFile(folderOfLastIteration, "*drt_legs_" + mode + ".*");
+            Path outputTripsPath = Path.of(outputFolder.toString() + "/" + mode + "_trips.tsv");
+            Path outputStatsPath = Path.of(outputFolder.toString() + "/" + mode + "_KPI.tsv");
 
-                List<String> outputRow = new ArrayList<>();
-                outputRow.add(Double.toString(departureTime));
-                outputRow.add(Double.toString(waitingTime));
-                outputRow.add(Double.toString(actualInVehicleTime));
-                outputRow.add(Double.toString(totalTravelTime));
-                outputRow.add(Double.toString(estimatedDirectInVehicleTime));
-                outputRow.add(Double.toString(actualTravelDistance));
-                outputRow.add(Double.toString(estimatedDirectTravelDistance));
-                outputRow.add(Double.toString(euclideanDistance));
-                outputRow.add(Double.toString(detourRatioTime));
-                outputRow.add(Double.toString(detourRatioDistance));
+            CSVPrinter tsvWriter = new CSVPrinter(new FileWriter(outputTripsPath.toString()), CSVFormat.TDF);
+            List<String> titleRow = Arrays.asList
+                    ("departure_time", "waiting_time", "in_vehicle_time", "total_travel_time",
+                            "est_direct_in_vehicle_time", "actual_travel_distance", "est_direct_drive_distance",
+                            "euclidean_distance", "detour_ratio_time", "detour_ratio_distance");
+            tsvWriter.printRecord(titleRow);
+            try (CSVParser parser = new CSVParser(Files.newBufferedReader(tripsFile),
+                    CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
+                for (CSVRecord record : parser.getRecords()) {
+                    Link fromLink = network.getLinks().get(Id.createLinkId(record.get(3)));
+                    Link toLink = network.getLinks().get(Id.createLinkId(record.get(6)));
+                    double departureTime = Double.parseDouble(record.get(0));
+                    LeastCostPathCalculator.Path path = router.calcLeastCostPath(fromLink.getToNode(), toLink.getToNode(),
+                            departureTime, null, null);
 
-                tsvWriter.printRecord(outputRow);
+                    double estimatedDirectInVehicleTime = path.travelTime;
+                    double estimatedDirectTravelDistance = path.links.stream().map(Link::getLength).mapToDouble(l -> l).sum();
+                    double waitingTime = Double.parseDouble(record.get(9));
+                    double actualInVehicleTime = Double.parseDouble(record.get(11));
+                    double totalTravelTime = waitingTime + actualInVehicleTime;
+                    double actualTravelDistance = Double.parseDouble(record.get(12));
+                    double euclideanDistance = DistanceUtils.calculateDistance(fromLink.getToNode().getCoord(), toLink.getToNode().getCoord());
+                    double detourRatioTime = actualInVehicleTime / estimatedDirectInVehicleTime;
+                    double detourRatioDistance = actualTravelDistance / estimatedDirectTravelDistance;
+
+                    List<String> outputRow = new ArrayList<>();
+                    outputRow.add(Double.toString(departureTime));
+                    outputRow.add(Double.toString(waitingTime));
+                    outputRow.add(Double.toString(actualInVehicleTime));
+                    outputRow.add(Double.toString(totalTravelTime));
+                    outputRow.add(Double.toString(estimatedDirectInVehicleTime));
+                    outputRow.add(Double.toString(actualTravelDistance));
+                    outputRow.add(Double.toString(estimatedDirectTravelDistance));
+                    outputRow.add(Double.toString(euclideanDistance));
+                    outputRow.add(Double.toString(detourRatioTime));
+                    outputRow.add(Double.toString(detourRatioDistance));
+
+                    tsvWriter.printRecord(outputRow);
+                }
             }
+            tsvWriter.close();
         }
-        tsvWriter.close();
-
         return 0;
     }
 }
