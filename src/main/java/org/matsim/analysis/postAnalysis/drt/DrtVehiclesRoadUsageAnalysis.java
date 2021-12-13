@@ -36,6 +36,10 @@ import java.util.stream.Collectors;
 
 import static org.matsim.application.ApplicationUtils.globFile;
 
+/**
+ * @author Chengqi Lu (luchengqi7)
+ */
+
 @CommandLine.Command(
         name = "road-usage",
         description = "Analyze road usage by drt vehicles"
@@ -174,7 +178,7 @@ public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
 
         for (DrtConfigGroup drtCfg : multiModeDrtConfigGroup.getModalElements()) {
             String mode = drtCfg.getMode();
-            Path vehicleFilePath = globFile(directory, "*" + mode + "__vehicles.*"); // TODO now the drt vehicles file in the output folder has __ in the name. Is that what we want?
+            Path vehicleFilePath = globFile(directory, "*" + mode + "_vehicles.*");
             FleetSpecification fleetSpecification = new FleetSpecificationImpl();
             new FleetReader(fleetSpecification).parse(vehicleFilePath.toUri().toURL());
             List<String> vehicleIdStrings = fleetSpecification.getVehicleSpecifications().keySet().
