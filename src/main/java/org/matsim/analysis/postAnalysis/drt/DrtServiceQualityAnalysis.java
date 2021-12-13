@@ -12,6 +12,8 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.contrib.common.util.DistanceUtils;
+import org.matsim.contrib.drt.run.DrtConfigGroup;
+import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.NetworkUtils;
@@ -40,16 +42,12 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--directory", description = "path to network file", required = true)
     private Path directory;
 
-    @CommandLine.Option(names = "--drt-modes", description = "drt modes in the scenario. Separate with , ", defaultValue = "drt")
-    private String drtModes;
-
     public static void main(String[] args) {
         new DrtServiceQualityAnalysis().execute(args);
     }
 
     @Override
     public Integer call() throws Exception {
-        String[] modes = drtModes.split(",");
         Path configPath = globFile(directory, "*output_config.*");
         Path networkPath = globFile(directory, "*output_network.*");
         Path eventPath = globFile(directory, "*output_events.*");
@@ -63,7 +61,11 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
         int lastIteration = config.controler().getLastIteration();
         String runId = config.controler().getRunId();
         Path folderOfLastIteration = Path.of(directory.toString() + "/ITERS/it." + lastIteration);
-
+        MultiModeDrtConfigGroup multiModeDrtConfigGroup = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
+        List<String> modes = new ArrayList<>();
+        for (DrtConfigGroup drtCfg : multiModeDrtConfigGroup.getModalElements()) {
+            modes.add(drtCfg.getMode());
+        }
 
         Network network = NetworkUtils.readTimeInvariantNetwork(networkPath.toString());
         TravelTime travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventPath.toString());
@@ -72,7 +74,6 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
                 (TransportMode.car, config).createTravelDisutility(travelTime);
         LeastCostPathCalculator router = new SpeedyALTFactory().
                 createPathCalculator(network, travelDisutility, travelTime);
-
 
         for (String mode : modes) {
             Path tripsFile = globFile(folderOfLastIteration, "*drt_legs_" + mode + ".*");

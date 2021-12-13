@@ -37,10 +37,10 @@ import java.util.stream.Collectors;
 import static org.matsim.application.ApplicationUtils.globFile;
 
 @CommandLine.Command(
-        name = "av-road-usage",
-        description = "Analyze road usage by autonomous vehicles"
+        name = "road-usage",
+        description = "Analyze road usage by drt vehicles"
 )
-public class AvRoadUsageAnalysis implements MATSimAppCommand {
+public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--directory", description = "path to the directory of the simulation output", required = true)
     private Path directory;
 
@@ -48,7 +48,7 @@ public class AvRoadUsageAnalysis implements MATSimAppCommand {
     private int timeBinSize;
 
     public static void main(String[] args) {
-        new AvRoadUsageAnalysis().execute(args);
+        new DrtVehiclesRoadUsageAnalysis().execute(args);
     }
 
     static class VehicleLinkUsageRecorder implements LinkEnterEventHandler, VehicleEntersTrafficEventHandler,
@@ -171,11 +171,12 @@ public class AvRoadUsageAnalysis implements MATSimAppCommand {
         Config config = ConfigUtils.loadConfig(configPath.toString());
         MultiModeDrtConfigGroup multiModeDrtConfigGroup = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
         Map<String, VehicleLinkUsageRecorder> handlerMap = new HashMap<>();
+
         for (DrtConfigGroup drtCfg : multiModeDrtConfigGroup.getModalElements()) {
             String mode = drtCfg.getMode();
-            Path avVehicleFilePath = globFile(directory, "*" + mode + "__vehicles.*"); // TODO now the drt vehicles file in the output folder has __ in the name. Is that what we want?
+            Path vehicleFilePath = globFile(directory, "*" + mode + "__vehicles.*"); // TODO now the drt vehicles file in the output folder has __ in the name. Is that what we want?
             FleetSpecification fleetSpecification = new FleetSpecificationImpl();
-            new FleetReader(fleetSpecification).parse(avVehicleFilePath.toUri().toURL());
+            new FleetReader(fleetSpecification).parse(vehicleFilePath.toUri().toURL());
             List<String> vehicleIdStrings = fleetSpecification.getVehicleSpecifications().keySet().
                     stream().map(Object::toString).collect(Collectors.toList());
             VehicleLinkUsageRecorder vehicleLinkUsageRecorder = new VehicleLinkUsageRecorder(network, timeBinSize, mode, vehicleIdStrings);
@@ -186,7 +187,7 @@ public class AvRoadUsageAnalysis implements MATSimAppCommand {
         MatsimEventsReader eventsReader = new MatsimEventsReader(eventsManager);
         eventsReader.readFile(eventsFilePath.toString());
 
-
+        // Write results
         for (String mode : handlerMap.keySet()) {
             Map<String, Map<Integer, MutableInt>> vehicleRoadUsageRecordMap = handlerMap.get(mode).getVehicleRoadUsageRecordMap();
             Map<String, Map<Integer, MutableInt>> passengerRoadUsageMap = handlerMap.get(mode).getPassengerRoadUsageMap();
