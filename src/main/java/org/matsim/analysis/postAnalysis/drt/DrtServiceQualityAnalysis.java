@@ -53,7 +53,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
         Path configPath = globFile(directory, "*output_config.*");
         Path networkPath = globFile(directory, "*output_network.*");
         Path eventPath = globFile(directory, "*output_events.*");
-        Path outputFolder = Path.of(directory.toString() + "/drt-service-quality-analysis");
+        Path outputFolder = Path.of(directory.toString() + "/analysis-drt-service-quality");
 
         if (!Files.exists(outputFolder)) {
             Files.createDirectory(outputFolder);
