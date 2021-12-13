@@ -7,6 +7,8 @@ import com.google.inject.multibindings.Multibinder;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
+import org.matsim.analysis.postAnalysis.drt.DrtServiceQualityAnalysis;
+import org.matsim.analysis.postAnalysis.drt.DrtVehiclesRoadUsageAnalysis;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -62,7 +64,7 @@ import java.util.Set;
         CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class
 })
 @MATSimApplication.Analysis({
-        TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class
+        TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
@@ -211,7 +213,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
             for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
                 controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
-                if (drtCfg.getMode().equals("av")){
+                if (drtCfg.getMode().equals("av")) {
                     KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
                 }
             }

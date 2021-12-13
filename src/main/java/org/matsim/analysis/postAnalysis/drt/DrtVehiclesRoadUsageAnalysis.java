@@ -13,6 +13,7 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
+import org.matsim.contrib.drt.util.DrtEventsReaders;
 import org.matsim.contrib.dvrp.fleet.FleetReader;
 import org.matsim.contrib.dvrp.fleet.FleetSpecification;
 import org.matsim.contrib.dvrp.fleet.FleetSpecificationImpl;
@@ -31,7 +32,10 @@ import picocli.CommandLine;
 import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.matsim.application.ApplicationUtils.globFile;
@@ -134,13 +138,19 @@ public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
 
             for (Link link : network.getLinks().values()) {
                 if (link.getAllowedModes().contains(mode)) {
-                    Map<Integer, MutableInt> counterMap = new HashMap<>();
                     int timeBins = 86400 / timeBinSize;
+
+                    Map<Integer, MutableInt> counterMap = new HashMap<>();
                     for (int i = 0; i < timeBins; i++) {
                         counterMap.put(i, new MutableInt(0));
                     }
                     vehicleRoadUsageRecordMap.put(link.getId().toString(), counterMap);
-                    passengerRoadUsageMap.put(link.getId().toString(), new HashMap<>(counterMap));
+
+                    Map<Integer, MutableInt> counterMap1 = new HashMap<>();
+                    for (int i = 0; i < timeBins; i++) {
+                        counterMap1.put(i, new MutableInt(0));
+                    }
+                    passengerRoadUsageMap.put(link.getId().toString(), counterMap1);
                 }
             }
 
@@ -188,7 +198,7 @@ public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
             eventsManager.addHandler(vehicleLinkUsageRecorder);
         }
 
-        MatsimEventsReader eventsReader = new MatsimEventsReader(eventsManager);
+        MatsimEventsReader eventsReader = DrtEventsReaders.createEventsReader(eventsManager);
         eventsReader.readFile(eventsFilePath.toString());
 
         // Write results
