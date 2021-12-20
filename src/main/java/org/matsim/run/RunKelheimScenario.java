@@ -101,7 +101,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
         for (long ii = 600; ii <= 97200; ii += 600) {
 
-            for (String act : List.of("home", "restaurant", "other", "visit", "errands",
+            for (String act : List.of("home", "restaurant", "other", "visit", "errands", "accomp_other", "accomp_children",
                     "educ_higher", "educ_secondary", "educ_primary", "educ_tertiary", "educ_kiga", "educ_other")) {
                 config.planCalcScore()
                         .addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams(act + "_" + ii).setTypicalDuration(ii));
