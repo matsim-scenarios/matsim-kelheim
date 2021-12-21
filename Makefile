@@ -96,7 +96,7 @@ scenarios/input/freight-trips.xml.gz: scenarios/input/kelheim-$V-network.xml.gz
 	 --network ../shared-svn/projects/german-wide-freight/original-data/german-primary-road.network.xml.gz\
 	 --input-crs EPSG:5677\
 	 --target-crs $(CRS)\
-	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp --shp-crs $(CRS)\
+	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)\
 	 --output $@
 
 scenarios/input/landuse/landuse.shp: ${SHP_FILES}
@@ -121,14 +121,17 @@ scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml
 	java -jar $(JAR) prepare population scenarios/input/prepare-25pct.plans.xml.gz\
 	 --output scenarios/input/prepare-25pct.plans.xml.gz
 
-	#java -jar $(JAR) prepare generate-short-distance-trips\
- 	# --population scenarios/input/prepare-25pct.plans.xml.gz\
- 	# --input-crs $(CRS)\
- 	# --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp --shp-crs $(CRS)\
- 	# --num-trips 13747
+	java -jar $(JAR) prepare generate-short-distance-trips\
+ 	 --population scenarios/input/prepare-25pct.plans.xml.gz\
+ 	 --input-crs $(CRS)\
+ 	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)\
+ 	 --num-trips 15216
 
-	java -jar $(JAR) prepare merge-populations scenarios/input/prepare-25pct.plans.xml.gz $<\
+	java -jar $(JAR) prepare merge-populations scenarios/input/prepare-25pct.plans-with-trips.xml.gz $<\
      --output scenarios/input/kelheim-$V-25pct.plans.xml.gz
+
+	java -jar $(JAR) prepare extract-home-coordinates scenarios/input/kelheim-$V-25pct.plans.xml.gz\
+	 --csv scenarios/input/kelheim-$V-homes.csv
 
 	java -jar $(JAR) prepare downsample-population scenarios/input/kelheim-$V-25pct.plans.xml.gz\
     	 --sample-size 0.25\
@@ -138,7 +141,7 @@ scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml
 check: scenarios/input/kelheim-$V-25pct.plans.xml.gz
 	java -jar $(JAR) analysis check-population $<\
  	 --input-crs $(CRS)\
- 	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp --shp-crs $(CRS)
+ 	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)
 
 # Aggregated target
 prepare: scenarios/input/kelheim-$V-25pct.plans.xml.gz scenarios/input/kelheim-$V-network-with-pt.xml.gz

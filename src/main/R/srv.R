@@ -17,19 +17,19 @@ theme_set(theme_Publication(18))
 levels = c("0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+")
 breaks = c(0, 1000, 2000, 5000, 10000, 20000, Inf)
 
-shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/20210521_kehlheim/dilutionArea.shp", crs=25832)
+shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp", crs=25832)
 
 #########
 # Read simulation data
 #########
 
 f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\calibration3\\runs\\008"
-
 f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\auto-tuning\\output\\run-03\\run-5"
+f <- "../../../output/output-kelheim-25pct/"
 
 sim_scale <- 4
 
-homes <- read_csv("v1.2-persons-with-home-activity.csv", 
+homes <- read_csv("../../../scenarios/input/kelheim-v1.4-homes.csv", 
                   col_types = cols(
                     person = col_character()
                   ))

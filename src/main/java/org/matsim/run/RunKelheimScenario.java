@@ -58,7 +58,7 @@ import java.util.Set;
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION)
 @MATSimApplication.Prepare({
         CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
-        MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class,
+        MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
         CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class
 })
 @MATSimApplication.Analysis({

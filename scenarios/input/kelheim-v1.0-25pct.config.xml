@@ -157,7 +157,7 @@
             </parameterset>
             <parameterset type="modeParams">
                 <param name="constant" value="-3.233557088040455"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="0.0"/>
+                <param name="marginalUtilityOfTraveling_util_hr" value="-0.5"/>
                 <param name="mode" value="ride"/>
                 <param name="monetaryDistanceRate" value="-0.0002"/>
                 <param name="dailyMonetaryConstant" value="-0.0"/>
