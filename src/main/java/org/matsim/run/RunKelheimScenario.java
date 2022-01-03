@@ -2,6 +2,7 @@ package org.matsim.run;
 
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import org.matsim.analysis.KelheimMainModeIdentifier;
@@ -11,8 +12,14 @@ import org.matsim.analysis.postAnalysis.drt.DrtServiceQualityAnalysis;
 import org.matsim.analysis.postAnalysis.drt.DrtVehiclesRoadUsageAnalysis;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
+import org.matsim.api.core.v01.events.PersonDepartureEvent;
+import org.matsim.api.core.v01.events.PersonScoreEvent;
+import org.matsim.api.core.v01.events.handler.PersonDepartureEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.traffic.LinkStats;
@@ -33,6 +40,7 @@ import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
@@ -55,6 +63,7 @@ import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParamete
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION)
@@ -84,6 +93,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
     @CommandLine.Option(names = "--case-study", defaultValue = "BASE", description = "Case study for the av scenario")
     private KelheimCaseStudyTool.AV_SERVICE_AREAS avServiceArea;
+
+    @CommandLine.Option(names = "--bike-rnd", defaultValue = "false", description = "enable randomness in ASC of bike")
+    private boolean bikeRnd;
 
     public RunKelheimScenario(@Nullable Config config) {
         super(config);
@@ -167,6 +179,16 @@ public class RunKelheimScenario extends MATSimApplication {
                     .getRouteFactories()
                     .setRouteFactory(DrtRoute.class, new DrtRouteFactory());
         }
+
+        if (bikeRnd) {
+            Random bicycleRnd = new Random(8765);
+            for (Person person : scenario.getPopulation().getPersons().values()) {
+                double width = 2; //TODO this value is to be determined
+                double number = width * (bicycleRnd.nextGaussian());
+                person.getAttributes().putAttribute("bicycleLove", number);
+            }
+        }
+
     }
 
     @Override
@@ -191,6 +213,23 @@ public class RunKelheimScenario extends MATSimApplication {
 
                 if (incomeDependent) {
                     bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
+                }
+
+                if (bikeRnd) {
+                    addEventHandlerBinding().toInstance(new PersonDepartureEventHandler() {
+                        @Inject
+                        EventsManager events;
+                        @Inject
+                        Population population;
+
+                        @Override
+                        public void handleEvent(PersonDepartureEvent event) {
+                            if (event.getLegMode().equals(TransportMode.bike)) {
+                                double bicycleLove = (double) population.getPersons().get(event.getPersonId()).getAttributes().getAttribute("bicycleLove");
+                                events.processEvent(new PersonScoreEvent(event.getTime(), event.getPersonId(), bicycleLove, "bicycleLove"));
+                            }
+                        }
+                    });
                 }
             }
         });
