@@ -28,7 +28,7 @@
     </module>
 
     <module name="plans">
-        <param name="inputPlansFile" value="kelheim-v1.3-25pct.plans-calib.xml.gz"/>
+        <param name="inputPlansFile" value="kelheim-v1.4-25pct.plans.xml.gz"/>
         <param name="removingUnnecessaryPlanAttributes" value="true"/>
     </module>
 
@@ -157,7 +157,7 @@
             </parameterset>
             <parameterset type="modeParams">
                 <param name="constant" value="-3.233557088040455"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="0.0"/>
+                <param name="marginalUtilityOfTraveling_util_hr" value="-0.5"/>
                 <param name="mode" value="ride"/>
                 <param name="monetaryDistanceRate" value="-0.0002"/>
                 <param name="dailyMonetaryConstant" value="-0.0"/>

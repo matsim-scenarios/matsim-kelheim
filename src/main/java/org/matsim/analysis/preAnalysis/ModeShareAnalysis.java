@@ -38,7 +38,7 @@ public class ModeShareAnalysis implements MATSimAppCommand {
     private String relevantPersonsFile;
 
     @CommandLine.Option(names = "--output-folder", description = "Path to analysis output folder", required = true)
-    private String outputFolder;
+    private Path outputFolder;
 
     @CommandLine.Option(names = "--distance-factor", description = "Multiply this factor to the euclidean distance to approximate network distance", defaultValue = "1.0")
     private double distanceFactor;
@@ -102,6 +102,10 @@ public class ModeShareAnalysis implements MATSimAppCommand {
     }
 
     private void writeTotalModeShare(Map<String, Map<Integer, MutableInt>> modeCount, double totalTrips) throws IOException {
+        if (!Files.exists(outputFolder)) {
+            Files.createDirectory(outputFolder);
+        }
+
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/total-mode-share.csv"), CSVFormat.DEFAULT);
         csvWriter.printRecord("mode", "number_of_trips", "share");
         for (String mode : modeCount.keySet()) {

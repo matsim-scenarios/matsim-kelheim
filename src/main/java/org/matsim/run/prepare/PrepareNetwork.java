@@ -55,7 +55,7 @@ public class PrepareNetwork implements MATSimAppCommand {
             }
         }
 
-        Network network = NetworkUtils.readTimeInvariantNetwork(networkFile);
+        Network network = NetworkUtils.readNetwork(networkFile);
         for (Link link : network.getLinks().values()) {
             if (!link.getAllowedModes().contains("car")){
                 continue;

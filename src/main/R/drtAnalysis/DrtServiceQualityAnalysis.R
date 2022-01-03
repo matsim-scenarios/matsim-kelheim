@@ -5,12 +5,21 @@ library(modelr)
 results <- read.csv(file = '/Users/luchengqi/Documents/MATSimScenarios/Kelheim/output/kelheim-case-study/run01/drt-service-analysis.tsv', sep="\t")
 mean_detour_ratio_time <- mean(results$detour_ratio_time)
 mean_detour_ratio_distance <- mean(results$detour_ratio_distance)
-waiting_time_mean <- mean(results$waiting_time)
+waiting_time_mean <- mean(results$waiting_time, na.rm = TRUE)
 waiting_time_median <- median(results$waiting_time)
 waiting_time_95_percentile <- quantile(results$waiting_time, probs = c(0.95))[["95%"]]
 
 distance_direct_mean = mean(results$est_direct_drive_distance)
 distance_euclidean_mean = mean(results$euclidean_distance)
+
+output <- data.frame(num_of_rides = nrow(results),
+                     waiting_time_mean = waiting_time_mean, 
+                     waiting_time_median = waiting_time_median, 
+                     waiting_time_95_percentile=waiting_time_95_percentile, 
+                     mean_detour_ratio_time=mean_detour_ratio_time, 
+                     mean_detour_ratio_distance=mean_detour_ratio_distance)
+write.table(output, file = "/Users/luchengqi/Documents/MATSimScenarios/Kelheim/output/kelheim-case-study/run01/drt-service-analysis-for-dashboard.tsv", 
+          quote = FALSE, row.names = FALSE, sep="\t", dec=".")
 
 ggplot(results, aes(est_direct_in_vehicle_time, total_travel_time)) + 
   geom_point() + 
