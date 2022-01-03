@@ -18,6 +18,8 @@ import picocli.CommandLine;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +33,7 @@ public class PopulationAnalysis implements MATSimAppCommand {
     private String populationPath;
 
     @CommandLine.Option(names = "--output-folder", description = "Path to analysis output folder", required = true)
-    private String outputFolder;
+    private Path outputFolder;
 
     @CommandLine.Mixin
     private ShpOptions shp = new ShpOptions();
@@ -63,6 +65,9 @@ public class PopulationAnalysis implements MATSimAppCommand {
     }
 
     private void analyzeHomeLocation(Population population, Geometry analyzedArea) throws IOException {
+        if (!Files.exists(outputFolder)){
+            Files.createDirectory(outputFolder);
+        }
         CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-home-locations.csv"), CSVFormat.TDF);
         csvWriter.printRecord("person", "home_x", "home_y", "home_location");
 

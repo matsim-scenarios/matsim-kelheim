@@ -4,11 +4,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.preAnalysis.PopulationAnalysis;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.options.ShpOptions;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
+import org.matsim.core.scenario.ScenarioUtils;
 import picocli.CommandLine;
 
 import java.nio.file.Files;
@@ -31,6 +35,9 @@ public class PreparePopulation implements MATSimAppCommand {
     @CommandLine.Parameters(arity = "1", paramLabel = "INPUT", description = "Path to input population")
     private Path input;
 
+    @CommandLine.Option(names = "--attributes", description = "Path to attributes file of population", defaultValue = "")
+    private Path attributePath;
+
     @CommandLine.Option(names = "--output", description = "Path to output population", required = true)
     private Path output;
 
@@ -45,13 +52,19 @@ public class PreparePopulation implements MATSimAppCommand {
             return 2;
         }
 
-        Population population = PopulationUtils.readPopulation(input.toString());
+        Config config = ConfigUtils.createConfig();
+        config.plans().setInputFile(input.toString());
+        if (!attributePath.toString().equals("")) {
+            config.plans().setInputPersonAttributeFile(attributePath.toString());
+            config.plans().setInsistingOnUsingDeprecatedPersonAttributeFile(true);
+        }
+        Scenario scenario = ScenarioUtils.loadScenario(config);
+        Population population = scenario.getPopulation();
 
         Geometry studyArea = null;
         if (shp.getShapeFile() != null) {
             studyArea = shp.getGeometry();
         }
-
 
         for (Person person : population.getPersons().values()) {
             // Remove the trailing ".0" in the activity name
@@ -70,7 +83,7 @@ public class PreparePopulation implements MATSimAppCommand {
 
             // Set car availability to "never" for agents below 18 years old
             // Standardize the attribute "age"
-            String avail = "always";
+            String avail = (String) person.getAttributes().getAttribute("sim_carAvailability");
             Object age = person.getAttributes().getAttribute("microm:modeled:age");
             if (age != null) {
                 PersonUtils.setAge(person, (int) age);
@@ -80,6 +93,7 @@ public class PreparePopulation implements MATSimAppCommand {
                 }
             }
             PersonUtils.setCarAvail(person, avail);
+            person.getAttributes().removeAttribute("sim_carAvailability"); // Replace with standardized car availability attribute
 
             // Standardize the attribute "sex"
             Object sex = person.getAttributes().getAttribute("microm:modeled:sex");
