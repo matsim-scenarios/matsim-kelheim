@@ -179,7 +179,7 @@ public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
             Files.createDirectory(outputFolder);
         }
 
-        Network network = NetworkUtils.readTimeInvariantNetwork(networkPath.toString());
+        Network network = NetworkUtils.readNetwork(networkPath.toString());
         EventsManager eventsManager = EventsUtils.createEventsManager();
 
         Config config = ConfigUtils.loadConfig(configPath.toString());

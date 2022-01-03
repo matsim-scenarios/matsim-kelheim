@@ -60,7 +60,7 @@ public class CongestionAnalysis implements MATSimAppCommand {
 
     @Override
     public Integer call() throws Exception {
-        Network network = NetworkUtils.readTimeInvariantNetwork(networkFile);
+        Network network = NetworkUtils.readNetwork(networkFile);
         TravelTimeCalculator.Builder builder = new TravelTimeCalculator.Builder(network);
         TravelTimeCalculator travelTimeCalculator = builder.build();
 

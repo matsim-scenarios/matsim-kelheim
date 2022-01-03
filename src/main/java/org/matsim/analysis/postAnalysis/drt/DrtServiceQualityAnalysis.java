@@ -67,7 +67,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
             modes.add(drtCfg.getMode());
         }
 
-        Network network = NetworkUtils.readTimeInvariantNetwork(networkPath.toString());
+        Network network = NetworkUtils.readNetwork(networkPath.toString());
         TravelTime travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventPath.toString());
         config.plansCalcRoute().setRoutingRandomness(0);
         TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutilityFactory
