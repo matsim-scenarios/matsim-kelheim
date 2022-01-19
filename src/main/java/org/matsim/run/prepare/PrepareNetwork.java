@@ -42,7 +42,7 @@ public class PrepareNetwork implements MATSimAppCommand {
                 if (drtOperationArea == null) {
                     drtOperationArea = (Geometry) feature.getDefaultGeometry();
                 } else {
-                    drtOperationArea.union((Geometry) feature.getDefaultGeometry());
+                    drtOperationArea = drtOperationArea.union((Geometry) feature.getDefaultGeometry());
                 }
             }
 
@@ -50,7 +50,7 @@ public class PrepareNetwork implements MATSimAppCommand {
                 if (avOperationArea == null) {
                     avOperationArea = (Geometry) feature.getDefaultGeometry();
                 } else {
-                    avOperationArea.union((Geometry) feature.getDefaultGeometry());
+                    avOperationArea = avOperationArea.union((Geometry) feature.getDefaultGeometry());
                 }
             }
         }
