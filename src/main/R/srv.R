@@ -23,7 +23,7 @@ shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/202
 # Read simulation data
 #########
 
-f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\calibration\\runs\\031"
+f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\calibration\\runs\\041"
 f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\auto-tuning\\output\\run-03\\run-5"
 f <- "../../../output/output-kelheim-25pct/"
 
