@@ -91,7 +91,7 @@ public class RunKelheimScenario extends MATSimApplication {
     @CommandLine.Option(names = "--av-fare", defaultValue = "2.0", description = "AV fare (euro per trip)")
     private double avFare;
 
-    @CommandLine.Option(names = "--case-study", defaultValue = "BASE", description = "Case study for the av scenario")
+    @CommandLine.Option(names = "--case-study", defaultValue = "NULL", description = "Case study for the av scenario")
     private KelheimCaseStudyTool.AV_SERVICE_AREAS avServiceArea;
 
     @CommandLine.Option(names = "--bike-rnd", defaultValue = "false", description = "enable randomness in ASC of bike")
