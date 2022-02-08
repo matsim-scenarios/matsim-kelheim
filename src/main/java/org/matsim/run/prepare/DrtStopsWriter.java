@@ -4,39 +4,35 @@ import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.application.options.ShpOptions;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
-import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.io.UncheckedIOException;
-import org.opengis.feature.simple.SimpleFeature;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class DrtStopsWriter extends MatsimXmlWriter {
     private final String mode;
-    private Geometry serviceArea;
+    private Geometry serviceArea = null;
     private final String outputFolder;
     private final Network network;
 
-    DrtStopsWriter(Network network, String mode, String serviceAreaPath, String outputFolder) {
+    DrtStopsWriter(Network network, String mode, ShpOptions shp, String outputFolder) {
         this.network = network;
         this.mode = mode;
         this.outputFolder = outputFolder;
-        if (serviceAreaPath != null) {
-            Collection<SimpleFeature> features = ShapeFileReader.getAllFeatures(serviceAreaPath);
-            if (features.size() < 1) {
-                throw new RuntimeException("No features in the shapefile! Please check the shapefile.");
-            }
-            serviceArea = (Geometry) ShapeFileReader.getAllFeatures(serviceAreaPath).iterator().next().getDefaultGeometry();
-            if (features.size() > 1) {
-                for (SimpleFeature feature : features) {
-                    serviceArea.union((Geometry) feature.getDefaultGeometry());
-                }
-            }
+        if (shp.getShapeFile() != null) {
+            serviceArea = shp.getGeometry();
         }
     }
 
