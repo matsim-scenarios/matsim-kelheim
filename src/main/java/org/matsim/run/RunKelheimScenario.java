@@ -97,6 +97,9 @@ public class RunKelheimScenario extends MATSimApplication {
     @CommandLine.Option(names = "--bike-rnd", defaultValue = "false", description = "enable randomness in ASC of bike")
     private boolean bikeRnd;
 
+    @CommandLine.Option(names = "--random-seed", defaultValue = "4711", description = "setting random seed for the simulation")
+    private long randomSeed;
+
     public RunKelheimScenario(@Nullable Config config) {
         super(config);
     }
@@ -148,6 +151,8 @@ public class RunKelheimScenario extends MATSimApplication {
 
         config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.info);
         config.plansCalcRoute().setAccessEgressType(PlansCalcRouteConfigGroup.AccessEgressType.accessEgressModeToLink);
+
+        config.global().setRandomSeed(randomSeed);
 
         if (drt) {
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
