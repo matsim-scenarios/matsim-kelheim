@@ -102,6 +102,13 @@ hist(j$travelTime_s, plot = TRUE)
 boxplot(j$travelTime_s)
 avgTravelTime_s <- mean(ridesToConsider$travelTime_s)
 avgTravelTime_s
+
+hist(j$distance_m, plot = TRUE)
+boxplot(j$distance_m)
+
+avgDistance_m <- mean(ridesToConsider$distance_m)
+avgDistance_m
+
 #ridesLessThan10Seconds <- ridesToConsider %>%
 #  filter(travelTime_s <= 180)
 
@@ -115,22 +122,35 @@ avgTravelTime_s
 #   filter(travelTime_s < 60)
 # below180s <- ridesToConsider %>%
 #   filter(travelTime_s < 180)
+# over1500s <- ridesToConsider %>%
+#   filter(travelTime_s > 1500)
+# over1000s <- ridesToConsider %>%
+#   filter(travelTime_s > 1000)
 
 ridesToConsider <- ridesToConsider %>%
   filter(travelTime_s >= 120)
 
 #calculate avg travel time of all rides
 j <- ridesToConsider %>%
-  mutate(travelTime_s = seconds(travelTime_s))
-hist(j$travelTime_s, plot = TRUE)
-boxplot(j$travelTime_s)
-avgTravelTime_s <- mean(ridesToConsider$travelTime_s)
+  mutate(travelTime_s = seconds(travelTime_s)) %>%
+  filter(travelTime_s < 1500)
+avgTravelTime_s <- mean(j$travelTime_s)
 avgTravelTime_s
 
-hist(ridesToConsider$distance_m)
-boxplot(ridesToConsider$distance_m)
-avgDistance_m <- mean(ridesToConsider$distance_m)
+hist(j$travelTime_s, plot = TRUE)
+boxplot(j$travelTime_s, main = "Boxplot KEXI Travel Time", ylab = "travel time [s]")
+abline(h = avgTravelTime_s - 2 * sd(j$travelTime_s), col="red",lty=2)
+abline(h = avgTravelTime_s + 2 * sd(j$travelTime_s), col="red",lty=2)
+
+k <- ridesToConsider %>%
+  filter(distance_m <= 5000)
+
+avgDistance_m <- mean(k$distance_m)
 avgDistance_m
+hist(k$distance_m, plot = TRUE)
+boxplot(k$distance_m, main = "Boxplot KEXI Travel Distance", ylab = "travel distance [m]")
+abline(h = avgDistance_m - 2 * sd(k$distance_m), col="red",lty=2)
+abline(h = avgDistance_m + 2 * sd(k$distance_m), col="red",lty=2)
 
 ############################################################################################################################################################
 
@@ -139,8 +159,12 @@ ridesPerDay <- ridesToConsider %>%
   group_by(date) %>%
   tally()
 
+
 avgRides <- mean(ridesPerDay$n)
 avgRides
 
+boxplot(ridesPerDay$n, main = "Boxplot KEXI Rides per day", ylab = "rides")
+abline(h = avgRides - 2 * sd(ridesPerDay$n), col="red",lty=2)
+abline(h = avgRides + 2 * sd(ridesPerDay$n), col="red",lty=2)
 
 
