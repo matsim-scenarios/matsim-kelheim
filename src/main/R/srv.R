@@ -23,7 +23,7 @@ shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/202
 # Read simulation data
 #########
 
-f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\calibration3\\runs\\008"
+f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\calibration\\runs\\041"
 f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\auto-tuning\\output\\run-03\\run-5"
 f <- "../../../output/output-kelheim-25pct/"
 
@@ -68,7 +68,7 @@ sim <- trips %>%
 srv <- read_csv("mid_adj.csv") %>%
     mutate(main_mode=mode) %>%
     mutate(scaled_trips=122258 * 3.2 * share) %>%
-    mutate(source = "srv") %>%
+    mutate(source = "mid") %>%
     mutate(dist_group=fct_relevel(dist_group, levels)) %>%
     arrange(dist_group)
 
@@ -90,7 +90,7 @@ p1_aggr <- ggplot(data=srv_aggr, mapping =  aes(x=1, y=share, fill=mode)) +
   labs(subtitle = "Survey data") +
   geom_bar(position="fill", stat="identity") +
   coord_flip() +
-  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 2, position=position_fill(vjust=0.5)) +
+  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 3, position=position_fill(vjust=0.5)) +
   scale_fill_locuszoom() +
   theme_void() +
   theme(legend.position="none")
@@ -99,7 +99,7 @@ p2_aggr <- ggplot(data=aggr, mapping =  aes(x=1, y=share, fill=mode)) +
   labs(subtitle = "Simulation") +
   geom_bar(position="fill", stat="identity") +
   coord_flip() +
-  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 2, position=position_fill(vjust=0.5)) +
+  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 3, position=position_fill(vjust=0.5)) +
   scale_fill_locuszoom() +
   theme_void()
 
@@ -111,16 +111,20 @@ ggsave(filename = "modal-split.png", path = ".", g,
 # Combined plot by distance
 ##########
 
-total <- bind_rows(srv, sim)
+total <- bind_rows(srv, sim) %>%
+    mutate(mode=fct_relevel(mode, "walk", "bike", "pt", "ride", "car"))
 
 # Maps left overgroups
 dist_order <- factor(total$dist_group, level = levels)
 dist_order <- fct_explicit_na(dist_order, "20000+")
 
 ggplot(total, aes(fill=mode, y=scaled_trips, x=source)) +
-  labs(subtitle = paste("Kelheim scenario", f), x="distance [m]") +
+  labs(subtitle = paste("Kelheim scenario", substring(f, 52)), x="distance [m]", y="trips") +
   geom_bar(position="stack", stat="identity", width = 0.5) +
-  facet_wrap(dist_order, nrow = 1)
+  facet_wrap(dist_order, nrow = 1) +
+  scale_y_continuous(labels = scales::number_format(suffix = " K", scale = 1e-3)) +
+  scale_fill_locuszoom() +
+  theme_minimal()
 
 #ggsave(filename = "modal-split.png", path = ".", g,
 #       width = 12, height = 2, device='png', dpi=300)
@@ -137,3 +141,64 @@ sim_aggr <- sim %>%
 tripShare <- 0.19
 shortDistance <- sum(filter(sim, dist_group=="0 - 1000")$trips)
 numTrips = (shortDistance - sim_sum * tripShare) / (tripShare - 1)
+
+
+##########################
+# Distance distributions based on RegioStar data
+##########################
+
+levels = c("0 - 500", "500 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", 
+           "10000 - 20000", "20000 - 50000", "50000 - 100000", "100000+")
+
+breaks = c(0, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, Inf)
+
+trips2 <- trips %>%
+  mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels)) %>%
+  mutate(mode = fct_relevel(main_mode, "walk", "bike", "pt", "ride", "car"))
+
+rs <- read_csv("tidied-mode-share-per-distance.csv") %>%
+  mutate(source="rs")
+
+sim <- trips2 %>%
+  group_by(dist_group) %>%
+  summarise(trips=n()) %>%
+  mutate(source="sim")
+
+sim <- mutate(sim, share=trips/sum(sim$trips))
+
+total_distance_dist <- bind_rows(filter(rs, mode=="total_distance_distribution"), sim)
+
+dist_order <- factor(total_distance_dist$dist_group, level = levels)
+dist_order <- fct_explicit_na(dist_order, "100000+")
+
+
+ggplot(total_distance_dist, aes(y=share, x=source, fill=source)) +
+  labs(subtitle = paste("Kelheim scenario", substring(f, 52)), x="distance [m]", y="share") +
+  geom_bar(position="stack", stat="identity", width = 0.5) +
+  facet_wrap(dist_order, nrow = 1) +
+  scale_fill_viridis_d() +
+  theme_minimal()
+
+##################################
+
+sim <- trips2 %>%
+  group_by(dist_group) %>%
+  mutate(n=n()) %>%
+  group_by(mode, dist_group) %>%
+  summarise(share=n()/first(n)) %>%
+  mutate(source="sim")
+
+by_distance <- bind_rows(filter(rs, mode!="total_distance_distribution"), sim) %>%
+  mutate(mode=fct_relevel(mode, "walk", "bike", "pt", "ride", "car"))
+
+dist_order <- factor(by_distance$dist_group, level = levels)
+dist_order <- fct_explicit_na(dist_order, "100000+")
+
+ggplot(by_distance, aes(y=share, x=source, fill=mode)) +
+  labs(subtitle = paste("Kelheim scenario", substring(f, 52)), x="distance [m]", y="share") +
+  geom_bar(position="stack", stat="identity", width = 0.5) +
+  facet_wrap(dist_order, nrow = 1) +
+  scale_fill_locuszoom() +
+  theme_minimal()
+
+

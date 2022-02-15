@@ -17,7 +17,8 @@
 		<!--<matsim.version>14.0-PR1452</matsim.version>-->
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
-		<matsim.version>14.0-SNAPSHOT</matsim.version>
+<!--		<matsim.version>14.0-SNAPSHOT</matsim.version>-->
+		<matsim.version>14.0-2022w01</matsim.version>
 
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>

@@ -23,7 +23,7 @@
     </module>
 
     <module name="network">
-        <param name="inputNetworkFile" value="kelheim-v1.3-network-with-pt.xml.gz"/>
+        <param name="inputNetworkFile" value="kelheim-v1.4-network-with-pt.xml.gz"/>
         <param name="laneDefinitionsFile" value="null" />
     </module>
 
@@ -38,8 +38,8 @@
 
 
     <module name="transit">
-        <param name="transitScheduleFile" value="kelheim-v1.3-transitSchedule.xml.gz"/>
-        <param name="vehiclesFile" value="kelheim-v1.3-transitVehicles.xml.gz"/>
+        <param name="transitScheduleFile" value="kelheim-v1.4-transitSchedule.xml.gz"/>
+        <param name="vehiclesFile" value="kelheim-v1.4-transitVehicles.xml.gz"/>
         <param name="useTransit" value="true"/>
     </module>
 
@@ -149,37 +149,58 @@
             <param name="waitingPt" value="-2.0" />
 
             <parameterset type="modeParams">
-                <param name="constant" value="-0.26664052630892354"/>
+                <param name="constant" value="0.2457"/>
                 <param name="marginalUtilityOfTraveling_util_hr" value="-0.5"/>
                 <param name="mode" value="car"/>
                 <param name="monetaryDistanceRate" value="-0.0002"/>
                 <param name="dailyMonetaryConstant" value="-5.3"/>
             </parameterset>
-            <parameterset type="modeParams">
-                <param name="constant" value="-3.233557088040455"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="-0.5"/>
-                <param name="mode" value="ride"/>
-                <param name="monetaryDistanceRate" value="-0.0002"/>
-                <param name="dailyMonetaryConstant" value="-0.0"/>
-            </parameterset>
-            <parameterset type="modeParams">
-                <param name="constant" value="2.6879185316452343"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="-3.5"/>
-                <param name="mode" value="pt"/>
-                <!-- Pt fare module includes extra costs -->
-                <param name="dailyMonetaryConstant" value="0.0"/>
-            </parameterset>
-            <parameterset type="modeParams">
-                <param name="constant" value="-2.135915662097987"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="-5.0"/>
-                <param name="mode" value="bike"/>
-            </parameterset>
-            <parameterset type="modeParams">
-                <param name="marginalUtilityOfTraveling_util_hr" value="-5.0"/>
-                <param name="mode" value="walk"/>
+
+            <parameterset type="modeParams" >
+                <param name="constant" value="-4.349841425323821" />
+                <param name="dailyMonetaryConstant" value="-0.0" />
+                <param name="dailyUtilityConstant" value="0.0" />
+                <param name="marginalUtilityOfDistance_util_m" value="0.0" />
+                <param name="marginalUtilityOfTraveling_util_hr" value="-0.5" />
+                <param name="mode" value="ride" />
+                <param name="monetaryDistanceRate" value="-2.0E-4" />
             </parameterset>
 
             <parameterset type="modeParams" >
+                <param name="constant" value="1.1082928126246734" />
+                <param name="dailyMonetaryConstant" value="0.0" />
+                <param name="dailyUtilityConstant" value="0.0" />
+                <param name="marginalUtilityOfDistance_util_m" value="0.0" />
+                <param name="marginalUtilityOfTraveling_util_hr" value="-3.5" />
+                <param name="mode" value="pt" />
+                <param name="monetaryDistanceRate" value="0.0" />
+            </parameterset>
+
+            <parameterset type="modeParams">
+                <param name="constant" value="-2.929952331516688" />
+                <param name="dailyMonetaryConstant" value="0.0" />
+                <param name="dailyUtilityConstant" value="0.0" />
+                <param name="marginalUtilityOfDistance_util_m" value="0.0" />
+                <param name="marginalUtilityOfTraveling_util_hr" value="-5.0" />
+                <param name="mode" value="bike" />
+                <param name="monetaryDistanceRate" value="0.0" />
+            </parameterset>
+
+            <parameterset type="modeParams">
+                <param name="constant" value="0.0" />
+                <param name="dailyMonetaryConstant" value="0.0" />
+                <param name="dailyUtilityConstant" value="0.0" />
+                <param name="marginalUtilityOfDistance_util_m" value="0.0" />
+                <param name="marginalUtilityOfTraveling_util_hr" value="-5.0" />
+                <param name="mode" value="walk" />
+                <param name="monetaryDistanceRate" value="0.0" />
+            </parameterset>
+
+            <parameterset type="modeParams" >
+                <param name="constant" value="0.0" />
+                <param name="dailyMonetaryConstant" value="0.0" />
+                <param name="dailyUtilityConstant" value="0.0" />
+                <param name="marginalUtilityOfDistance_util_m" value="0.0" />
                 <param name="marginalUtilityOfTraveling_util_hr" value="-10.0" />
                 <param name="mode" value="freight" />
                 <param name="monetaryDistanceRate" value="-0.002" />

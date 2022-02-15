@@ -40,12 +40,7 @@ public class PrepareDrtStops implements MATSimAppCommand {
         Scenario scenario = ScenarioUtils.loadScenario(config);
         Network network = scenario.getNetwork();
 
-        String shapeFilePath = null;
-        if (shp.getShapeFile() != null) {
-            shapeFilePath = shp.getShapeFile().toString();
-        }
-
-        DrtStopsWriter drtStopsWriter = new DrtStopsWriter(network, mode, shapeFilePath, outputFolder);
+        DrtStopsWriter drtStopsWriter = new DrtStopsWriter(network, mode, shp, outputFolder);
         drtStopsWriter.write();
         return 0;
     }
