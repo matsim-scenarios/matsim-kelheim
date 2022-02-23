@@ -10,6 +10,7 @@ import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.io.UncheckedIOException;
+import org.opengis.feature.simple.SimpleFeature;
 
 import java.io.BufferedReader;
 import java.io.FileWriter;
@@ -31,8 +32,17 @@ public class DrtStopsWriter extends MatsimXmlWriter {
         this.network = network;
         this.mode = mode;
         this.outputFolder = outputFolder;
-        if (shp.getShapeFile() != null) {
-            serviceArea = shp.getGeometry();
+        //If you just say serviceArea = shp.getGeometry() instead of looping through features
+        //somehow the first feature only is taken -sm0222
+        List<SimpleFeature> features = shp.readFeatures();
+        for(SimpleFeature feature : features) {
+            if (shp.getShapeFile() != null) {
+                if (serviceArea == null) {
+                    serviceArea = (Geometry) feature.getDefaultGeometry();
+                } else {
+                    serviceArea = serviceArea.union((Geometry) feature.getDefaultGeometry());
+                }
+            }
         }
     }
 
