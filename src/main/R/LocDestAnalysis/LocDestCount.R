@@ -1,3 +1,5 @@
+
+
 setwd("/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnalysis")
 #Daten Stopdaten einlesen
 stops <- read.csv("kelheim-drt-stops-locations.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
@@ -13,15 +15,17 @@ laenge <- length(movements$fromLinkId)
 fromLink <-character(0)
 toLink <- character(0)
 anzahlFahrten <- character(0)
+stopIds <- character(0)
+
 
 
 
 Fahrten <- 1 # gibt Anzahl der Fahrten zwischen zwei Links an
-connection <- c(1,1) # Vektor mit einem from und einem to Link drin
+connection <- c(sortedMovement[1,"fromLinkId"],sortedMovement[1,"toLinkId"]) # Vektor mit einem from und einem to Link drin
 
 #Iteration durch sorted Movement, wobei paarweise die Tuple (hier Vektoren, connection und newConnection) verglichen werden
 # sind sie identisch, wird Fahrten+1 gerechnet, ansonsten werden di eTuple abgespeichert und das nächste Tupel wird verglichen
-for(row in 1:laenge){
+for(row in 2:laenge){
   newConnection <- c(sortedMovement[row,"fromLinkId"],sortedMovement[row,"toLinkId"]) # nächster Vektor mit einem from und einem to Link drin
   if (identical(connection,newConnection)){
     Fahrten <- Fahrten + 1
@@ -32,6 +36,8 @@ for(row in 1:laenge){
       toLink <- c(toLink,connection[2])
       anzahlFahrten <- c(anzahlFahrten,Fahrten)
       Fahrten <- 1
+      stopIds <- c(stopIds,paste(as.character(stops$Stop.ID[which(stops$Link.ID==connection[1],arr.ind=FALSE)]), as.character(stops$Stop.ID[which(stops$Link.ID==connection[2],arr.ind=FALSE)]),sep="-"))
+
       connection <- newConnection
 
     }
@@ -43,10 +49,12 @@ if (Fahrten>=2){
   anzahlFahrten <- c(anzahlFahrten,Fahrten)
 }
 # in Datadfame speichern und als csv Datei abspeichern
-class.df <- data.frame(fromLink,toLink,anzahlFahrten,stringsAsFactors = FALSE)
+class.df <- data.frame(stopIds,fromLink,toLink,anzahlFahrten,stringsAsFactors = FALSE)
 print(class.df)
+
 setwd("/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnalysis")
-write.csv(class.df, "LinktoLinkAnzahl.csv")
+write.csv(sortedMovement,"sortedMove.csv",quote = FALSE)
+write.csv(class.df, "LinktoLinkAnzahl.csv",quote = FALSE)
 
 
 
