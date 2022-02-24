@@ -7,7 +7,7 @@ movements <- read.csv("KEXI-base-case.passingQ.250.drt_legs_drt.csv", stringsAsF
 
 
 
-#Sortiert erst Dataframe erst nach "fromLinkId" und dann nach "tiLinkId"
+#Sortiert erst Dataframe erst nach "fromLinkId" und dann nach "toLinkId"
 sortedMovement <- movements[order(movements$fromLinkId,movements$toLinkId), ]
 
 #erstellt Vektoren / vll noch eone schönere Lösung möglich
@@ -53,7 +53,7 @@ class.df <- data.frame(stopIds,fromLink,toLink,anzahlFahrten,stringsAsFactors = 
 print(class.df)
 
 setwd("/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnalysis")
-write.csv(sortedMovement,"sortedMove.csv",quote = FALSE)
+
 write.csv(class.df, "LinktoLinkAnzahl.csv",quote = FALSE)
 
 
