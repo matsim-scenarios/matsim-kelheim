@@ -290,7 +290,7 @@ public class PotentialServiceAreaAnalysis {
 			depotLink = Id.createLinkId("26526533#9");
 		}
 		Link l = network.getLinks().get(depotLink);
-		CarrierVehicle.Builder vBuilder = CarrierVehicle.Builder.newInstance(Id.create((areaName + "_shuttle"), Vehicle.class), depotLink);
+		CarrierVehicle.Builder vBuilder = CarrierVehicle.Builder.newInstance(Id.create((areaName + "_shuttle"), Vehicle.class), depotLink, vehicleType);
 		vBuilder.setEarliestStart(0 * 60 * 60);
 		vBuilder.setLatestEnd(24 * 60 * 60);
 		vBuilder.setType(vehicleType);

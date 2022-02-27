@@ -57,7 +57,7 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
     @CommandLine.Option(names = "--target", description = "target error", defaultValue = "0.002")
     private double targetError;
 
-    @CommandLine.Option(names = "--time", description = "target error", defaultValue = "604800")
+    @CommandLine.Option(names = "--time", description = "maximum running time", defaultValue = "604800")
     private long maxRunningTime;
 
     @CommandLine.Option(names = "--patience", description = "patience for the tuning", defaultValue = "5")
@@ -106,7 +106,7 @@ public class RunKelheimAutoTuning implements MATSimAppCommand {
         private void prepareConfig(Config config) {
             for (long ii = 600; ii <= 97200; ii += 600) {
 
-                for (String act : List.of("home", "restaurant", "other", "visit", "errands",
+                for (String act : List.of("home", "restaurant", "other", "visit", "errands", "accomp_other", "accomp_children",
                         "educ_higher", "educ_secondary", "educ_primary", "educ_tertiary", "educ_kiga", "educ_other")) {
                     config.planCalcScore()
                             .addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams(act + "_" + ii).setTypicalDuration(ii));
