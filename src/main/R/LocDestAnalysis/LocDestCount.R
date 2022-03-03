@@ -2,10 +2,8 @@
 
 setwd("/Users/tomkelouisa/Documents/VSP/")
 #Daten Stopdaten einlesen
-stops <- read.csv("kelheim-drt-stops-locations.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+stops <- read.csv("kelheim-drt-stops-locations(1).csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 movements <- read.csv("KEXI-base-case.passingQ.250.drt_legs_drt.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
-
-
 
 #Sortiert erst Dataframe erst nach "fromLinkId" und dann nach "toLinkId"
 sortedMovement <- movements[order(movements$fromLinkId,movements$toLinkId), ]
@@ -15,8 +13,8 @@ laenge <- length(movements$fromLinkId)
 fromLink <-character(0)
 toLink <- character(0)
 anzahlFahrten <- character(0)
-stopIds <- character(0)
-
+fromstopIds <- character(0)
+tostopIds <- character(0)
 
 
 
@@ -36,20 +34,29 @@ for(row in 2:laenge){
       toLink <- c(toLink,connection[2])
       anzahlFahrten <- c(anzahlFahrten,Fahrten)
       Fahrten <- 1
-      stopIds <- c(stopIds,paste(as.character(stops$Stop.ID[which(stops$Link.ID==connection[1],arr.ind=FALSE)]), as.character(stops$Stop.ID[which(stops$Link.ID==connection[2],arr.ind=FALSE)]),sep="-"))
-
+      fromstopIds <- c(fromstopIds,as.character(stops$Stop.ID[which(stops$Link.ID==connection[1],arr.ind=FALSE)]))
+      tostopIds <- c(tostopIds,as.character(stops$Stop.ID[which(stops$Link.ID==connection[2],arr.ind=FALSE)]))
+      if (length(fromstopIds)!=length(tostopIds)){
+        #bei nicht exitsierenden toStops
+        tostopIds <- c(tostopIds,"NA")
+      }
+      print(connection)
       connection <- newConnection
 
     }
 }
+print(length(fromstopIds))
 #mögliche letztes Tupel abfangen
 if (Fahrten>=2){
   fromLink <- c(fromLink,connection[1])
   toLink <- c(toLink,connection[2])
   anzahlFahrten <- c(anzahlFahrten,Fahrten)
+  fromstopIds <- c(fromstopIds,as.character(stops$Stop.ID[which(stops$Link.ID==connection[1],arr.ind=FALSE)]))
+  tostopIds <- c(tostopIds,as.character(stops$Stop.ID[which(stops$Link.ID==connection[2],arr.ind=FALSE)]))
 }
+print(length(tostopIds))
 # in Datadfame speichern und als csv Datei abspeichern
-class.df <- data.frame(stopIds,fromLink,toLink,anzahlFahrten,stringsAsFactors = FALSE)
+class.df <- data.frame(fromstopIds,tostopIds, fromLink,toLink,anzahlFahrten,stringsAsFactors = FALSE)
 print(class.df)
 
 setwd("/Users/tomkelouisa/Documents/VSP")
