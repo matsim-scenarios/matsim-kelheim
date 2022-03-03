@@ -1,6 +1,6 @@
 
 
-setwd("/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnalysis")
+setwd("/Users/tomkelouisa/Documents/VSP/")
 #Daten Stopdaten einlesen
 stops <- read.csv("kelheim-drt-stops-locations.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 movements <- read.csv("KEXI-base-case.passingQ.250.drt_legs_drt.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
@@ -52,7 +52,7 @@ if (Fahrten>=2){
 class.df <- data.frame(stopIds,fromLink,toLink,anzahlFahrten,stringsAsFactors = FALSE)
 print(class.df)
 
-setwd("/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnalysis")
+setwd("/Users/tomkelouisa/Documents/VSP")
 
 write.csv(class.df, "LinktoLinkAnzahl.csv",quote = FALSE)
 
