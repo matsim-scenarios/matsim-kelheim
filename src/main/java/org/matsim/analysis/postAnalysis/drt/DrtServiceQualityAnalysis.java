@@ -22,6 +22,9 @@ import org.matsim.core.router.speedy.SpeedyALTFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
+import org.matsim.vehicles.Vehicle;
+import org.matsim.vehicles.VehicleType;
+import org.matsim.vehicles.VehicleUtils;
 import picocli.CommandLine;
 
 import java.io.FileWriter;
@@ -75,10 +78,15 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
         LeastCostPathCalculator router = new SpeedyALTFactory().
                 createPathCalculator(network, travelDisutility, travelTime);
 
+        // a quick fix for the AV speed calculation
+        VehicleType vehicleTypeAv = VehicleUtils.createVehicleType(Id.create("av_type_for_route_calculation", VehicleType.class));
+        vehicleTypeAv.setMaximumVelocity(5.0);
+        Vehicle avVehicle = VehicleUtils.createVehicle(Id.create("dummy_av_vehicle", Vehicle.class), vehicleTypeAv);
+
         for (String mode : modes) {
             Path tripsFile = globFile(folderOfLastIteration, "*drt_legs_" + mode + ".*");
-            Path outputTripsPath = Path.of(outputFolder.toString() + "/" + mode + "_trips.tsv");
-            Path outputStatsPath = Path.of(outputFolder.toString() + "/" + mode + "_KPI.tsv");
+            Path outputTripsPath = Path.of(outputFolder + "/" + mode + "_trips.tsv");
+            Path outputStatsPath = Path.of(outputFolder + "/" + mode + "_KPI.tsv");
 
             List<Double> waitingTimes = new ArrayList<>();
             List<Double> onboardDelayRatios = new ArrayList<>();
@@ -98,9 +106,12 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
                     Link fromLink = network.getLinks().get(Id.createLinkId(record.get(3)));
                     Link toLink = network.getLinks().get(Id.createLinkId(record.get(6)));
                     double departureTime = Double.parseDouble(record.get(0));
+                    Vehicle vehicle = null;
+                    if (mode.equals("av")) {
+                        vehicle = avVehicle;
+                    }
                     LeastCostPathCalculator.Path path = router.calcLeastCostPath(fromLink.getToNode(), toLink.getToNode(),
-                            departureTime, null, null);
-
+                            departureTime, null, vehicle);
                     double estimatedDirectInVehicleTime = path.travelTime;
                     double estimatedDirectTravelDistance = path.links.stream().map(Link::getLength).mapToDouble(l -> l).sum();
                     double waitingTime = Double.parseDouble(record.get(9));
