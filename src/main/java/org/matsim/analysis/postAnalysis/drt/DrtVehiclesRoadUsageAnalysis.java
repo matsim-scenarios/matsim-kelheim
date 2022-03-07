@@ -219,6 +219,7 @@ public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
                 String formattedTime = DurationFormatUtils.formatDuration(time * 1000L, "HH:MM:SS", true);
                 header.add(formattedTime);
             }
+            header.add("sum");
             vehicleRoadUsageWriter.printRecord(header);
             passengerRoadUsageWriter.printRecord(header);
 
@@ -228,12 +229,18 @@ public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
                     List<String> passengerEntry = new ArrayList<>();
                     vehicleEntry.add(link.getId().toString());
                     passengerEntry.add(link.getId().toString());
+                    MutableInt vehicleSum = new MutableInt(0);
+                    MutableInt passengerSum = new MutableInt(0);
                     for (int i = 0; i < numOfTimeBins; i++) {
                         int vehicleRoadUsage = vehicleRoadUsageRecordMap.get(link.getId().toString()).get(i).intValue();
+                        vehicleSum.add(vehicleRoadUsage);
                         vehicleEntry.add(Integer.toString(vehicleRoadUsage));
                         int passengerRoadUsage = passengerRoadUsageMap.get(link.getId().toString()).get(i).intValue();
+                        passengerSum.add(passengerRoadUsage);
                         passengerEntry.add(Integer.toString(passengerRoadUsage));
                     }
+                    vehicleEntry.add(Integer.toString(vehicleSum.intValue()));
+                    passengerEntry.add(Integer.toString(passengerSum.intValue()));
                     vehicleRoadUsageWriter.printRecord(vehicleEntry);
                     passengerRoadUsageWriter.printRecord(passengerEntry);
                 }
