@@ -145,6 +145,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
         config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
         config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
+        config.controler().setRunId(sample.adjustName(config.controler().getRunId()));
 
         config.qsim().setFlowCapFactor(sample.getSize() / 100.0);
         config.qsim().setStorageCapFactor(sample.getSize() / 100.0);
