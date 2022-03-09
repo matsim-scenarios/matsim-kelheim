@@ -9,7 +9,7 @@
         <param name="lastIteration" value="500"/>
         <param name="overwriteFiles" value="failIfDirectoryExists"/>
         <param name="runId" value="kelheim-v2.0"/>
-        <param name="outputDirectory" value="./output/output-kelheim-25pct"/>
+        <param name="outputDirectory" value="./output/output-kelheim-v2.0-25pct"/>
         <param name="writeEventsInterval" value="50"/>
         <param name="writePlansInterval" value="50"/>
         <param name="enableLinkToLinkRouting" value="false" />

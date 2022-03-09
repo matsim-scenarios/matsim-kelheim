@@ -42,7 +42,7 @@ It can be used by using either of these methods:
 
 1. Set up the project in your IDE.
 1. Make sure the project is configured as maven project.
-1. Run the JAVA class `src/main/java/org/matsim/run/RunKelheimScenario.java` with the following program argument `run`.
+1. Run the JAVA class `src/main/java/org/matsim/run/RunKelheimScenario.java` with the following program argument `run`. Add '--1pct' for test runs with a smaller sample size.
 1. "Open" the output directory.  You can drag files into VIA as was already done above.
 1. Edit the config file or adjust the run class. Re-run MATSim.
 
@@ -53,6 +53,6 @@ It can be used by using either of these methods:
 2. Build the scenario using `mvnw package`. Add the option `-Dskiptests=true` in order to skip tests and speed up the process. 
 3. There should be a file directly in the `matsim-kehlheim` directory with name approximately as `matsim-kehlheim-2.x.jar`.
 4. Run this file from the command line using `java -jar matsim-kehlheim-2.x.jar --help` to see all possible options.
-  1. For example, one can disable lanes or run the 25pct scenario using the available options
-5. Start this scenario using the default config by running `java -jar matsim-kehlheim-2.x.jar`
+  1. For example, one can disable lanes or run smaller sample sizes using the available options
+5. Start this scenario using the default config by running `java -jar matsim-kehlheim-2.x.jar`.
 6. "Open" the output directory.  You can drag files into VIA as was already done above.
