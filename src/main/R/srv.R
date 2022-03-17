@@ -1,5 +1,3 @@
-
-
 library(gridExtra)
 library(tidyverse)
 library(lubridate)
@@ -24,12 +22,14 @@ shape <- st_read("../../../scenarios/input/shp/dilutionArea.shp", crs=25832)
 # Read simulation data
 #########
 
-f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\calibration\\runs\\041"
-f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\auto-tuning\\output\\run-03\\run-5"
-f <- "../../../output/output-kelheim-25pct/"
-f <- "D:/KelRide/kelheim-case-study/avServiceAreas/KEXI-with-av/run-01-BAUERNSIEDLUNG/"
-f <- "Z:/net/ils/matsim-kelheim/v2.0-release/output/output-kelheim-v2.0-25pct/"
-f <- "Z:/net/ils/matsim-kelheim/calibration/runs/041/"
+#f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\calibration\\runs\\041"
+#f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\auto-tuning\\output\\run-03\\run-5"
+#f <- "../../../output/output-kelheim-25pct/"
+#f <- "D:/KelRide/kelheim-case-study/avServiceAreas/KEXI-with-av/run-01-BAUERNSIEDLUNG/"
+#f <- "Z:/net/ils/matsim-kelheim/v2.0-release/output/output-kelheim-v2.0-25pct/"
+f <- "Z:/net/ils/matsim-kelheim/calibration/runs/046/"
+#f <- "Z:/net/ils/matsim-kelheim/kelheim-case-study/KEXI-base-case/output-ASC-infinity/"
+
 
 sim_scale <- 4
 
@@ -54,7 +54,7 @@ trips <- read_delim(list.files(f, pattern = "*.output_trips.csv.gz", full.names 
                     )) %>%
         filter(main_mode!="freight") %>%
         semi_join(persons) %>%
-        mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels)) %>%
+        mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels), right = F) %>% # traveled_distance == 0 is considered
         filter(!is.na(dist_group))
 
 
