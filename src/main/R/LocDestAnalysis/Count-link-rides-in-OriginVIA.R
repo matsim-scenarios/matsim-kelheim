@@ -43,7 +43,7 @@ if(("fromstopID" %in% colnames(viaDataframe))==FALSE){
 
 
   ########################################
-  # fügt zu den VIA Daten den Haltestellenwert von VSP hinzu
+  # fügt zu den VIA Daten den Haltestellenwert VSP hinzu
 
   viaDataframe <- viaDataframe  %>%
     rowwise() %>%
