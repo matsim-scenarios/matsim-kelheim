@@ -64,10 +64,9 @@ countdrivenlinks <- function(movements, fromstopID,tostop_ID,tsvname){
 
 
 
-  setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
+  setwd(filePath)
 
-  #write.csv2(class.df, csvname,quote = FALSE)
+
   write.table(class.df,tsvname,quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
-  #print(laenge)
-  #print(sum(as.integer(class.df$anzahlFahrten)))
+
 }

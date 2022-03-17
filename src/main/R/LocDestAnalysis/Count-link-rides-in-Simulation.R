@@ -1,10 +1,21 @@
 library(tidyverse)
 
-setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
+######################
+# dies sind die Variablen, die man für den eigenen Gebrauch anpassen muss
+filePath <- "/Users/tomkelouisa/Documents/VSP/Kehlheimfiles" # hier sollen die beiden folgenden Files liegen
+simulationfilename <- "KEXI-base-case.passingQ.250.drt_legs_drt.csv" # Filename der Realdaten
+haltestellenFile <- "kelheim-drt-stops-locations(1).csv" # Filename der Haltestellenliste
+nameAnalyseFile <- "Simulation-drt-Analyse-Anzahl.tsv" # Filename des Analyseoutputfiles, in tsv
+
+# wenn die obigen Daten eingegeben sind, kann das Programm gestartet werden und es wird das outputfile im filePath erstellt
+##############################
+
+
+setwd(filePath)
 #Daten Stopdaten einlesen
 stops <- read.csv("kelheim-drt-stops-locations(1).csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 # Simulierte drt Daten einlesen
-movements <- read.csv("KEXI-base-case.passingQ.250.drt_legs_drt.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
+movements <- read.csv(simulationfilename, stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
 
 #Sortiert erst Dataframe erst nach "fromLinkId" und dann nach "toLinkId"
 sortedMovement <- movements[order(movements$fromLinkId,movements$toLinkId), ]
@@ -58,8 +69,8 @@ for(row in 2:laenge){
     }
 }
 
-#mögliche letztes Tupel abfangen
-if (Fahrten>=2){
+  #das letztes Tupel abfangen
+  connection <- newConnection
   fromLink <- c(fromLink,connection[1])
   toLink <- c(toLink,connection[2])
   anzahlFahrten <- c(anzahlFahrten,Fahrten)
@@ -69,16 +80,16 @@ if (Fahrten>=2){
   toY <- c(toY,as.character(stops$Y[which(stops$Link.ID==connection[2],arr.ind=FALSE)]))
   fromX <- c(fromX,as.character(stops$X[which(stops$Link.ID==connection[1],arr.ind=FALSE)]))
   fromY <- c(fromY,as.character(stops$Y[which(stops$Link.ID==connection[1],arr.ind=FALSE)]))
-}
-print(length(tostopIds))
+
+
 # in Datadfame speichern und als csv Datei abspeichern
 class.df <- data.frame(fromstopIds,tostopIds, fromLink,toLink,fromX,fromY,toX,toY,anzahlFahrten,stringsAsFactors = FALSE)
-print(class.df)
 
-setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
 
-#write.csv(class.df, "Simulation-drt-Link-to-Link-Anzahl.csv",quote = FALSE)
-write.table(class.df,"Simulation-drt-Analyse-Anzahl.tsv",quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
+setwd(filePath)
+
+
+write.table(class.df,nameAnalyseFile,quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
 
 
 

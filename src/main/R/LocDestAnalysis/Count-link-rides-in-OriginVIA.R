@@ -2,16 +2,23 @@ library(geosphere)
 library(tidyverse)
 library(dplyr)
 library(terra)
+######################
+# dies sind die Variablen, die man für den eigenen Gebrauch anpassen muss
+programPath <- "/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnalysis" # hier sollen die Funktionen neareststop.R und countdrivenstops.R liegen
+filePath <- "/Users/tomkelouisa/Documents/VSP/Kehlheimfiles" # hier sollen die beiden folgenden Files liegen
+originfilename <- "VIA_Rides_202106_202201origin.csv" # Filename der Realdaten
+haltestellenFile <- "KEXI_Haltestellen_Liste_Kelheim.csv" # Filename der Haltestellenliste
+nameAnalyseFile <- "Via-Origin-drt-count-Analysis-KEXI.tsv" # Filename des Analyseoutputfiles, in tsv
 
-setwd("/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnalysis")
+setwd(programPath)
 source("neareststop.R")
 source("countdrivenstops.R")
 
 
 
-setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
+setwd(filePath)
 # Daten von VIA einlesen
-viaDataframe <- read.csv("VIA_Rides_202106_202201origin.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
+viaDataframe <- read.csv(originfilename, stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
 
 
 if(("fromstopID" %in% colnames(viaDataframe))==FALSE){
@@ -19,14 +26,9 @@ if(("fromstopID" %in% colnames(viaDataframe))==FALSE){
   ######################################
 
   # Daten der jeweiligen Haltestellen einlesen
-  #stops <- read.csv("kelheim-drt-stops-locations(1).csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
-  stops <- read.csv("KEXI_Haltestellen_Liste_Kelheim.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8",sep= ";")
-  #convert UTM32 Coordinates to Longitude and Latitude, Haltestellen Daten sind als X und Y Koordinaten (UTM 32) angegeben
-  #UTMCoord <- cbind(stops$X, stops$Y)
-  #v <- vect(UTMCoord, crs="+proj=utm +zone=32 +datum=WGS84  +units=m")
-  #y <- project(v, "+proj=longlat +datum=WGS84")
-  #lonlat <- geom(y)[, c("x", "y")]
-  #stops<-stops %>% mutate(stoplongitude=lonlat[,"x"],stoplatitude=lonlat[,"y"])
+
+  stops <- read.csv(haltestellenFile, stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8",sep= ";")
+
 
 
   ########################################
@@ -42,13 +44,13 @@ if(("fromstopID" %in% colnames(viaDataframe))==FALSE){
     #mutate(tostop_ID = as.integer(neareststop(Destination.Longitude, Destination.latitude,"Stop.ID")))
     mutate(tostop_ID=as.integer(neareststop(Destination.Longitude, Destination.latitude,"Haltestellen.Nr.")))
 
-  setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
-  write.csv2(stops,"stop.csv",quote = FALSE)
-  write.csv2(viaDataframe, "VIA_Rides_202106_202201neu.csv",quote = FALSE)
+  setwd(filePath)
+
+  #write.csv2(viaDataframe, "VIA_Rides_202106_202201neu.csv",quote = FALSE)
 
 }
 # zählt die Anzahl der Fahrten von einem Stop zum nächsten
-countdrivenlinks(viaDataframe,"fromstopID","tostop_ID","Stop.ID","Via-Origin-drt-count-Analysis-KEXI.tsv")
+countdrivenlinks(viaDataframe,"fromstopID","tostop_ID",nameAnalyseFile)
 
 
 

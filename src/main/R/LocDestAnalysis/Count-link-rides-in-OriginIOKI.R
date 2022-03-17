@@ -3,34 +3,25 @@ library(tidyverse)
 library(dplyr)
 library(terra)
 
-setwd("/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnalysis")
-source("neareststop.R")
+######################
+# dies sind die Variablen, die man für den eigenen Gebrauch anpassen muss
+programPath <- "/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnalysis" # hier sollen die Funktion countdrivenstops.R liegen
+filePath <- "/Users/tomkelouisa/Documents/VSP/Kehlheimfiles" # hier sollen die beiden folgenden Files liegen
+originfilename <- "IOKI_Rides_202006_202105.csv" # Filename der Realdaten
+haltestellenFile <- "KEXI_Haltestellen_Liste_Kelheim.csv" # Filename der Haltestellenliste
+nameAnalyseFile <- "IOKI-Origin-drt-count-Analysis-KEXI.tsv" # Filename des Analyseoutputfiles, in tsv
+
+setwd(programPath)
+
 source("countdrivenstops.R")
 
-setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
-# Daten von VIA einlesen
-#IOKIDataframe <- read.csv("IOKI_Rides_202006_202105.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
+setwd(filePath)
+# Daten von IOKI einlesen
+IOKIDataframe <- read.csv(originfilename, stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
 
-stops <- read.csv("KEXI_Haltestellen_Liste_Kelheim.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
+stops <- read.csv(haltestellenFile, stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
 
 
-if(("fromstopID" %in% colnames(IOKIDataframe))==FALSE){
-  #VSP-stops müssen den VIA Daten hinzugefügt werden
-  ########################################
-  # fügt zu den VIA Daten den Haltestellenwert von VSP hinzu
-
-  IOKIDataframe <- IOKIDataframe %>%
-    rowwise() %>%
-    mutate(fromstopID=as.integer(neareststop(Kalkulierter.Abfahrtsort..lon., Kalkulierter.Abfahrtsort..lat.,"Haltestellen.Nr.")))
-
-  IOKIDataframe <- IOKIDataframe  %>%
-    rowwise() %>%
-    mutate(tostop_ID = as.integer(neareststop(Kalkulierter.Ankunftsort..lon., Kalkulierter.Ankunftsort..lat.,"Haltestellen.Nr.")))
-
-  setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
-
-  write.csv2(IOKIDataframe, "data.csv",quote = FALSE)
-  write.table(IOKIDataframe,"IOKI-Origin-drt-count-Analysis.tsv",quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
-
-}
-countdrivenlinks(IOKIDataframe,"fromstopID","tostop_ID","Haltestellen.Nr.","IOKI-Origin-drt-count-Analysis.tsv")
+names(IOKIDataframe)[names(IOKIDataframe)=="Abfahrtsortsname"] <- "fromstopID"
+names(IOKIDataframe)[names(IOKIDataframe)=="Ankunftsortsname"] <- "tostop_ID"
+countdrivenlinks(IOKIDataframe,"fromstopID","tostop_ID",nameAnalyseFile)
