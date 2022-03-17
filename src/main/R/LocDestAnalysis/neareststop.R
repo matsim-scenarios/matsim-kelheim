@@ -1,7 +1,7 @@
 #setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
 #stops <- read.csv("KEXI_Haltestellen_Liste_Kelheim.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
 
-neareststop <- function(longitude,latitude) {
+neareststop <- function(longitude,latitude,stopIDcolumn) {
   # calculate shortest distance between the VIA stops and the VSP stops
   print("long/Lat")
   print(longitude)
@@ -26,7 +26,7 @@ neareststop <- function(longitude,latitude) {
     mutate(distance_m = as.double(distGeo(c(as.double(longitude), as.double(latitude)),
                                           c(as.double(lon), as.double(lat)))))
   print(bereich$distance_m)
-  stopId <-bereich[which.min(bereich$distance_m),"Haltestellen.Nr."]
+  stopId <-bereich[which.min(bereich$distance_m),stopIDcolumn]
 
   return(stopId)
 

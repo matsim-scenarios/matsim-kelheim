@@ -1,8 +1,9 @@
+library(tidyverse)
 
-
-setwd("/Users/tomkelouisa/Documents/VSP/")
+setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
 #Daten Stopdaten einlesen
 stops <- read.csv("kelheim-drt-stops-locations(1).csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+# Simulierte drt Daten einlesen
 movements <- read.csv("KEXI-base-case.passingQ.250.drt_legs_drt.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
 
 #Sortiert erst Dataframe erst nach "fromLinkId" und dann nach "toLinkId"
@@ -59,9 +60,10 @@ print(length(tostopIds))
 class.df <- data.frame(fromstopIds,tostopIds, fromLink,toLink,anzahlFahrten,stringsAsFactors = FALSE)
 print(class.df)
 
-setwd("/Users/tomkelouisa/Documents/VSP")
+setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
 
-write.csv(class.df, "LinktoLinkAnzahl.csv",quote = FALSE)
+write.csv(class.df, "Simulation-drt-Link-to-Link-Anzahl.csv",quote = FALSE)
+write.table(class.df,"Simulation-drt-Link-to-Link-Anzahl.tsv",quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
 
 
 
