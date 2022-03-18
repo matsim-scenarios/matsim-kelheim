@@ -18,12 +18,37 @@ counts <- TripDataframe %>%
     group_by(main_mode,end_activity_type) %>%
         summarise(Anzahl = n())
 
-ggplot(counts, aes(x=main_mode, fill=end_activity_type))+
-    geom_bar( aes(y=..count..))+
+#auch gut, aber zu groß,
+ggplot(counts, aes(x=main_mode, y=Anzahl, fill=end_activity_type))+
+    geom_bar( stat="identity",position ="stack")+
     xlab("Mainmodes")+
-    ylab("Anzahl der Wegzwecke")
+    ylab("Anzahl der Wegzwecke")+
+    facet_grid(~end_activity_type)
 
-ggsave("plot.png",width=5,height=5)
 
+ggsave("example.pdf",width=10,height=10)
+
+
+# gar nicht so schlecht
+ggplot(TripDataframe, aes(x=main_mode, y=stat(count), group=factor(end_activity_type), fill=factor(end_activity_type)))+
+  geom_bar( )+
+  xlab("Fortbewegungsart")+
+  ylab("Anzahl der Wegzwecke")+
+  scale_y_continuous(breaks= seq(0,100000,5000))+
+  labs(fill="Wegezwecke")+
+  scale_fill_hue(l=40)
+  #geom_text(aes(label=stat(count)),stat="count",position=position_stack(vjust=0.5))
+
+ggsave("try.png",width=10,height=10)
+
+
+# das ist gut
+ggplot(counts, aes(x=main_mode, y=Anzahl, fill=end_activity_type))+
+  geom_bar( stat="identity",position ="stack")+
+  xlab("Mainmodes")+
+  ylab("Anzahl der Wegzwecke")+
+  facet_wrap(~end_activity_type, scale="free")
+
+################ drt
 
 
