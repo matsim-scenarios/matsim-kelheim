@@ -163,6 +163,9 @@ ridesPerDay <- ridesToConsider %>%
 avgRides <- mean(ridesPerDay$n)
 avgRides
 
+#a typical day here can be seen as a day with no of rides close to the average no of rides (119)
+typicalDays <- filter(ridesPerDay, between(n, avgRides - 3, avgRides + 3))
+
 boxplot(ridesPerDay$n, main = "Boxplot KEXI Rides per day", ylab = "rides")
 abline(h = avgRides - 2 * sd(ridesPerDay$n), col="red",lty=2)
 abline(h = avgRides + 2 * sd(ridesPerDay$n), col="red",lty=2)
