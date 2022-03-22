@@ -27,16 +27,16 @@ shape <- st_read("../../../scenarios/input/shp/dilutionArea.shp", crs=25832)
 #f <- "../../../output/output-kelheim-25pct/"
 #f <- "D:/KelRide/kelheim-case-study/avServiceAreas/KEXI-with-av/run-01-BAUERNSIEDLUNG/"
 #f <- "Z:/net/ils/matsim-kelheim/v2.0-release/output/output-kelheim-v2.0-25pct/"
-f <- "Z:/net/ils/matsim-kelheim/calibration/runs/046/"
+f <- "Z:/net/ils/matsim-kelheim/calibration/runs/052/"
 #f <- "Z:/net/ils/matsim-kelheim/kelheim-case-study/KEXI-base-case/output-ASC-infinity/"
 
 
 sim_scale <- 4
 
-homes <- read_csv("../../../scenarios/input/kelheim-v2.0-homes.csv", 
-                  col_types = cols(
-                    person = col_character()
-                  ))
+#homes <- read_csv("../../../scenarios/input/kelheim-v2.0-homes.csv", 
+#                  col_types = cols(
+#                    person = col_character()
+#                  ))
 
 persons <- read_delim(list.files(f, pattern = "*.output_persons.csv.gz", full.names = T, include.dirs = F), delim = ";", trim_ws = T, 
                      col_types = cols(
@@ -54,7 +54,7 @@ trips <- read_delim(list.files(f, pattern = "*.output_trips.csv.gz", full.names 
                     )) %>%
         filter(main_mode!="freight") %>%
         semi_join(persons) %>%
-        mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels), right = F) %>% # traveled_distance == 0 is considered
+        mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels, right = F)) # traveled_distance == 0 is considered
         filter(!is.na(dist_group))
 
 
