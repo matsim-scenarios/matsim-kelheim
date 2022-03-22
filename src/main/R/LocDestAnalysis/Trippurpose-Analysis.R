@@ -3,6 +3,10 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 library(hrbrthemes)
+library(ggpubr)
+library(patchwork)
+library(RColorBrewer)
+
 
 require(readr)
 filePath<-"/Users/tomkelouisa/Documents/VSP/Kehlheimfiles/Wegezweckeplots" # the plots are going to be saved here
@@ -20,7 +24,7 @@ TripDataframe <- TripDataframe %>%
 
 counts <- TripDataframe %>%
     group_by(main_mode,end_activity_type) %>%
-        summarise(Anzahl = n())
+        summarise(count = n())
 
 interactiveMode<-FALSE
 #######################
@@ -34,8 +38,8 @@ print(length(drtanalyse$main_mode))
 plot <-ggplot(drtanalyse,aes(x=end_activity_type))+
   geom_bar(fill= "steelblue")+
   xlab("Trippurpose")+
-  ggtitle("Trippurposes of drt usage")+
-  ylab("Number of trippurposes ")+
+  ggtitle("Trip purposes of drt usage")+
+  ylab("Number of trips ")+
   theme(axis.text.x = element_text(angle = 45,hjust=1))+
   theme(plot.title = element_text(hjust = 0.5))+
   #theme_ipsum()+
@@ -82,17 +86,20 @@ if(interactiveMode){
 ##############
 #Stackbalkendiagramm, die Wegzwecke auf Fortbewegungart aufgetragen
 #drt sehr schlecht erkennbar, da so geringe Anzahl
+nb.cols <- 18
+mycolors <- colorRampPalette(brewer.pal(8, "Set2"))(nb.cols)
 p2 <-ggplot(TripDataframe, aes(x=main_mode, y=stat(count), group=factor(end_activity_type), fill=factor(end_activity_type)))+
-  geom_bar( )+
+  geom_bar(fill=c(mycolors))+
   xlab("Traveling mode")+
-  ylab("Number of Trippurposes")+
-  ggtitle("Trippurposes of traveling modes")+
+  ylab("Number of trips")+
+  ggtitle("Trip purposes of traveling modes")+
   scale_y_continuous(breaks= seq(0,100000,5000))+
   labs(fill="Wegezwecke")+
   #theme_ipsum()+
+  #scale_fill_manual(values = mycolors) +
   theme(text=element_text(size=20))+
-  theme(plot.title = element_text(hjust = 0.5))+
-  scale_fill_hue(l=40)
+  theme(plot.title = element_text(hjust = 0.5))
+  #scale_fill_hue(l=40)
 
 plotFile <-paste(filePath,"/Wegezwecke_Fortbewegungsmittel.png",sep="")
 paste("printing plot to ", plotFile)
@@ -107,13 +114,13 @@ if(interactiveMode){
 
 ################
 # Veranschauling der Fortbewegungsarten im Bezug auf einen Wegzweck
-p3<-ggplot(counts, aes(x=main_mode, y=Anzahl, fill=end_activity_type))+
+p3<-ggplot(counts, aes(x=main_mode, y=count, fill=end_activity_type))+
   geom_bar( stat="identity",position ="stack")+
   xlab("Mainmodes")+
-  ylab("Number of Trippurposes")+
+  ylab("Number of trips")+
   #theme_ipsum()+
   theme(text=element_text(size=20))+
-  ggtitle("traveling modes refenced to trippurpose")+
+  ggtitle("traveling modes refenced to trip purpose")+
   theme(plot.title = element_text(hjust = 0.5))+
   facet_wrap(~end_activity_type, scale="free")
 
@@ -128,20 +135,21 @@ if(interactiveMode){
 ################
 #Veranschaulichung der Wegezwecke im Bezug auf eine Fortbewegungsart
 
-p4 <-ggplot(counts, aes(x=end_activity_type,y=Anzahl, fill=main_mode))+
+p4 <-ggplot(counts, aes(x=end_activity_type,y=count, fill=main_mode))+
   geom_bar( stat="identity",position ="stack")+
-  ylab("Mainmodes")+
-  xlab("Numbr of Trippurposes")+
-  ggtitle("Trippurposes refernced to the traveling mode")+
+  ylab("Number of trips ")+
+  xlab("Trip purposes")+
+  ggtitle("Trip purposes refernced to the traveling mode")+
   facet_wrap(~main_mode, scale="free")+
   #theme_ipsum()+
   theme(text=element_text(size=20))+
   theme(plot.title = element_text(hjust = 0.5))+
-  theme(axis.text.x = element_text(angle = 45,hjust=1))
+  #theme(legend.position = "none")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1,size=8))
 
 
-
-plotFile <-paste(filePath,"/Weckzweck_pro_Fortbewegungsmittel.png",sep="")
+#ggtitle("Trip purposes refernced to the traveling mode")
+plotFile <-paste(filePath,"/Weckzweck_pro_Fortbewegungsmittel_split.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1200, height = 800)
 p4
@@ -152,5 +160,59 @@ if(interactiveMode){
 
 
 
-## simplify the plot edu=combine
+#########
+p5 <-ggplot(counts, aes(x=end_activity_type,y=count, fill=main_mode))+
+  geom_bar( stat="identity",position ="stack")+
+  #ylab("Mainmodes")+
+  #lab("Number of trips")+
+  theme(legend.position = "none")+
+  #ggtitle("Trip purposes refernced to the traveling mode")+
+  #facet_wrap(~main_mode, scale="free")+
+  #theme_ipsum()+
+  theme(text=element_text(size=20))+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme(axis.text.x = element_text(angle = 45,hjust=1))
 
+#figure <- p4 + inset_element(p5,left=0.5,bottom=0, top=0.5,right=0)
+#ggtitle("Trip purposes refernced to the traveling mode")
+dev.off()
+layout <- c(
+  area(t = 1, l = 1, b = 5, r = 5),
+  area(t = 5, l = 3, b = 5, r = 5)
+)
+figure= p4+p5+ plot_layout(design=layout)
+#figure=p4 + inset_element(p5, left = 0.6, bottom = 1, right = 1, top = 0.6)
+ggtitle("Trip purposes refernced to the traveling mode")
+plotFile <-paste(filePath,"/Weckzweck_pro_Fortbewegungsmittel_gesamt.png",sep="")
+paste("printing plot to ", plotFile)
+png(plotFile, width = 1200, height = 800)
+figure
+dev.off()
+if(interactiveMode){
+  ggplotly(figure)
+}
+
+
+#########
+p5 <-ggplot(counts, aes(x=end_activity_type,y=count, fill=main_mode))+
+  geom_bar( stat="identity",position ="stack")+
+  ylab("Number of trips")+
+  xlab("Trip purposes")+
+
+  ggtitle("Trip purposes refernced to the traveling mode")+
+
+  theme(text=element_text(size=20))+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme(axis.text.x = element_text(angle = 45,hjust=1))
+
+
+plotFile <-paste(filePath,"/Weckzweck_pro_Fortbewegungsmittel_stack.png",sep="")
+paste("printing plot to ", plotFile)
+png(plotFile, width = 1200, height = 800)
+p5
+dev.off()
+if(interactiveMode){
+  ggplotly(p5)
+}
+
+### scale muss noch verändert werden
