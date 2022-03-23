@@ -62,7 +62,7 @@ plot1 <-ggplot(drtanalyse,aes(x=main_mode,y=stat(count), group=factor(end_activi
   xlab("Trippurpose")+
   ylab("Traveling mode")+
   ggtitle("Trippurposes of drt usage")+
-  scale_fill_hue(l=40)+
+  scale_fill_manual(values = c("#A6CEE3", "#6EAACF", "#3687BC", "#4190AA" ,"#7EBA98" ,"#AADB84" ,"#76C15D", "#41A737", "#6D9E4C", "#C09B78", "#F88A8A", "#EE5656", "#E42123", "#EC5439", "#F6985B", "#FDB35B" ,"#FE992D", "#FF7F00")) +
   #theme_ipsum()+
   theme(text=element_text(size=20))+
   theme(plot.title = element_text(hjust = 0.5))+
@@ -83,32 +83,6 @@ if(interactiveMode){
 #ggsave("example.pdf",width=10,height=10)
 
 
-##############
-#Stackbalkendiagramm, die Wegzwecke auf Fortbewegungart aufgetragen
-#drt sehr schlecht erkennbar, da so geringe Anzahl
-nb.cols <- 18
-mycolors <- colorRampPalette(brewer.pal(8, "Set2"))(nb.cols)
-p2 <-ggplot(TripDataframe, aes(x=main_mode, y=stat(count), group=factor(end_activity_type), fill=factor(end_activity_type)))+
-  geom_bar(fill=c(mycolors))+
-  xlab("Traveling mode")+
-  ylab("Number of trips")+
-  ggtitle("Trip purposes of traveling modes")+
-  scale_y_continuous(breaks= seq(0,100000,5000))+
-  labs(fill="Wegezwecke")+
-  #theme_ipsum()+
-  #scale_fill_manual(values = mycolors) +
-  theme(text=element_text(size=20))+
-  theme(plot.title = element_text(hjust = 0.5))
-  #scale_fill_hue(l=40)
-
-plotFile <-paste(filePath,"/Wegezwecke_Fortbewegungsmittel.png",sep="")
-paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)
-p2
-dev.off()
-if(interactiveMode){
-  ggplotly(p2)
-}
 
 
 
@@ -180,7 +154,7 @@ layout <- c(
   area(t = 1, l = 1, b = 5, r = 5),
   area(t = 5, l = 3, b = 5, r = 5)
 )
-figure= p4+p5+ plot_layout(design=layout)
+figure<- p4+p5+ plot_layout(design=layout)
 #figure=p4 + inset_element(p5, left = 0.6, bottom = 1, right = 1, top = 0.6)
 ggtitle("Trip purposes refernced to the traveling mode")
 plotFile <-paste(filePath,"/Weckzweck_pro_Fortbewegungsmittel_gesamt.png",sep="")
@@ -215,4 +189,27 @@ if(interactiveMode){
   ggplotly(p5)
 }
 
-### scale muss noch verändert werden
+
+##############
+#Stackbalkendiagramm, die Wegzwecke auf Fortbewegungart aufgetragen
+#drt sehr schlecht erkennbar, da so geringe Anzahl
+
+p2 <-ggplot(TripDataframe, aes(x=main_mode, y=stat(count), group=factor(end_activity_type), fill=factor(end_activity_type)))+
+  geom_bar()+
+  xlab("Traveling mode")+
+  ylab("Number of trips")+
+  ggtitle("Trip purposes of traveling modes")+
+  labs(fill="Wegezwecke")+
+  scale_fill_manual(values = c("#A6CEE3", "#6EAACF", "#3687BC", "#4190AA" ,"#7EBA98" ,"#AADB84" ,"#76C15D", "#41A737", "#6D9E4C", "#C09B78", "#F88A8A", "#EE5656", "#E42123", "#EC5439", "#F6985B", "#FDB35B" ,"#FE992D", "#FF7F00")) +
+  theme(text=element_text(size=20))+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+plotFile <-paste(filePath,"/Wegezwecke_Fortbewegungsmittel.png",sep="")
+paste("printing plot to ", plotFile)
+png(plotFile, width = 1200, height = 800)
+p2
+dev.off()
+if(interactiveMode){
+  ggplotly(p2)
+}
