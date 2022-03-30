@@ -160,7 +160,6 @@ public class RunKelheimScenario extends MATSimApplication {
 
         if (intermodal) {
             ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
-            config.transit().setTransitScheduleFile("kelheim-v1.4-transitSchedule-with-intermodal-stops.xml.gz");
         }
 
         if (drt) {
