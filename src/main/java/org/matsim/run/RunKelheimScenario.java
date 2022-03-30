@@ -52,6 +52,7 @@ import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
+import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
@@ -99,6 +100,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
     @CommandLine.Option(names = "--random-seed", defaultValue = "4711", description = "setting random seed for the simulation")
     private long randomSeed;
+
+    @CommandLine.Option(names = "--intermodal", defaultValue = "false", description = "enable DRT service")
+    private boolean intermodal;
 
     public RunKelheimScenario(@Nullable Config config) {
         super(config);
@@ -153,6 +157,10 @@ public class RunKelheimScenario extends MATSimApplication {
         config.plansCalcRoute().setAccessEgressType(PlansCalcRouteConfigGroup.AccessEgressType.accessEgressModeToLink);
 
         config.global().setRandomSeed(randomSeed);
+
+        if (intermodal) {
+            ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
+        }
 
         if (drt) {
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
