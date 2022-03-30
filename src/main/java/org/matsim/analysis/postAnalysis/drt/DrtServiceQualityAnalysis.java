@@ -91,6 +91,8 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
             List<Double> waitingTimes = new ArrayList<>();
             List<Double> onboardDelayRatios = new ArrayList<>();
             List<Double> detourDistanceRatios = new ArrayList<>();
+            List<Double> euclideanDistances = new ArrayList<>();
+            List<Double> directDistances = new ArrayList<>();
 
             CSVPrinter tsvWriter = new CSVPrinter(new FileWriter(outputTripsPath.toString()), CSVFormat.TDF);
             List<String> titleRow = Arrays.asList
@@ -125,6 +127,8 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
                     waitingTimes.add(waitingTime);
                     onboardDelayRatios.add(onboardDelayRatio);
                     detourDistanceRatios.add(detourRatioDistance);
+                    euclideanDistances.add(euclideanDistance);
+                    directDistances.add(estimatedDirectTravelDistance); //TODO there is currently discrepancy between DRT legs and calculated route in the post analysis
 
                     List<String> outputRow = new ArrayList<>();
                     outputRow.add(Double.toString(departureTime));
@@ -148,7 +152,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
             CSVPrinter tsvWriterKPI = new CSVPrinter(new FileWriter(outputStatsPath.toString()), CSVFormat.TDF);
             List<String> titleRowKPI = Arrays.asList
                     ("number_of_requests", "waiting_time_mean", "waiting_time_median", "waiting_time_95_percentile",
-                            "onboard_delay_ratio_mean", "detour_distance_ratio_mean");
+                            "onboard_delay_ratio_mean", "detour_distance_ratio_mean", "trips_euclidean_distance_mean", "trips_direct_network_distance_mean");
             tsvWriterKPI.printRecord(titleRowKPI);
 
             int meanWaitingTime = (int) waitingTimes.stream().mapToDouble(w -> w).average().orElse(-1);
@@ -159,6 +163,9 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
             String meanDelayRatio = formatter.format(onboardDelayRatios.stream().mapToDouble(r -> r).average().orElse(-1));
             String meanDetourDistanceRatio = formatter.format(detourDistanceRatios.stream().mapToDouble(d -> d).average().orElse(-1));
 
+            String meanEuclideanDistance = formatter.format(euclideanDistances.stream().mapToDouble(r -> r).average().orElse(-1));
+            String meanDirectNetworkDistance = formatter.format(directDistances.stream().mapToDouble(r -> r).average().orElse(-1));
+
             List<String> outputKPIRow = new ArrayList<>();
             outputKPIRow.add(Integer.toString(numOfTrips));
             outputKPIRow.add(Integer.toString(meanWaitingTime));
@@ -166,6 +173,8 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
             outputKPIRow.add(Integer.toString(waitingTime95Percentile));
             outputKPIRow.add(meanDelayRatio);
             outputKPIRow.add(meanDetourDistanceRatio);
+            outputKPIRow.add(meanEuclideanDistance);
+            outputKPIRow.add(meanDirectNetworkDistance);  //TODO read this value carefully
 
             tsvWriterKPI.printRecord(outputKPIRow);
 
