@@ -12,7 +12,7 @@ haltestellenFile <- "KEXI_Haltestellen_Liste_Kelheim.csv" # Filename der Haltest
 nameAnalyseFile <- "IOKI-Origin-drt-count-Analysis-KEXI.tsv" # Filename des Analyseoutputfiles, in tsv
 startdate <- "19-12-2020"  # wenn das ganze File ausgewertet werden soll, schreibe hier -1 rein
 tage <- 1 # Anzahl an Tagen die ausgewertet werden sollen
-
+csvfilename <- "stop2stopridesIOKI.csv"
 
 setwd(programPath)
 

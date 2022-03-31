@@ -59,14 +59,14 @@ countdrivenlinks <- function(movements, fromstopID,tostop_ID,tsvname){
   # in Datadfame speichern und als csv Datei abspeichern
 
   class.df <- data.frame(fromstopIds,tostopIds,fromlat,fromlon,tolat,tolon,anzahlFahrten,stringsAsFactors = FALSE)
-
+  class.smalldf <- data.frame(fromstopIds,tostopIds,anzahlFahrten)
 
 
 
 
   setwd(filePath)
 
-
+  write.csv2(class.smalldf,csvfilename,quote=FALSE, row.names=FALSE)
   write.table(class.df,tsvname,quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
 
 }

@@ -6,7 +6,7 @@ filePath <- "/Users/tomkelouisa/Documents/VSP/Kehlheimfiles" # hier sollen die b
 simulationfilename <- "KEXI-base-case.passingQ.250.drt_legs_drt.csv" # Filename der Realdaten
 haltestellenFile <- "kelheim-drt-stops-locations(1).csv" # Filename der Haltestellenliste
 nameAnalyseFile <- "Simulation-drt-Analyse-Anzahl.tsv" # Filename des Analyseoutputfiles, in tsv
-
+csvfilename <- "stop2stoprides.csv"
 # wenn die obigen Daten eingegeben sind, kann das Programm gestartet werden und es wird das outputfile im filePath erstellt
 ##############################
 
@@ -84,11 +84,11 @@ for(row in 2:laenge){
 
 # in Datadfame speichern und als csv Datei abspeichern
 class.df <- data.frame(fromstopIds,tostopIds, fromLink,toLink,fromX,fromY,toX,toY,anzahlFahrten,stringsAsFactors = FALSE)
-
+class.smalldf <- data.frame(fromstopIds,tostopIds,anzahlFahrten,stringsAsFactors = FALSE)
 
 setwd(filePath)
 
-
+write.csv2(class.smalldf,csvfilename,quote=FALSE, row.names=FALSE)
 write.table(class.df,nameAnalyseFile,quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
 
 

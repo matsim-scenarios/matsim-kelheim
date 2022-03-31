@@ -9,10 +9,10 @@ programPath <- "/Users/tomkelouisa/Documents/VSP/Kehlheim/src/main/R/LocDestAnal
 filePath <- "/Users/tomkelouisa/Documents/VSP/Kehlheimfiles" # hier sollen die beiden folgenden Files liegen
 originfilename <- "VIA_Rides_202106_202201origin.csv" # Filename der Realdaten
 haltestellenFile <- "KEXI_Haltestellen_Liste_Kelheim.csv" # Filename der Haltestellenliste
-startdate <- "2021-07-01"  # wenn das ganze File ausgewertet werden soll, schreibe hier -1 rein
+startdate <- "2021-07-02"  # wenn das ganze File ausgewertet werden soll, schreibe hier -1 rein
 tage <- 1 # Anzahl an Tagen die ausgewertet werden sollen
 nameAnalyseFile <- paste(startdate , "_Via-Origin-drt-count-Analysis-KEXI.tsv") # Filename des Analyseoutputfiles, in tsv
-
+csvfilename <- "stop2stopridesVIA.csv"
 setwd(programPath)
 source("neareststop.R")
 source("countdrivenstops.R")
