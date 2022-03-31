@@ -167,7 +167,7 @@ if(interactiveMode){
 }
 
 
-#########
+#######
 p5 <-ggplot(counts, aes(x=end_activity_type,y=count, fill=main_mode))+
   geom_bar( stat="identity",position ="stack")+
   ylab("Number of trips")+
