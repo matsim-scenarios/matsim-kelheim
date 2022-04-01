@@ -166,6 +166,39 @@ avgRides
 #a typical day here can be seen as a day with no of rides close to the average no of rides (119)
 typicalDays <- filter(ridesPerDay, between(n, avgRides - 3, avgRides + 3))
 
+#5 days are chosen as typical references
+typicalDay_jul <- ymd("2021-07-21")
+typicalDay_sep <- ymd("2021-09-15")
+typicalDay_oct <- ymd("2021-10-12")
+typicalDay_dec <- ymd("2021-12-01")
+typicalDay_jan <- ymd("2022-01-27")
+
+typicalDaysList <- list(typicalDay_jul, typicalDay_sep, typicalDay_oct, typicalDay_dec, typicalDay_jan)
+
+# this is so ugly and hard coded right now, as you have to change the day you want to plot
+#but a for loop for this just does not seem to work -sm apr22
+typicalDayRidesPerInterval <- ridesToConsider %>%
+  filter(date == typicalDay_jan) %>%
+  mutate (interval = floor( (minute(Actual.PU.time) + hour(Actual.PU.time) * 60) / 5)  )  %>%
+  group_by(interval) %>%
+  tally()
+
+p <- typicalDayRidesPerInterval %>%
+  ggplot( aes(x=interval*5/60, y=n)) +
+  ggtitle(paste("Fahrten pro 5-Minuten-Intervall (VIA): typischer Tag im ", month(typicalDay_jan, label=TRUE))) +
+  geom_area(fill="#69b3a2", alpha=0.5) +
+  geom_line(color="#69b3a2") +
+  ylab("Anzahl Fahrten") +
+  xlab("Stunde") +
+  theme_ipsum()
+
+plotFile = paste("typicalDays/KEXI_rides_VIA_", month(typicalDay_jan, label=TRUE), ".png")
+paste("printing plot to ", plotFile)
+png(plotFile, width = 1200, height = 800)
+p
+dev.off()
+ggplotly(p)
+
 boxplot(ridesPerDay$n, main = "Boxplot KEXI Rides per day", ylab = "rides")
 abline(h = avgRides - 2 * sd(ridesPerDay$n), col="red",lty=2)
 abline(h = avgRides + 2 * sd(ridesPerDay$n), col="red",lty=2)
