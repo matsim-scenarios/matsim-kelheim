@@ -53,7 +53,6 @@ import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
-import org.matsim.extensions.pt.fare.intermodalTripFareCompensator.IntermodalTripFareCompensatorsModule;
 import org.matsim.extensions.pt.routing.EnhancedRaptorIntermodalAccessEgress;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesModule;
@@ -275,7 +274,7 @@ public class RunKelheimScenario extends MATSimApplication {
             }
 
             if (intermodal){
-                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
+//                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
                 controler.addOverridingModule(new PtIntermodalRoutingModesModule());
                 controler.addOverridingModule(new AbstractModule() {
                     @Override
