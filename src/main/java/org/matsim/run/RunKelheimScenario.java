@@ -274,15 +274,16 @@ public class RunKelheimScenario extends MATSimApplication {
                 }
             }
 
-            controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
-            controler.addOverridingModule(new PtIntermodalRoutingModesModule());
-            controler.addOverridingModule(new AbstractModule() {
-                @Override
-                public void install() {
-                    bind(RaptorIntermodalAccessEgress.class).to(EnhancedRaptorIntermodalAccessEgress.class);
-                }
-            });
-
+            if (intermodal){
+                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
+                controler.addOverridingModule(new PtIntermodalRoutingModesModule());
+                controler.addOverridingModule(new AbstractModule() {
+                    @Override
+                    public void install() {
+                        bind(RaptorIntermodalAccessEgress.class).to(EnhancedRaptorIntermodalAccessEgress.class);
+                    }
+                });
+            }
         }
     }
 }
