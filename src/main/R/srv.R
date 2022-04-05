@@ -27,9 +27,8 @@ shape <- st_read("../../../scenarios/input/shp/dilutionArea.shp", crs=25832)
 #f <- "../../../output/output-kelheim-25pct/"
 #f <- "D:/KelRide/kelheim-case-study/avServiceAreas/KEXI-with-av/run-01-BAUERNSIEDLUNG/"
 #f <- "Z:/net/ils/matsim-kelheim/v2.0-release/output/output-kelheim-v2.0-25pct/"
-f <- "Z:/net/ils/matsim-kelheim/calibration/runs/052/"
-#f <- "Z:/net/ils/matsim-kelheim/kelheim-case-study/KEXI-base-case/output-ASC-infinity/"
-
+#f <- "Z:/net/ils/matsim-kelheim/calibration/runs/052/"
+f <- "Z:/net/ils/matsim-kelheim/kelheim-case-study/KEXI-base-case-based-on-calibRun-052/output-ASC-200-dist-0.0/"
 
 sim_scale <- 4
 
@@ -54,7 +53,7 @@ trips <- read_delim(list.files(f, pattern = "*.output_trips.csv.gz", full.names 
                     )) %>%
         filter(main_mode!="freight") %>%
         semi_join(persons) %>%
-        mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels, right = F)) # traveled_distance == 0 is considered
+        mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels, right = F)) %>%  # traveled_distance == 0 is considered
         filter(!is.na(dist_group))
 
 
@@ -166,7 +165,7 @@ levels = c("0 - 500", "500 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000"
 breaks = c(0, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, Inf)
 
 trips2 <- trips %>%
-  mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels)) %>%
+  mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels, right = F)) %>%
   mutate(mode = fct_relevel(main_mode, "walk", "bike", "pt", "ride", "car"))
 
 rs <- read_csv("tidied-mode-share-per-distance.csv") %>%
