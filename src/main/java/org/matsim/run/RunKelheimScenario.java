@@ -1,6 +1,5 @@
 package org.matsim.run;
 
-import ch.sbb.matsim.routing.pt.raptor.RaptorIntermodalAccessEgress;
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -53,7 +52,6 @@ import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
-import org.matsim.extensions.pt.routing.EnhancedRaptorIntermodalAccessEgress;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesModule;
 import org.matsim.run.prepare.PrepareNetwork;
@@ -276,12 +274,12 @@ public class RunKelheimScenario extends MATSimApplication {
             if (intermodal){
 //                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
                 controler.addOverridingModule(new PtIntermodalRoutingModesModule());
-                controler.addOverridingModule(new AbstractModule() {
-                    @Override
-                    public void install() {
-                        bind(RaptorIntermodalAccessEgress.class).to(EnhancedRaptorIntermodalAccessEgress.class);
-                    }
-                });
+//                controler.addOverridingModule(new AbstractModule() {
+//                    @Override
+//                    public void install() {
+//                        bind(RaptorIntermodalAccessEgress.class).to(EnhancedRaptorIntermodalAccessEgress.class);
+//                    }
+//                });
             }
         }
     }
