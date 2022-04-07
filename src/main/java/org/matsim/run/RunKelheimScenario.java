@@ -53,7 +53,6 @@ import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
-import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesModule;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
@@ -271,16 +270,16 @@ public class RunKelheimScenario extends MATSimApplication {
                 }
             }
 
-            if (intermodal){
+//            if (intermodal){
 //                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
-                controler.addOverridingModule(new PtIntermodalRoutingModesModule());
+//                controler.addOverridingModule(new PtIntermodalRoutingModesModule());
 //                controler.addOverridingModule(new AbstractModule() {
 //                    @Override
 //                    public void install() {
 //                        bind(RaptorIntermodalAccessEgress.class).to(EnhancedRaptorIntermodalAccessEgress.class);
 //                    }
 //                });
-            }
+//            }
         }
     }
 }
