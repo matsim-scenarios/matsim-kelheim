@@ -1,21 +1,42 @@
 library(tidyverse)
 
 ######################
-# dies sind die Variablen, die man für den eigenen Gebrauch anpassen muss
-filePath <- "/Users/tomkelouisa/Documents/VSP/Kehlheimfiles" # hier sollen die beiden folgenden Files liegen
-simulationfilename <- "KEXI-base-case.passingQ.250.drt_legs_drt.csv" # Filename der Realdaten
-haltestellenFile <- "kelheim-drt-stops-locations(1).csv" # Filename der Haltestellenliste
-nameAnalyseFile <- "Simulation-drt-Analyse-Anzahl.tsv" # Filename des Analyseoutputfiles, in tsv
-csvfilename <- "stop2stoprides.csv"
-# wenn die obigen Daten eingegeben sind, kann das Programm gestartet werden und es wird das outputfile im filePath erstellt
+##INPUT##
+
+
+# Path to stops file
+stopsPath <- "D:/svn/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/kelheim-v2.0-drt-stops-locations.csv"
+# path to run main output dir
+runDirectory <- "Z:/net/ils/matsim-kelheim/kelheim-case-study/KEXI-with-av/run-asv-0.7_marginal-5e-5-BAUERNSIEDLUNG/" 
+
+# mode to be analyzed. set either drt or av
+mode <- "drt"
+
 ##############################
+## SCRIPT ##
 
 
-setwd(filePath)
+outputDir <- paste(runDirectory, "analysis-stop-2-stop", sep = "") # the plots are going to be saved here
+if(!file.exists(outputDir)){
+  print("creating analysis sub-directory")
+  dir.create(outputDir)  
+}
+
+
 #Daten Stopdaten einlesen
-stops <- read.csv("kelheim-drt-stops-locations(1).csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+stops <- read.csv(stopsPath,
+                  stringsAsFactors = FALSE,
+                  header = TRUE,
+                  encoding = "UTF-8")
+
+fileEnding <- paste("*.drt_legs_", mode, ".csv", sep ="")
+
 # Simulierte drt Daten einlesen
-movements <- read.csv(simulationfilename, stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep= ";")
+movements <- read.csv(list.files(paste(runDirectory, "ITERS/it.999/", sep=""), pattern = fileEnding, full.names = T, include.dirs = F),
+                      stringsAsFactors = FALSE,
+                      header = TRUE,
+                      encoding = "UTF-8",
+                      sep= ";")
 
 #Sortiert erst Dataframe erst nach "fromLinkId" und dann nach "toLinkId"
 sortedMovement <- movements[order(movements$fromLinkId,movements$toLinkId), ]
@@ -84,12 +105,14 @@ for(row in 2:laenge){
 
 # in Datadfame speichern und als csv Datei abspeichern
 class.df <- data.frame(fromstopIds,tostopIds, fromLink,toLink,fromX,fromY,toX,toY,anzahlFahrten,stringsAsFactors = FALSE)
-class.smalldf <- data.frame(fromstopIds,tostopIds,anzahlFahrten,stringsAsFactors = FALSE)
+class.smalldf <- data.frame(fromstopIds,tostopIds,anzahlFahrten,stringsAsFactors = FALSE) %>% 
+  filter(!is.na(fromstopIds) & !is.na(tostopIds))
 
-setwd(filePath)
 
-write.csv2(class.smalldf,csvfilename,quote=FALSE, row.names=FALSE)
-write.table(class.df,nameAnalyseFile,quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
+print(paste( "writing to ", outputDir, "/stop-2-stop-", mode, ".csv", sep=""))
+write.csv2(class.smalldf,paste(outputDir, "/stop-2-stop-", mode, ".csv", sep=""),quote=FALSE, row.names=FALSE)
+print(paste( "writing to ", outputDir, "/stop-2-stop-", mode, ".tsv", sep=""))
+write.table(class.df,paste(outputDir, "/stop-2-stop-", mode, "-detailed.tsv", sep=""),quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
 
 
 
