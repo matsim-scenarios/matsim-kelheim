@@ -112,9 +112,10 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
                     if (mode.equals("av")) {
                         vehicle = avVehicle;
                     }
-                    LeastCostPathCalculator.Path path = router.calcLeastCostPath(fromLink.getToNode(), toLink.getToNode(),
+                    LeastCostPathCalculator.Path path = router.calcLeastCostPath(fromLink.getToNode(), toLink.getFromNode(),
                             departureTime, null, vehicle);
-                    double estimatedDirectInVehicleTime = path.travelTime;
+                    path.links.add(toLink);
+                    double estimatedDirectInVehicleTime = path.travelTime + travelTime.getLinkTravelTime(toLink, path.travelTime + departureTime, null, null) + 2;
                     double estimatedDirectTravelDistance = path.links.stream().map(Link::getLength).mapToDouble(l -> l).sum();
                     double waitingTime = Double.parseDouble(record.get(9));
                     double actualInVehicleTime = Double.parseDouble(record.get(11));
@@ -128,7 +129,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
                     onboardDelayRatios.add(onboardDelayRatio);
                     detourDistanceRatios.add(detourRatioDistance);
                     euclideanDistances.add(euclideanDistance);
-                    directDistances.add(estimatedDirectTravelDistance); //TODO there is currently discrepancy between DRT legs and calculated route in the post analysis
+                    directDistances.add(estimatedDirectTravelDistance);
 
                     List<String> outputRow = new ArrayList<>();
                     outputRow.add(Double.toString(departureTime));
@@ -174,7 +175,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
             outputKPIRow.add(meanDelayRatio);
             outputKPIRow.add(meanDetourDistanceRatio);
             outputKPIRow.add(meanEuclideanDistance);
-            outputKPIRow.add(meanDirectNetworkDistance);  //TODO read this value carefully
+            outputKPIRow.add(meanDirectNetworkDistance);
 
             tsvWriterKPI.printRecord(outputKPIRow);
 
