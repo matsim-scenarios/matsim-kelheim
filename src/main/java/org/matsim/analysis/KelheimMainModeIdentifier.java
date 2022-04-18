@@ -72,7 +72,7 @@ public class KelheimMainModeIdentifier implements AnalysisMainModeIdentifier {
             }
         }
         if (mainModeIndex == -1) {
-            throw new RuntimeException("no main mode found for trip " + planElements.toString() ) ;
+            throw new RuntimeException("no main mode found for trip " + planElements) ;
         }
 
         String mainMode = modeHierarchy.get( mainModeIndex ) ;
@@ -87,16 +87,12 @@ public class KelheimMainModeIdentifier implements AnalysisMainModeIdentifier {
                 } else if (drtModes.contains(modeFound)) {
                     isDrtPt = true;
                 } else {
-                    log.error("unknown intermodal pt trip: " + planElements.toString());
+                    log.error("unknown intermodal pt trip: " + planElements);
                     throw new RuntimeException("unknown intermodal pt trip");
                 }
             }
 
-            if (isDrtPt) {
-                return ANALYSIS_MAIN_MODE_PT_WITH_DRT_USED_FOR_ACCESS_OR_EGRESS;
-            } else {
-                return TransportMode.pt;
-            }
+            return TransportMode.pt;
 
         } else {
             return mainMode;
