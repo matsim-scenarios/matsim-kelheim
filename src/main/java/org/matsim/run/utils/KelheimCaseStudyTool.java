@@ -4,13 +4,17 @@ import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.core.config.Config;
 
 public class KelheimCaseStudyTool {
-    public enum AV_SERVICE_AREAS {NULL, CORE, HOHENPFAHL, BAUERNSIEDLUNG}
+    public enum AV_SERVICE_AREAS {NULL, CORE, CORE_WITH_SHOP, HOHENPFAHL, BAUERNSIEDLUNG}
     // NULL: do not change anything; CORE: Donaupark + Altstadt; HOHENPFAHL: CORE + Hohenpfahl area; BAUERNSIEDLUNG: CORE + Bauernsiedlung area
 
     public static void setConfigFile(Config config, DrtConfigGroup drtConfig, AV_SERVICE_AREAS avServiceAreas) {
         // Set drt related things (vehicle file, stops file)
         if (avServiceAreas == AV_SERVICE_AREAS.CORE) {
             drtConfig.setTransitStopFile("av-stops-DP-AS.xml");
+        }
+
+        if (avServiceAreas == AV_SERVICE_AREAS.CORE_WITH_SHOP) {
+            drtConfig.setTransitStopFile("av-stops-DP-AS-shops.xml");
         }
 
         if (avServiceAreas == AV_SERVICE_AREAS.HOHENPFAHL) {
