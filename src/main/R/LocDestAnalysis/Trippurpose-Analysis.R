@@ -108,7 +108,7 @@ plot <-ggplot(drtAnalysis,aes(x=end_activity_type))+
 
 plotFile <-paste(outputDir,"/drt_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)
+png(plotFile, width = 1100, height = 800)
 plot
 dev.off()
 if(interactiveMode){
@@ -143,7 +143,7 @@ if(interactiveMode){
 #analyze av mode
 avAnalysis <- TripDataframe %>%
   filter(main_mode=="av")
-print(length(drtAnalysis$main_mode))
+print(length(avAnalysis$main_mode))
 
 ####################
 #av Balkendiagramm
@@ -161,7 +161,7 @@ plot <-ggplot(avAnalysis,aes(x=end_activity_type))+
 
 plotFile <-paste(outputDir,"/av_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)
+png(plotFile, width = 1100, height = 800)
 plot
 dev.off()
 if(interactiveMode){
@@ -214,7 +214,7 @@ plot <-ggplot(carAnalysis,aes(x=end_activity_type))+
 
 plotFile <-paste(outputDir,"/car_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)
+png(plotFile, width = 1100, height = 800)
 plot
 dev.off()
 if(interactiveMode){
@@ -267,7 +267,7 @@ plot <-ggplot(bikeAnalysis,aes(x=end_activity_type))+
 
 plotFile <-paste(outputDir,"/bike_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)
+png(plotFile, width = 1100, height = 800)
 plot
 dev.off()
 if(interactiveMode){
@@ -320,7 +320,7 @@ plot <-ggplot(walkAnalysis,aes(x=end_activity_type))+
 
 plotFile <-paste(outputDir,"/walk_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)
+png(plotFile, width = 1100, height = 800)
 plot
 dev.off()
 if(interactiveMode){
@@ -373,7 +373,7 @@ plot <-ggplot(ptAnalysis,aes(x=end_activity_type))+
 
 plotFile <-paste(outputDir,"/pt_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)
+png(plotFile, width = 1100, height = 800)
 plot
 dev.off()
 if(interactiveMode){
@@ -426,7 +426,7 @@ plot <-ggplot(rideAnalysis,aes(x=end_activity_type))+
 
 plotFile <-paste(outputDir,"/ride_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)
+png(plotFile, width = 1100, height = 800)
 plot
 dev.off()
 if(interactiveMode){
