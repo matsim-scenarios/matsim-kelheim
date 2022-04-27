@@ -5,12 +5,14 @@ library(tidyverse)
 
 
 # Path to stops file
-stopsPath <- "D:/svn/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/kelheim-v2.0-drt-stops-locations.csv"
+# stopsPath <- "C:/Users/Simon/Documents/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/kelheim-v2.0-drt-stops-locations.csv"
+stopsPath <- "C:/Users/Simon/Documents/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/Hohenpfahl-av-stops-locations.csv"
 # path to run main output dir
-runDirectory <- "Z:/net/ils/matsim-kelheim/kelheim-case-study/KEXI-with-av/run-asv-0.7_marginal-5e-5-BAUERNSIEDLUNG/" 
+# runDirectory <- "C:/Users/Simon/Documents/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/output/KEXI-base-case/"
+runDirectory <- "C:/Users/Simon/Documents/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/output/KEXI-with-AV/AV-CORE-HOHENPFAHL/"
 
 # mode to be analyzed. set either drt or av
-mode <- "drt"
+mode <- "av"
 
 ##############################
 ## SCRIPT ##

@@ -1,4 +1,4 @@
-countdrivenlinks <- function(movements, fromstopID,tostop_ID,tsvname){
+countdrivenlinks <- function(movements, fromstopID,tostop_ID,csvname){
 
   sortedMovement <- movements[order(movements$fromstopID,movements$tostop_ID), ]
 
@@ -66,7 +66,7 @@ countdrivenlinks <- function(movements, fromstopID,tostop_ID,tsvname){
 
   setwd(filePath)
 
-  write.csv2(class.smalldf,csvfilename,quote=FALSE, row.names=FALSE)
-  write.table(class.df,tsvname,quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
+  write.csv2(class.smalldf,csvname,quote=FALSE, row.names=FALSE)
+  # write.table(class.df,paste(tsvname, "_detailed.tsv"),quote=FALSE, sep="\t",col.names = NA,row.names = TRUE)
 
 }
