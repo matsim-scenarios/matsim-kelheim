@@ -10,10 +10,10 @@ library(hrbrthemes)
 ### INPUT DEFINITIONS ###
 
 # set working directory
-setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
+setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
 
 # read data
-allData <- read.csv2("Via_data_2022-02-08/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+allData <- read.csv2("Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 
 # In the VIA data they differentiate between requested PU time and requested DO time. Only 450 requests do not have a requested PU time
 # Therefore the rows will get joined (otherwise it will lead to errors)
@@ -64,11 +64,11 @@ p <- reqProTag %>%
 ##would put this behind an if or else condition but does not work for me :/
 plotFile = "plots/KEXI_202106_202201_requests_VIA.png"
 paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)  
+png(plotFile, width = 1200, height = 800)
 p
 dev.off()
 if(interactiveMode){
-  ggplotly(p)  
+  ggplotly(p)
 }
 
 ############  
@@ -81,9 +81,9 @@ reqProWochentag <- reqProTag %>%
 p <- reqProWochentag %>%
   ggplot( aes(x=weekday, y=avg)) +
   ggtitle("Durchschn. Anzahl Requests pro Wochentag (VIA)") +
-  geom_bar(color="#69b3a2", stat = "identity") + 
+  geom_bar(color="#69b3a2", stat = "identity") +
   ylab("Durchschn. Anzahl Requests") +
-  xlab("Wochentag") + 
+  xlab("Wochentag") +
   theme_ipsum()
 
 ##would put this behind an if or else condition but does not work for me :/
@@ -247,6 +247,11 @@ ridesPerInterval <- completedRides %>%
   mutate (interval = floor( (minute(Actual.PU.time) + hour(Actual.PU.time) * 60) / 5)  )  %>%
   group_by(interval) %>% 
   tally()
+# Write File for Dashboard for " Real Demand Time Distribution" plot
+ridesPerIntervals <- ridesPerInterval %>%
+                      mutate(interval5 = format(round(interval*5/60, 2), nsmall = 2))
+class.df <- data.frame(ridesPerIntervals$interval5,ridesPerIntervals$n, stringsAsFactors = FALSE)
+write.csv2(class.df,"KEXI_202106_202201_rides_daily_VIA.csv",quote=FALSE,row.names=FALSE)
 
 p <- ridesPerInterval %>%
   ggplot( aes(x=interval*5/60, y=n)) +
