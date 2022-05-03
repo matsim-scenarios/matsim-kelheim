@@ -22,13 +22,8 @@ shape <- st_read("../../../scenarios/input/shp/dilutionArea.shp", crs=25832)
 # Read simulation data
 #########
 
-#f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\calibration\\runs\\041"
-#f <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\auto-tuning\\output\\run-03\\run-5"
-#f <- "../../../output/output-kelheim-25pct/"
-#f <- "D:/KelRide/kelheim-case-study/avServiceAreas/KEXI-with-av/run-01-BAUERNSIEDLUNG/"
-#f <- "Z:/net/ils/matsim-kelheim/v2.0-release/output/output-kelheim-v2.0-25pct/"
-#f <- "Z:/net/ils/matsim-kelheim/calibration/runs/052/"
-f <- "Z:/net/ils/matsim-kelheim/kelheim-case-study/KEXI-base-case-based-on-calibRun-052/output-ASC-200-dist-0.0/"
+f <- "../../../output/output-kelheim-25pct/"
+#f <- "Z:/net/ils/matsim-kelheim/calibration/runs/052/" # delete before release
 
 sim_scale <- 4
 
