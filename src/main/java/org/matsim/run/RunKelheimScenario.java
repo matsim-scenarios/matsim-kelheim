@@ -78,7 +78,7 @@ import java.util.Set;
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-    static final String VERSION = "1.0";
+    static final String VERSION = "2.0";
 
     @CommandLine.Mixin
     private final SampleOptions sample = new SampleOptions(25, 10, 1);
@@ -149,6 +149,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
         config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
         config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
+        config.controler().setRunId(sample.adjustName(config.controler().getRunId()));
 
         config.qsim().setFlowCapFactor(sample.getSize() / 100.0);
         config.qsim().setStorageCapFactor(sample.getSize() / 100.0);

@@ -79,11 +79,9 @@ public class DrtStopsWriter extends MatsimXmlWriter {
 
         BufferedReader csvReader = new BufferedReader(new InputStreamReader(data.openStream()));
         csvReader.readLine();
-        while (true) {
-            String stopEntry = csvReader.readLine();
-            if (stopEntry == null) {
-                break;
-            }
+        String stopEntry = csvReader.readLine();
+        while (stopEntry != null) {
+
             String[] stopData = stopEntry.split(";");
             // write stop
             Coord coord = new Coord(Double.parseDouble(stopData[2]), Double.parseDouble(stopData[3]));
@@ -106,6 +104,8 @@ public class DrtStopsWriter extends MatsimXmlWriter {
                 csvWriter.append(Double.toString(link.getToNode().getCoord().getY()));
                 csvWriter.append("\n");
             }
+
+            stopEntry = csvReader.readLine();
         }
         csvWriter.close();
     }

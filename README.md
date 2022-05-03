@@ -29,7 +29,7 @@ The **MATSim input files, output files, analysis data and visualizations** are l
 Handling of large files within git is not without problems (git lfs files are not included in the zip download; we have to pay; ...).  In consequence, large files, both on the input and on the output side, reside at https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kehlheim .
 
 ----
-### Run the MATSim Düsseldorf scenario
+### Run the MATSim Kelheim scenario
 
 The Kelheim scenario has a command line interface providing the following options:
 
@@ -42,7 +42,7 @@ It can be used by using either of these methods:
 
 1. Set up the project in your IDE.
 1. Make sure the project is configured as maven project.
-1. Run the JAVA class `src/main/java/org/matsim/run/RunKelheimScenario.java`.
+1. Run the JAVA class `src/main/java/org/matsim/run/RunKelheimScenario.java` with the following program argument `run`. Add '--1pct' for test runs with a smaller sample size.
 1. "Open" the output directory.  You can drag files into VIA as was already done above.
 1. Edit the config file or adjust the run class. Re-run MATSim.
 
@@ -50,9 +50,9 @@ It can be used by using either of these methods:
 (Requires either cloning or downloading the repository and java)
 
 1. Open the cmd and go to your project directory
-2. Build the scenario using `mvnw package`
-3. There should be a file directly in the `matsim-kehlheim` directory with name approximately as `matsim-kehlheim-1.0.jar`.
-4. Run this file from the command line using `java -jar matsim-kehlheim-1.0.jar --help` to see all possible options.
-  1. For example, one can disable lanes or run the 25pct scenario using the available options
-5. Start this scenario using the default config by running `java -jar matsim-kehlheim-1.0.jar`
+2. Build the scenario using `mvnw package`. Add the option `-Dskiptests=true` in order to skip tests and speed up the process. 
+3. There should be a file directly in the `matsim-kehlheim` directory with name approximately as `matsim-kehlheim-2.x.jar`.
+4. Run this file from the command line using `java -jar matsim-kehlheim-2.x.jar --help` to see all possible options.
+  1. For example, one can disable lanes or run smaller sample sizes using the available options
+5. Start this scenario using the default config by running `java -jar matsim-kehlheim-2.x.jar`.
 6. "Open" the output directory.  You can drag files into VIA as was already done above.
