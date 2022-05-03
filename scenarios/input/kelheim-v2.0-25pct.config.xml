@@ -6,7 +6,7 @@
     </module>
 
     <module name="controler">
-        <param name="lastIteration" value="500"/>
+        <param name="lastIteration" value="1000"/>
         <param name="overwriteFiles" value="failIfDirectoryExists"/>
         <param name="runId" value="kelheim-v2.0-25pct"/>
         <param name="outputDirectory" value="./output/output-kelheim-v2.0-25pct"/>
@@ -81,7 +81,7 @@
             <param name="weight" value="0.85"/>
         </parameterset>
         <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="420"/>
+            <param name="disableAfterIteration" value="840"/>
             <param name="strategyName" value="ReRoute"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.10"/>
@@ -149,7 +149,7 @@
             <param name="waitingPt" value="-2.0" />
 
             <parameterset type="modeParams">
-                <param name="constant" value="0.2457"/>
+                <param name="constant" value="0.4127849992415157"/>
                 <param name="marginalUtilityOfTraveling_util_hr" value="-0.5"/>
                 <param name="mode" value="car"/>
                 <param name="monetaryDistanceRate" value="-0.0002"/>
@@ -157,7 +157,7 @@
             </parameterset>
 
             <parameterset type="modeParams" >
-                <param name="constant" value="-4.349841425323821" />
+                <param name="constant" value="-3.8727356227011978" />
                 <param name="dailyMonetaryConstant" value="-0.0" />
                 <param name="dailyUtilityConstant" value="0.0" />
                 <param name="marginalUtilityOfDistance_util_m" value="0.0" />
@@ -167,7 +167,7 @@
             </parameterset>
 
             <parameterset type="modeParams" >
-                <param name="constant" value="1.1082928126246734" />
+                <param name="constant" value="0.9145722430234507" />
                 <param name="dailyMonetaryConstant" value="0.0" />
                 <param name="dailyUtilityConstant" value="0.0" />
                 <param name="marginalUtilityOfDistance_util_m" value="0.0" />
@@ -177,7 +177,7 @@
             </parameterset>
 
             <parameterset type="modeParams">
-                <param name="constant" value="-2.929952331516688" />
+                <param name="constant" value="-2.6694607546031124" />
                 <param name="dailyMonetaryConstant" value="0.0" />
                 <param name="dailyUtilityConstant" value="0.0" />
                 <param name="marginalUtilityOfDistance_util_m" value="0.0" />
