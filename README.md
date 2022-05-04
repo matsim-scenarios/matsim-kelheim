@@ -1,10 +1,10 @@
 # The MATSim Open Kelheim Scenario
 
 [![Build Status](https://github.com/matsim-scenarios/matsim-kelheim/actions/workflows/build.yaml/badge.svg)](https://github.com/matsim-scenarios/matsim-kelheim/actions/workflows/build.yaml)
-![license](https://img.shields.io/github/license/matsim-scenarios/matsim-kehlheim.svg)
+![license](https://img.shields.io/github/license/matsim-scenarios/matsim-kelheim.svg)
 ![JDK](https://img.shields.io/badge/JDK-11+-green.svg)
 
-![Kelheim MATSim network and agents](scenarios/visualization-kehlheim.png "Kelheim MATSim network and agents")
+![Kelheim MATSim network and agents](scenarios/visualization-kelheim.png "Kelheim MATSim network and agents")
 
 
 ### About this project
@@ -26,7 +26,7 @@ The **MATSim input files, output files, analysis data and visualizations** are l
 
 ### Note
 
-Handling of large files within git is not without problems (git lfs files are not included in the zip download; we have to pay; ...).  In consequence, large files, both on the input and on the output side, reside at https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kehlheim .
+Handling of large files within git is not without problems (git lfs files are not included in the zip download; we have to pay; ...).  In consequence, large files, both on the input and on the output side, reside at https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim .
 
 ----
 ### Run the MATSim Kelheim scenario
@@ -37,7 +37,7 @@ The Kelheim scenario has a command line interface providing the following option
 
 It can be used by using either of these methods:
 
-##### ... using an IDE, e.g. Eclipse, IntelliJ - Alternative 1: use cloned/downloaded matsim-kehlheim repository
+##### ... using an IDE, e.g. Eclipse, IntelliJ - Alternative 1: use cloned/downloaded matsim-kelheim repository
 (Requires either cloning or downloading the repository.)
 
 1. Set up the project in your IDE.
@@ -51,8 +51,8 @@ It can be used by using either of these methods:
 
 1. Open the cmd and go to your project directory
 2. Build the scenario using `mvnw package`. Add the option `-Dskiptests=true` in order to skip tests and speed up the process. 
-3. There should be a file directly in the `matsim-kehlheim` directory with name approximately as `matsim-kehlheim-2.x.jar`.
-4. Run this file from the command line using `java -jar matsim-kehlheim-2.x.jar --help` to see all possible options.
+3. There should be a file directly in the `matsim-kelheim` directory with name approximately as `matsim-kelheim-2.x.jar`.
+4. Run this file from the command line using `java -jar matsim-kelheim-2.x.jar --help` to see all possible options.
   1. For example, one can disable lanes or run smaller sample sizes using the available options
-5. Start this scenario using the default config by running `java -jar matsim-kehlheim-2.x.jar`.
+5. Start this scenario using the default config by running `java -jar matsim-kelheim-2.x.jar`.
 6. "Open" the output directory.  You can drag files into VIA as was already done above.
