@@ -7,7 +7,7 @@ library(sf)
 
 source("https://raw.githubusercontent.com/matsim-scenarios/matsim-duesseldorf/master/src/main/R/theme.R")
 
-# setwd("C:/Users/chris/Development/matsim-scenarios/matsim-kelheim/src/main/R")
+setwd("PLEASE ADJUST TO YOUR LOCAL DIRECTORY FOR matsim-kelheim/src/main/R")
 
 theme_set(theme_Publication(18))
 
@@ -15,17 +15,14 @@ theme_set(theme_Publication(18))
 levels = c("0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+")
 breaks = c(0, 1000, 2000, 5000, 10000, 20000, Inf)
 
-#shape <- st_read("../../../../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp", crs=25832)
 shape <- st_read("../../../scenarios/input/shp/dilutionArea.shp", crs=25832)
 
 #########
 # Read simulation data
 #########
 
-f <- "../../../output/output-kelheim-25pct/"
-#f <- "Z:/net/ils/matsim-kelheim/calibration/runs/052/" # delete before release
-
-sim_scale <- 4
+sim_scale <- 4 # set to 4 for 25pct, 10 for 10pct, 100 for 1pct, ...
+f <- "../../../output/output-kelheim-25pct/" # set to run output directory
 
 #homes <- read_csv("../../../scenarios/input/kelheim-v2.0-homes.csv", 
 #                  col_types = cols(
