@@ -27,7 +27,9 @@ The **MATSim input files, output files, analysis data and visualizations** are l
 ### Note
 
 Handling of large files within git is not without problems (git lfs files are not included in the zip download; we have to pay; ...).  In consequence, large files, both on the input and on the output side, reside at https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim .
-
+All necessary input files to run the base model (without any measurement) can be found version at https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v2.0/input.
+The MATSim config file within this GitHub repository (scenarios/input/kelheim-v2.0-25pct.config.xml) points to those input files.
+The output of this model version is available for two sample sizes, 10 pct and 25 pct, at https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v2.0/output.
 ----
 ### Run the MATSim Kelheim scenario
 
