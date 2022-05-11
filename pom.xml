@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.matsim-scenarios</groupId>
 	<artifactId>matsim-kelheim</artifactId>
-	<version>2.x-SNAPSHOT</version>
+	<version>2.optDrt</version>
 
 	<name>MATSim Kelheim Model</name>
 	<description>A transport model of the district of Kelheim and it's surroundings</description>
@@ -88,6 +88,23 @@
 				<exclusion>
 					<groupId>org.matsim</groupId>
 					<artifactId>matsim-examples</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>com.github.matsim-vsp</groupId>
+			<artifactId>opt-drt</artifactId>
+			<version>0b00b9b9b9</version>
+			<exclusions>
+				<!-- Will pull old drt version -->
+				<exclusion>
+					<groupId>org.matsim.contrib</groupId>
+					<artifactId>drt</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.matsim</groupId>
+					<artifactId>matsim</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>

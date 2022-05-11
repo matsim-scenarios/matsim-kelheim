@@ -53,6 +53,8 @@ import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
+import org.matsim.optDRT.MultiModeOptDrtConfigGroup;
+import org.matsim.optDRT.OptDrt;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
@@ -86,6 +88,9 @@ public class RunKelheimScenario extends MATSimApplication {
     @CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
     private boolean drt;
 
+    @CommandLine.Option(names = "--with-optDrt", defaultValue = "false", description = "enable DRT optimization")
+    private boolean optDrt;
+
     @CommandLine.Option(names = "--income-dependent", defaultValue = "true", description = "enable income dependent monetary utility", negatable = true)
     private boolean incomeDependent;
 
@@ -101,7 +106,7 @@ public class RunKelheimScenario extends MATSimApplication {
     @CommandLine.Option(names = "--random-seed", defaultValue = "4711", description = "setting random seed for the simulation")
     private long randomSeed;
 
-    @CommandLine.Option(names = "--intermodal", defaultValue = "false", description = "enable DRT service")
+    @CommandLine.Option(names = "--intermodal", defaultValue = "false", description = "enable intermodality for DRT service")
     private boolean intermodal;
 
     public RunKelheimScenario(@Nullable Config config) {
@@ -167,6 +172,7 @@ public class RunKelheimScenario extends MATSimApplication {
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
             ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
             DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
+            ConfigUtils.addOrGetModule(config, MultiModeOptDrtConfigGroup.class);
         }
 
         return config;
@@ -266,9 +272,10 @@ public class RunKelheimScenario extends MATSimApplication {
 
             for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
                 controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
-                if (drtCfg.getMode().equals("av")) {
-                    KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
-                }
+                //this should not be done by code but by config file only. ts, may '22
+//                if (drtCfg.getMode().equals("av")) {
+//                    KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
+//                }
             }
 
 //            if (intermodal){
@@ -281,6 +288,11 @@ public class RunKelheimScenario extends MATSimApplication {
 //                    }
 //                });
 //            }
+
+            if(optDrt){
+                // drt-opt module
+                OptDrt.addAsOverridingModule(controler, ConfigUtils.addOrGetModule(config, MultiModeOptDrtConfigGroup.class));
+            }
         }
     }
 }
