@@ -8,6 +8,7 @@ import org.matsim.application.options.ShpOptions;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.opengis.feature.simple.SimpleFeature;
@@ -34,13 +35,15 @@ public class DrtStopsWriter extends MatsimXmlWriter {
         this.outputFolder = outputFolder;
         //If you just say serviceArea = shp.getGeometry() instead of looping through features
         //somehow the first feature only is taken -sm0222
-        List<SimpleFeature> features = shp.readFeatures();
-        for(SimpleFeature feature : features) {
-            if (shp.getShapeFile() != null) {
-                if (serviceArea == null) {
-                    serviceArea = (Geometry) feature.getDefaultGeometry();
-                } else {
-                    serviceArea = serviceArea.union((Geometry) feature.getDefaultGeometry());
+        if(shp.isDefined()){
+            List<SimpleFeature> features = shp.readFeatures();
+            for(SimpleFeature feature : features) {
+                if (shp.getShapeFile() != null) {
+                    if (serviceArea == null) {
+                        serviceArea = (Geometry) feature.getDefaultGeometry();
+                    } else {
+                        serviceArea = serviceArea.union((Geometry) feature.getDefaultGeometry());
+                    }
                 }
             }
         }
@@ -73,9 +76,10 @@ public class DrtStopsWriter extends MatsimXmlWriter {
 
         // Read original data csv
         System.out.println("Start processing the network. This may take some time...");
-        URL data = new URL("https://svn.vsp.tu-berlin.de/" +
-                "repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
-                "KEXI_Haltestellen_Liste_Kelheim_utm32n.csv");
+//        URL data = new URL("https://svn.vsp.tu-berlin.de/" +
+//                "repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
+//                "KEXI_Haltestellen_Liste_Kelheim_utm32n.csv");
+        URL data = IOUtils.getFileUrl("D:/KelFleet/sektor9/LandKexi_Sektor9_Haltestellen.csv");
 
         BufferedReader csvReader = new BufferedReader(new InputStreamReader(data.openStream()));
         csvReader.readLine();

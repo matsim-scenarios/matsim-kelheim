@@ -271,7 +271,9 @@ public class RunKelheimScenario extends MATSimApplication {
                             maxSpeed));
 
             for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
+//                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
+
+
                 //this should not be done by code but by config file only. ts, may '22
 //                if (drtCfg.getMode().equals("av")) {
 //                    KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
