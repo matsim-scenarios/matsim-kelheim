@@ -60,7 +60,7 @@ public class PrepareNetworkForKelfleet {
 		List<PreparedGeometry> geoms = ShpGeometryUtils.loadPreparedGeometries(IOUtils.resolveFileOrResource(inputArea));
 		for (Link link : network.getLinks().values()) {
 			Object type = link.getAttributes().getAttribute("type");
-			if(link.getAllowedModes().contains(TransportMode.car) && (type == null || !((String) type).contains("motorway") ){
+			if(link.getAllowedModes().contains(TransportMode.car) && (type == null || !((String) type).contains("motorway") )){
 				if(ShpGeometryUtils.isCoordInPreparedGeometries(link.getFromNode().getCoord(), geoms) ||
 						ShpGeometryUtils.isCoordInPreparedGeometries(link.getToNode().getCoord(), geoms)){
 					Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
