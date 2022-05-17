@@ -43,6 +43,10 @@ counts <- TripDataframe %>%
     group_by(main_mode,end_activity_type) %>%
         summarise(count = n())
 
+#get the csv file for the simwrapper dashboard
+csvFile <-paste(outputDir,"/kehlheim.output_trips.edit.csv",sep="")
+write.csv(counts,csvFile,quote=FALSE, row.names=FALSE)
+
 
 
 
