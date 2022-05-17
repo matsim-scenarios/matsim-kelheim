@@ -4,6 +4,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
 import org.matsim.api.core.v01.events.VehicleEntersTrafficEvent;
 import org.matsim.api.core.v01.events.handler.LinkEnterEventHandler;
@@ -193,7 +194,7 @@ public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
             new FleetReader(fleetSpecification).parse(vehicleFilePath.toUri().toURL());
             List<String> vehicleIdStrings = fleetSpecification.getVehicleSpecifications().keySet().
                     stream().map(Object::toString).collect(Collectors.toList());
-            VehicleLinkUsageRecorder vehicleLinkUsageRecorder = new VehicleLinkUsageRecorder(network, timeBinSize, mode, vehicleIdStrings);
+            VehicleLinkUsageRecorder vehicleLinkUsageRecorder = new VehicleLinkUsageRecorder(network, timeBinSize, TransportMode.drt, vehicleIdStrings);
             handlerMap.put(mode, vehicleLinkUsageRecorder);
             eventsManager.addHandler(vehicleLinkUsageRecorder);
         }
@@ -224,7 +225,7 @@ public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
             passengerRoadUsageWriter.printRecord(header);
 
             for (Link link : network.getLinks().values()) {
-                if (link.getAllowedModes().contains(mode)) {
+                if (link.getAllowedModes().contains(TransportMode.drt)) {
                     List<String> vehicleEntry = new ArrayList<>();
                     List<String> passengerEntry = new ArrayList<>();
                     vehicleEntry.add(link.getId().toString());

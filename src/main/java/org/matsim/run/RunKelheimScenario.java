@@ -1,6 +1,5 @@
 package org.matsim.run;
 
-import ch.sbb.matsim.routing.pt.raptor.RaptorIntermodalAccessEgress;
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -53,9 +52,7 @@ import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
-import org.matsim.extensions.pt.routing.EnhancedRaptorIntermodalAccessEgress;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
-import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesModule;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
@@ -81,7 +78,7 @@ import java.util.Set;
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-    static final String VERSION = "1.0";
+    static final String VERSION = "2.x";
 
     @CommandLine.Mixin
     private final SampleOptions sample = new SampleOptions(25, 10, 1);
@@ -152,6 +149,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
         config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
         config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
+        config.controler().setRunId(sample.adjustName(config.controler().getRunId()));
 
         config.qsim().setFlowCapFactor(sample.getSize() / 100.0);
         config.qsim().setStorageCapFactor(sample.getSize() / 100.0);
@@ -273,16 +271,16 @@ public class RunKelheimScenario extends MATSimApplication {
                 }
             }
 
-            if (intermodal){
+//            if (intermodal){
 //                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
-                controler.addOverridingModule(new PtIntermodalRoutingModesModule());
-                controler.addOverridingModule(new AbstractModule() {
-                    @Override
-                    public void install() {
-                        bind(RaptorIntermodalAccessEgress.class).to(EnhancedRaptorIntermodalAccessEgress.class);
-                    }
-                });
-            }
+//                controler.addOverridingModule(new PtIntermodalRoutingModesModule());
+//                controler.addOverridingModule(new AbstractModule() {
+//                    @Override
+//                    public void install() {
+//                        bind(RaptorIntermodalAccessEgress.class).to(EnhancedRaptorIntermodalAccessEgress.class);
+//                    }
+//                });
+//            }
         }
     }
 }
