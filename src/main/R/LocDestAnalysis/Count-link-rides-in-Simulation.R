@@ -1,18 +1,32 @@
 library(tidyverse)
+library(optparse)
+
+option_list <- list(
+  make_option(c("-s", "--stops"), type="character", default=NULL,
+              help="Path to stops file. Avoid using '\', use '/' instead", metavar="character"),
+  make_option(c("-d", "--runDir"), type="character", default=NULL,
+              help="Path run directory. Avoid using '\', use '/' instead", metavar="character"),
+  make_option(c("-m", "--mode"), type="character", default=NULL,
+              help="Mode to be analyzed. Either drt or av", metavar="character"))
+
+opt_parser <- OptionParser(option_list=option_list)
+opt <- parse_args(opt_parser)
+
+if (is.null(opt$stops) | is.null(opt$runDir) | is.null(opt$mode)){
+  print_help(opt_parser)
+  stop("At least 3 arguments must be supplied. Use -h for help.", call.=FALSE)
+}
 
 ######################
 ##INPUT##
 
 
 # Path to stops file
-# stopsPath <- "C:/Users/Simon/Documents/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/kelheim-v2.0-drt-stops-locations.csv"
-stopsPath <- "C:/Users/Simon/Documents/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/Hohenpfahl-av-stops-locations.csv"
+stopsPath <- opt$stops
 # path to run main output dir
-# runDirectory <- "C:/Users/Simon/Documents/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/output/KEXI-base-case/"
-runDirectory <- "C:/Users/Simon/Documents/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/output/KEXI-with-AV/AV-CORE-HOHENPFAHL/"
-
+runDirectory <- opt$runDir
 # mode to be analyzed. set either drt or av
-mode <- "av"
+mode <- opt$mode
 
 ##############################
 ## SCRIPT ##
