@@ -5,6 +5,7 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
+import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
@@ -51,14 +52,18 @@ import org.matsim.core.controler.Controler;
 import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.optDRT.MultiModeOptDrtConfigGroup;
 import org.matsim.optDRT.OptDrt;
+import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
 import org.matsim.run.utils.StrategyWeightFadeout;
+import org.matsim.utils.gis.shp2matsim.ShpGeometryUtils;
 import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
@@ -209,6 +214,18 @@ public class RunKelheimScenario extends MATSimApplication {
             }
         }
 
+        for (DrtConfigGroup drtCfg : MultiModeDrtConfigGroup.get(scenario.getConfig()).getModalElements()) {
+
+            String drtServiceAreaShapeFile = drtCfg.getDrtServiceAreaShapeFile();
+            if (drtServiceAreaShapeFile != null && !drtServiceAreaShapeFile.equals("") && !drtServiceAreaShapeFile.equals("null")) {
+
+                tagTransitStopsInServiceArea(scenario.getTransitSchedule(),
+                        "allowDrtAccessEgress", "true",
+                        drtServiceAreaShapeFile,
+                        "stopFilter", "station_S/U/RE/RB");
+            }
+        }
+
     }
 
     @Override
@@ -294,6 +311,22 @@ public class RunKelheimScenario extends MATSimApplication {
             if(optDrt){
                 // drt-opt module
                 OptDrt.addAsOverridingModule(controler, ConfigUtils.addOrGetModule(config, MultiModeOptDrtConfigGroup.class));
+            }
+        }
+    }
+
+    private static void tagTransitStopsInServiceArea(TransitSchedule transitSchedule,
+                                                     String newAttributeName, String newAttributeValue,
+                                                     String drtServiceAreaShapeFile,
+                                                     String oldFilterAttribute, String oldFilterValue) {
+        List<Geometry> geoms = ShpGeometryUtils.loadGeometries(IOUtils.resolveFileOrResource(drtServiceAreaShapeFile));
+        for (TransitStopFacility stop: transitSchedule.getFacilities().values()) {
+            if (stop.getAttributes().getAttribute(oldFilterAttribute) != null) {
+                if (stop.getAttributes().getAttribute(oldFilterAttribute).equals(oldFilterValue)) {
+                    if (ShpGeometryUtils.isCoordInGeometries(stop.getCoord(), geoms)) {
+                        stop.getAttributes().putAttribute(newAttributeName, newAttributeValue);
+                    }
+                }
             }
         }
     }

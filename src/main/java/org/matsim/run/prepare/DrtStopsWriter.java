@@ -79,7 +79,7 @@ public class DrtStopsWriter extends MatsimXmlWriter {
 //        URL data = new URL("https://svn.vsp.tu-berlin.de/" +
 //                "repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
 //                "KEXI_Haltestellen_Liste_Kelheim_utm32n.csv");
-        URL data = IOUtils.getFileUrl("D:/KelFleet/sektor9/LandKexi_Sektor9_Haltestellen.csv");
+        URL data = IOUtils.getFileUrl("D:/svn/shared-svn/projects/matsim-kelheim/data/sektor3/sektor3-haltestellen.csv");
 
         BufferedReader csvReader = new BufferedReader(new InputStreamReader(data.openStream()));
         csvReader.readLine();
