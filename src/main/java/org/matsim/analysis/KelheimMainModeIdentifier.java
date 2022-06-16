@@ -91,9 +91,7 @@ public class KelheimMainModeIdentifier implements AnalysisMainModeIdentifier {
                     throw new RuntimeException("unknown intermodal pt trip");
                 }
             }
-
-            return TransportMode.pt;
-
+            return isDrtPt ? ANALYSIS_MAIN_MODE_PT_WITH_DRT_USED_FOR_ACCESS_OR_EGRESS : TransportMode.pt;
         } else {
             return mainMode;
         }
