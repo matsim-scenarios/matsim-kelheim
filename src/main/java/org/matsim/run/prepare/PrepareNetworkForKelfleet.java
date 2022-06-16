@@ -39,8 +39,8 @@ public class PrepareNetworkForKelfleet {
 	public static void main(String[] args) {
 
 		String inputNetwork = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v2.0/input/kelheim-v2.0-network-with-pt.xml.gz";
-		String outputNetwork = "D:/KelFleet/sektor9/kelheim-v2.0-network-av-sektor9.xml.gz";
-		String inputArea = "D:/KelFleet/sektor9/kelheim-kelfleet-sektor9.shp";
+		String outputNetwork = "D:/svn/shared-svn/projects/matsim-kelheim/data/sektor3/kelheim-v2.0-network-av-sektor3u5.xml.gz";
+		String inputArea = "D:/svn/shared-svn/projects/matsim-kelheim/data/sektor3/kelheim-kelfleet-sektor3u5.shp";
 
 		Network network = NetworkUtils.readNetwork(inputNetwork);
 

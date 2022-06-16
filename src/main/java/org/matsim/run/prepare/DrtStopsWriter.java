@@ -79,7 +79,7 @@ public class DrtStopsWriter extends MatsimXmlWriter {
 //        URL data = new URL("https://svn.vsp.tu-berlin.de/" +
 //                "repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
 //                "KEXI_Haltestellen_Liste_Kelheim_utm32n.csv");
-        URL data = IOUtils.getFileUrl("D:/svn/shared-svn/projects/matsim-kelheim/data/sektor3/sektor3-haltestellen.csv");
+        URL data = IOUtils.getFileUrl("D:/svn/shared-svn/projects/matsim-kelheim/data/sektor3/sektor5-haltestellen.csv");
 
         BufferedReader csvReader = new BufferedReader(new InputStreamReader(data.openStream()));
         csvReader.readLine();
@@ -118,7 +118,7 @@ public class DrtStopsWriter extends MatsimXmlWriter {
         double shortestDistance = Double.MAX_VALUE;
         Link nearestLink = null;
         for (Link link : network.getLinks().values()) {
-            if (!link.getAllowedModes().contains("car")) {
+            if (!link.getAllowedModes().contains("av")) {
                 continue;
             }
             double dist = CoordUtils.distancePointLinesegment(link.getFromNode().getCoord(), link.getToNode().getCoord(), coord);

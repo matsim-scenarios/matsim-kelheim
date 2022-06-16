@@ -30,7 +30,7 @@ public class AddDrtVehiclesToVehiclesFile {
 
 		int nrOfVehiclesToAdd = 100;
 		String inputFile = "D:/KelFleet/kelheim-v2.0-vehicleTypes.xml";
-		String outputFile = "D:/svn/shared-svn/projects/matsim-kelheim/data/sektor3/kelheim-v2.0-sektor3-" + nrOfVehiclesToAdd + "-vehicles.xml";
+		String outputFile = "D:/svn/shared-svn/projects/matsim-kelheim/data/sektor3/kelheim-v2.0-sektor3u5-" + nrOfVehiclesToAdd + "-vehicles.xml";
 
 		String dvrpMode = "av";
 		Id<VehicleType> vehicleTypeId = Id.create("autonomous_vehicle", VehicleType.class); //vehicle type must exist in input file already
