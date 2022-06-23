@@ -6,10 +6,10 @@
     </module>
 
     <module name="controler">
-        <param name="lastIteration" value="1000"/>
+        <param name="lastIteration" value="1500"/>
         <param name="overwriteFiles" value="failIfDirectoryExists"/>
-        <param name="runId" value="kelheim-v2.x-25pct"/>
-        <param name="outputDirectory" value="./output/output-kelheim-v2.x-25pct"/>
+        <param name="runId" value="kh"/>
+        <param name="outputDirectory" value="./output/kh"/>
         <param name="writeEventsInterval" value="100"/>
         <param name="writePlansInterval" value="100"/>
         <param name="enableLinkToLinkRouting" value="false" />
@@ -81,7 +81,6 @@
             <param name="weight" value="0.85"/>
         </parameterset>
         <parameterset type="strategysettings">
-            <param name="disableAfterIteration" value="840"/>
             <param name="strategyName" value="ReRoute"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.10"/>
@@ -112,8 +111,10 @@
 
     <module name="subtourModeChoice">
         <param name="chainBasedModes" value="car,bike"/>
-        <param name="modes" value="car,pt,bike,walk"/>
+        <param name="modes" value="car,ride,pt,bike,walk"/>
         <param name="considerCarAvailability" value="true"/>
+        <param name="behavior" value="betweenAllAndFewerConstraints"/>
+        <param name="probaForRandomSingleTripMode" value="0.5" />
     </module>
 
     <module name="informedModeChoice">

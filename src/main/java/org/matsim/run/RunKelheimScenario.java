@@ -125,8 +125,11 @@ public class RunKelheimScenario extends MATSimApplication {
     @CommandLine.Option(names = "--intermodal", defaultValue = "false", description = "enable DRT service")
     private boolean intermodal;
 
+    @CommandLine.Option(names = "--plans", defaultValue = "", description = "Use different input plans")
+    private String planOrigin;
+
     @CommandLine.ArgGroup(exclusive = false, multiplicity = "0..1", heading = "Strategy Options\n")
-    StrategyOptions strategy;
+    StrategyOptions strategy = new StrategyOptions();
 
     public RunKelheimScenario(@Nullable Config config) {
         super(config);
@@ -208,8 +211,30 @@ public class RunKelheimScenario extends MATSimApplication {
         distanceBasedPtFareParams.setLongDistanceTripIntercept(30); // y = ax + b --> b value, for long trips
 
         InformedModeChoiceConfigGroup imc = ConfigUtils.addOrGetModule(config, InformedModeChoiceConfigGroup.class);
-
         imc.setTopK(strategy.k);
+
+        addRunOption(config, "mc", strategy.modeChoice);
+
+        if (strategy.modeChoice == ModeChoice.bestKSelection ||strategy.modeChoice == ModeChoice.informedModeChoice) {
+            addRunOption(config, "k", strategy.k);
+        }
+
+        if (strategy.massConservation)
+            addRunOption(config, "mass-conv");
+
+        if (!strategy.timeMutation)
+            addRunOption(config, "no-tm");
+
+        if (iterations != -1)
+            addRunOption(config, "iter", iterations);
+
+        if (!planOrigin.isBlank()) {
+            config.plans().setInputFile(
+                    config.plans().getInputFile().replace(".plans", ".plans-" + planOrigin)
+            );
+
+            addRunOption(config, planOrigin);
+        }
 
         return config;
     }
@@ -309,6 +334,8 @@ public class RunKelheimScenario extends MATSimApplication {
                 config.strategy().clearStrategySettings();
                 strategies.forEach(s -> config.strategy().addStrategySettings(s));
 
+                schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ReRoute, "person", 0.78));
+
                 bind(new TypeLiteral<StrategyChooser<Plan, Person>>() {}).toInstance(new ForceInnovationStrategyChooser<>(strategy.forceInnovation, true));
 
                 if (incomeDependent) {
@@ -373,9 +400,8 @@ public class RunKelheimScenario extends MATSimApplication {
 
     public static final class StrategyOptions {
 
-        @CommandLine.Option(names = "--mode-choice", defaultValue = "subTourModeChoice", description = "Mode choice strategy: ${COMPLETION-CANDIDATES}")
+        @CommandLine.Option(names = {"--mode-choice", "--mc"}, defaultValue = "subTourModeChoice", description = "Mode choice strategy: ${COMPLETION-CANDIDATES}")
         private ModeChoice modeChoice = ModeChoice.subTourModeChoice;
-
 
         @CommandLine.Option(names = "--weight", defaultValue = "0.10", description = "Mode-choice strategy weight")
         private double weight;
@@ -398,7 +424,10 @@ public class RunKelheimScenario extends MATSimApplication {
 
         none ("none"),
         changeSingleTrip (DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode),
-        subTourModeChoice (DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice);
+        subTourModeChoice (DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice),
+        bestChoice (InformedModeChoiceModule.BEST_CHOICE_STRATEGY),
+        bestKSelection (InformedModeChoiceModule.BEST_K_SELECTION_STRATEGY),
+        informedModeChoice (InformedModeChoiceModule.INFORMED_MODE_CHOICE);
 
         private final String name;
 
