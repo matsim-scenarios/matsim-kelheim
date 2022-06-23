@@ -409,13 +409,15 @@ public class RunKelheimScenario extends MATSimApplication {
         @CommandLine.Option(names = "--top-k", defaultValue = "5", description = "Top k options for some of the strategies")
         private int k;
 
-        @CommandLine.Option(names = "--time-mutation", defaultValue = "true", description = "Enable time mutation strategy", negatable = true)
+        // picocli has strange behaviour regarding default values of these boolean options
+        // Like this the default will be true
+        @CommandLine.Option(names = "--no-time-mutation", defaultValue = "true", description = "Enable time mutation strategy", negatable = true)
         private boolean timeMutation;
 
         @CommandLine.Option(names = "--mass-conservation", defaultValue = "false", description = "Enable mass conservation constraint", negatable = true)
         private boolean massConservation;
 
-        @CommandLine.Option(names = "--force-innovation", defaultValue = "10", description = "Force innovative strategy with this %")
+        @CommandLine.Option(names = "--force-innovation", defaultValue = "10", description = "Force innovative strategy with %% of agents")
         private int forceInnovation;
 
     }
