@@ -10,8 +10,8 @@
         <param name="overwriteFiles" value="failIfDirectoryExists"/>
         <param name="runId" value="kelheim-v2.x-25pct"/>
         <param name="outputDirectory" value="./output/output-kelheim-v2.x-25pct"/>
-        <param name="writeEventsInterval" value="50"/>
-        <param name="writePlansInterval" value="50"/>
+        <param name="writeEventsInterval" value="100"/>
+        <param name="writePlansInterval" value="100"/>
         <param name="enableLinkToLinkRouting" value="false" />
         <param name="routingAlgorithmType" value="SpeedyALT"/>
     </module>
@@ -114,6 +114,11 @@
         <param name="chainBasedModes" value="car,bike"/>
         <param name="modes" value="car,pt,bike,walk"/>
         <param name="considerCarAvailability" value="true"/>
+    </module>
+
+    <module name="informedModeChoice">
+        <param name="modes" value="car,ride,pt,bike,walk"/>
+        <param name="topK" value="5"/>
     </module>
 
     <module name="changeMode">

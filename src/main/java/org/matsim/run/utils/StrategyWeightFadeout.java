@@ -102,7 +102,7 @@ public final class StrategyWeightFadeout implements IterationStartsListener {
 			Optional<GenericPlanStrategy<Plan, Person>> strategy = strategies.stream().filter(st -> st.toString().contains(strategyName)).findFirst();
 
 			if (strategy.isEmpty()) {
-				log.warn("Could not find loaded strategy for {}", strategy);
+				log.warn("Could not find loaded strategy for {}", s.name);
 				return;
 			}
 

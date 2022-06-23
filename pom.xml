@@ -129,6 +129,12 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.matsim.contrib</groupId>
+			<artifactId>informed-mode-choice</artifactId>
+			<version>${matsim.version}</version>
+		</dependency>
+
+		<dependency>
 			<groupId>one.util</groupId>
 			<artifactId>streamex</artifactId>
 			<version>0.7.3</version>

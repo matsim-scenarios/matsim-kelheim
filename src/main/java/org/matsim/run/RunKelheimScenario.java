@@ -4,6 +4,7 @@ import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
@@ -19,6 +20,7 @@ import org.matsim.api.core.v01.events.handler.PersonDepartureEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
@@ -40,25 +42,43 @@ import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
+
+
+
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
+import org.matsim.core.config.groups.StrategyConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.replanning.choosers.ForceInnovationStrategyChooser;
+import org.matsim.core.replanning.choosers.StrategyChooser;
 import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
+import org.matsim.modechoice.InformedModeChoiceConfigGroup;
+import org.matsim.modechoice.InformedModeChoiceModule;
+import org.matsim.modechoice.ModeAvailability;
+import org.matsim.modechoice.ModeOptions;
+import org.matsim.modechoice.commands.GenerateChoiceSet;
+import org.matsim.modechoice.constraints.RelaxedSubtourConstraint;
+import org.matsim.modechoice.estimators.DailyConstantFixedCosts;
+import org.matsim.modechoice.estimators.DefaultLegScoreEstimator;
+import org.matsim.modechoice.estimators.LegEstimator;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
 import org.matsim.run.utils.StrategyWeightFadeout;
 import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
+import playground.vsp.pt.fare.DistanceBasedPtFareParams;
+import playground.vsp.pt.fare.PtFareConfigGroup;
+import playground.vsp.pt.fare.PtTripFareEstimator;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
@@ -66,12 +86,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-@CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION)
+@CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
         CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
         MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
-        CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class
+        CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, GenerateChoiceSet.class
 })
 @MATSimApplication.Analysis({
         TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
@@ -103,6 +124,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
     @CommandLine.Option(names = "--intermodal", defaultValue = "false", description = "enable DRT service")
     private boolean intermodal;
+
+    @CommandLine.ArgGroup(exclusive = false, multiplicity = "0..1", heading = "Strategy Options\n")
+    StrategyOptions strategy;
 
     public RunKelheimScenario(@Nullable Config config) {
         super(config);
@@ -169,6 +193,24 @@ public class RunKelheimScenario extends MATSimApplication {
             DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
         }
 
+        PtFareConfigGroup ptFareConfigGroup = ConfigUtils.addOrGetModule(config, PtFareConfigGroup.class);
+        DistanceBasedPtFareParams distanceBasedPtFareParams = ConfigUtils.addOrGetModule(config, DistanceBasedPtFareParams.class);
+
+        // Set parameters
+        ptFareConfigGroup.setApplyUpperBound(true);
+        ptFareConfigGroup.setUpperBoundFactor(1.5);
+
+        distanceBasedPtFareParams.setMinFare(2.0);  // Minimum fare (e.g. short trip or 1 zone ticket)
+        distanceBasedPtFareParams.setLongDistanceTripThreshold(50000); // Division between long trip and short trip (unit: m)
+        distanceBasedPtFareParams.setNormalTripSlope(0.00017); // y = ax + b --> a value, for short trips
+        distanceBasedPtFareParams.setNormalTripIntercept(1.6); // y = ax + b --> b value, for short trips
+        distanceBasedPtFareParams.setLongDistanceTripSlope(0.00025); // y = ax + b --> a value, for long trips
+        distanceBasedPtFareParams.setLongDistanceTripIntercept(30); // y = ax + b --> b value, for long trips
+
+        InformedModeChoiceConfigGroup imc = ConfigUtils.addOrGetModule(config, InformedModeChoiceConfigGroup.class);
+
+        imc.setTopK(strategy.k);
+
         return config;
     }
 
@@ -220,11 +262,54 @@ public class RunKelheimScenario extends MATSimApplication {
                 bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
                 addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
+                // Configure mode-choice strategy
                 addControlerListenerBinding().to(StrategyWeightFadeout.class).in(Singleton.class);
                 Multibinder<StrategyWeightFadeout.Schedule> schedules = Multibinder.newSetBinder(binder(), StrategyWeightFadeout.Schedule.class);
 
-                schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode, "person", 0.75, 0.85));
-                schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice, "person", 0.75, 0.85));
+                // Always collect all strategies (without the common MCs first)
+                List<StrategyConfigGroup.StrategySettings> strategies = config.strategy().getStrategySettings().stream()
+                        .filter(s -> !s.getStrategyName().equals(DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice) &&
+                                    !s.getStrategyName().equals(DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode) &&
+                                    !s.getStrategyName().equals(DefaultPlanStrategiesModule.DefaultStrategy.TimeAllocationMutator)
+                                ).collect(Collectors.toList());
+
+                if (strategy.timeMutation) {
+                    strategies.add(new StrategyConfigGroup.StrategySettings()
+                            .setStrategyName(DefaultPlanStrategiesModule.DefaultStrategy.TimeAllocationMutator)
+                            .setSubpopulation("person")
+                            .setWeight(0.025)
+                    );
+                }
+
+                if (strategy.modeChoice != ModeChoice.none) {
+
+                    strategies.add(new StrategyConfigGroup.StrategySettings()
+                            .setStrategyName(strategy.modeChoice.name)
+                            .setSubpopulation("person")
+                            .setWeight(strategy.weight)
+                    );
+
+                    schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(strategy.modeChoice.name, "person", 0.75, 0.85));
+
+                    InformedModeChoiceModule.Builder builder = InformedModeChoiceModule.newBuilder()
+                            .withFixedCosts(DailyConstantFixedCosts.class, TransportMode.car)
+                            .withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
+                            .withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
+                            .withTripEstimator(PtTripFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt);
+
+	                if (strategy.massConservation)
+		                builder.withConstraint(RelaxedSubtourConstraint.class);
+
+                    install(builder.build());
+
+                }
+
+
+                // reset und set new strategies
+                config.strategy().clearStrategySettings();
+                strategies.forEach(s -> config.strategy().addStrategySettings(s));
+
+                bind(new TypeLiteral<StrategyChooser<Plan, Person>>() {}).toInstance(new ForceInnovationStrategyChooser<>(strategy.forceInnovation, true));
 
                 if (incomeDependent) {
                     bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
@@ -284,4 +369,46 @@ public class RunKelheimScenario extends MATSimApplication {
 //            }
         }
     }
+
+
+    public static final class StrategyOptions {
+
+        @CommandLine.Option(names = "--mode-choice", defaultValue = "subTourModeChoice", description = "Mode choice strategy: ${COMPLETION-CANDIDATES}")
+        private ModeChoice modeChoice = ModeChoice.subTourModeChoice;
+
+
+        @CommandLine.Option(names = "--weight", defaultValue = "0.10", description = "Mode-choice strategy weight")
+        private double weight;
+
+        @CommandLine.Option(names = "--top-k", defaultValue = "5", description = "Top k options for some of the strategies")
+        private int k;
+
+        @CommandLine.Option(names = "--time-mutation", defaultValue = "true", description = "Enable time mutation strategy", negatable = true)
+        private boolean timeMutation;
+
+        @CommandLine.Option(names = "--mass-conservation", defaultValue = "false", description = "Enable mass conservation constraint", negatable = true)
+        private boolean massConservation;
+
+        @CommandLine.Option(names = "--force-innovation", defaultValue = "10", description = "Force innovative strategy with this %")
+        private int forceInnovation;
+
+    }
+
+    public enum ModeChoice {
+
+        none ("none"),
+        changeSingleTrip (DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode),
+        subTourModeChoice (DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice);
+
+        private final String name;
+
+        ModeChoice(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+    }
+
 }
