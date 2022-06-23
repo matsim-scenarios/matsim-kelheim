@@ -236,6 +236,10 @@ public class RunKelheimScenario extends MATSimApplication {
             addRunOption(config, planOrigin);
         }
 
+        // Depends on number of pre generated plans
+        if (strategy.modeChoice == ModeChoice.none)
+            config.strategy().setMaxAgentPlanMemorySize(Math.max(config.strategy().getMaxAgentPlanMemorySize(), 25));
+
         return config;
     }
 
