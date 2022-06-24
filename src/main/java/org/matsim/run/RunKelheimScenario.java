@@ -236,6 +236,10 @@ public class RunKelheimScenario extends MATSimApplication {
             addRunOption(config, planOrigin);
         }
 
+        if (strategy.forceInnovation != 10) {
+            addRunOption(config, "f-inv", strategy.forceInnovation);
+        }
+
         // Depends on number of pre generated plans
         if (strategy.modeChoice == ModeChoice.none)
             config.strategy().setMaxAgentPlanMemorySize(Math.max(config.strategy().getMaxAgentPlanMemorySize(), 25));
@@ -340,7 +344,8 @@ public class RunKelheimScenario extends MATSimApplication {
 
                 schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ReRoute, "person", 0.78));
 
-                bind(new TypeLiteral<StrategyChooser<Plan, Person>>() {}).toInstance(new ForceInnovationStrategyChooser<>(strategy.forceInnovation, true));
+                if (strategy.forceInnovation > 0)
+                    bind(new TypeLiteral<StrategyChooser<Plan, Person>>() {}).toInstance(new ForceInnovationStrategyChooser<>(strategy.forceInnovation, true));
 
                 if (incomeDependent) {
                     bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
