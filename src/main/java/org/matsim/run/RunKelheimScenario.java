@@ -63,13 +63,11 @@ import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.modechoice.InformedModeChoiceConfigGroup;
 import org.matsim.modechoice.InformedModeChoiceModule;
-import org.matsim.modechoice.ModeAvailability;
 import org.matsim.modechoice.ModeOptions;
 import org.matsim.modechoice.commands.GenerateChoiceSet;
 import org.matsim.modechoice.constraints.RelaxedSubtourConstraint;
-import org.matsim.modechoice.estimators.DailyConstantFixedCosts;
 import org.matsim.modechoice.estimators.DefaultLegScoreEstimator;
-import org.matsim.modechoice.estimators.LegEstimator;
+import org.matsim.modechoice.estimators.FixedCostsEstimator;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
@@ -241,8 +239,10 @@ public class RunKelheimScenario extends MATSimApplication {
         }
 
         // Depends on number of pre generated plans
-        if (strategy.modeChoice == ModeChoice.none)
+        if (strategy.modeChoice == ModeChoice.none || strategy.modeChoice == ModeChoice.informedModeChoice)
             config.strategy().setMaxAgentPlanMemorySize(Math.max(config.strategy().getMaxAgentPlanMemorySize(), 25));
+
+        config.planCalcScore().setExplainScores(true);
 
         return config;
     }
@@ -325,7 +325,7 @@ public class RunKelheimScenario extends MATSimApplication {
                     schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(strategy.modeChoice.name, "person", 0.75, 0.85));
 
                     InformedModeChoiceModule.Builder builder = InformedModeChoiceModule.newBuilder()
-                            .withFixedCosts(DailyConstantFixedCosts.class, TransportMode.car)
+                            .withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
                             .withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
                             .withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
                             .withTripEstimator(PtTripFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt);
