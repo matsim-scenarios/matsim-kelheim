@@ -65,7 +65,7 @@ import org.matsim.modechoice.InformedModeChoiceConfigGroup;
 import org.matsim.modechoice.InformedModeChoiceModule;
 import org.matsim.modechoice.ModeOptions;
 import org.matsim.modechoice.commands.GenerateChoiceSet;
-import org.matsim.modechoice.constraints.RelaxedSubtourConstraint;
+import org.matsim.modechoice.constraints.RelaxedMassConservationConstraint;
 import org.matsim.modechoice.estimators.DefaultLegScoreEstimator;
 import org.matsim.modechoice.estimators.FixedCostsEstimator;
 import org.matsim.run.prepare.PrepareNetwork;
@@ -331,7 +331,7 @@ public class RunKelheimScenario extends MATSimApplication {
                             .withTripEstimator(PtTripFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt);
 
 	                if (strategy.massConservation)
-		                builder.withConstraint(RelaxedSubtourConstraint.class);
+		                builder.withConstraint(RelaxedMassConservationConstraint.class);
 
                     install(builder.build());
 
