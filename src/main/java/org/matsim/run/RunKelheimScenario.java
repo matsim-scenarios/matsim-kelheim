@@ -210,10 +210,12 @@ public class RunKelheimScenario extends MATSimApplication {
 
         InformedModeChoiceConfigGroup imc = ConfigUtils.addOrGetModule(config, InformedModeChoiceConfigGroup.class);
         imc.setTopK(strategy.k);
+		imc.setInvBeta(strategy.invBeta);
+		imc.setAnneal(strategy.anneal);
 
         addRunOption(config, "mc", strategy.modeChoice);
 
-        if (strategy.modeChoice == ModeChoice.bestKSelection ||strategy.modeChoice == ModeChoice.informedModeChoice) {
+        if (strategy.modeChoice == ModeChoice.selectBestKPlanModes || strategy.modeChoice == ModeChoice.informedModeChoice) {
             addRunOption(config, "k", strategy.k);
         }
 
@@ -234,13 +236,19 @@ public class RunKelheimScenario extends MATSimApplication {
             addRunOption(config, planOrigin);
         }
 
-        if (strategy.forceInnovation != 10) {
+		if (strategy.anneal != InformedModeChoiceConfigGroup.Schedule.off)
+			addRunOption(config, "anneal", strategy.anneal);
+
+		if (strategy.invBeta != 1)
+			addRunOption(config, "invBeta", strategy.invBeta);
+
+        if (strategy.forceInnovation != 10)
             addRunOption(config, "f-inv", strategy.forceInnovation);
-        }
+
 
         // Depends on number of pre generated plans
         if (strategy.modeChoice == ModeChoice.none || strategy.modeChoice == ModeChoice.informedModeChoice)
-            config.strategy().setMaxAgentPlanMemorySize(Math.max(config.strategy().getMaxAgentPlanMemorySize(), 25));
+            config.strategy().setMaxAgentPlanMemorySize(Math.max(config.strategy().getMaxAgentPlanMemorySize(), strategy.k) + 5);
 
         config.planCalcScore().setExplainScores(true);
 
@@ -347,6 +355,8 @@ public class RunKelheimScenario extends MATSimApplication {
                 if (strategy.forceInnovation > 0)
                     bind(new TypeLiteral<StrategyChooser<Plan, Person>>() {}).toInstance(new ForceInnovationStrategyChooser<>(strategy.forceInnovation, true));
 
+                // bind(StrategyChooser<Plan, Person>.class).toInstance(new ForceInnovationStrategyChooser<>(strategy.forceInnovation, true));
+
                 if (incomeDependent) {
                     bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
                 }
@@ -429,6 +439,12 @@ public class RunKelheimScenario extends MATSimApplication {
         @CommandLine.Option(names = "--force-innovation", defaultValue = "10", description = "Force innovative strategy with %% of agents")
         private int forceInnovation;
 
+        @CommandLine.Option(names = "--inv-beta", defaultValue = "1", description = "Inv beta parameter (0 = best choice)")
+        private double invBeta;
+
+        @CommandLine.Option(names = "--anneal", defaultValue = "off", description = "Parameter annealing")
+        private InformedModeChoiceConfigGroup.Schedule anneal = InformedModeChoiceConfigGroup.Schedule.off;
+
     }
 
     public enum ModeChoice {
@@ -436,8 +452,8 @@ public class RunKelheimScenario extends MATSimApplication {
         none ("none"),
         changeSingleTrip (DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode),
         subTourModeChoice (DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice),
-        bestChoice (InformedModeChoiceModule.BEST_CHOICE_STRATEGY),
-        bestKSelection (InformedModeChoiceModule.BEST_K_SELECTION_STRATEGY),
+        selectSingleTrip (InformedModeChoiceModule.SELECT_SINGLE_TRIP_MODE_STRATEGY),
+        selectBestKPlanModes (InformedModeChoiceModule.SELECT_BEST_K_PLAN_MODES_STRATEGY),
         informedModeChoice (InformedModeChoiceModule.INFORMED_MODE_CHOICE);
 
         private final String name;
