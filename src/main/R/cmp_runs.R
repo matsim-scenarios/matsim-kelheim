@@ -24,15 +24,16 @@ read_runs <- function(files, name, base_dir="") {
 }
 
 
-d <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\matsim-kelheim\\mode-choice\\output\\"
+d <- "\\\\sshfs.kr\\rakow@cluster.math.tu-berlin.de\\net\\ils\\schlenther\\"
 
 files <- list(
-  forceInnovation="kh-mc_subTourModeChoice-no-tm-car",
-  default="kh-mc_subTourModeChoice-no-tm-car-f-inv_0"
+  fromCar="hamburg-v3.0\\output\\output-hh-base-10pct-c",
+  fromWalk="hamburg-v3.0\\output\\output-hh-base-10pct-w"
 )
 
 df <- read_runs(files, "modestats.txt", d) %>%
-    filter(name != "freight")
+    filter(name != "freight") %>%
+    filter(!str_starts(name, "commercial"))
 
 df_diff <- df %>% 
   group_by(Iteration, name) %>%
@@ -41,11 +42,11 @@ df_diff <- df %>%
 
 
 ggplot(df, aes(Iteration, value, color=name)) +
-  labs(title = "ChangeSingleTrip", subtitle = "ForceInnovation=10") +
+  labs(title = "ChangeSingleTrip", subtitle = "Hamburg") +
   geom_line(size=1.2) +
   facet_grid(cols=vars(file)) +
   theme_classic(base_size = 12) +
-  xlim(0, 1500) +
+  xlim(0, 500) +
   ylim(0, 0.85) +
   scale_color_startrek() +
   ylab("Share")
@@ -54,13 +55,17 @@ ggplot(df, aes(Iteration, value, color=name)) +
 ggsave("file.png", dpi = 300, width = 10, height = 4)
 
 ggplot(df_diff, aes(Iteration, value, color=name)) +
-  labs(title = "ChangeSingleTrip Differences FromWalk/FromCar", subtitle = "ForceInnovation=10") +
+  labs(title = "Differences FromWalk/FromCar", subtitle = "ForceInnovation=10") +
   geom_line(size=1.2) +
   theme_classic(base_size = 12) +
-  xlim(0, 1500) +
+  xlim(0, 500) +
   ylim(-0.4, 0.4) +
   scale_color_startrek() +
   ylab("Share")
 
 
 ggsave("file_diff.png", dpi = 300, width = 10, height = 4)
+
+
+pbinom(3, size = 13, prob = 1 / 6)
+plot(0:10, pbinom(0:10, size = 10, prob = 1 / 6), type = "l")

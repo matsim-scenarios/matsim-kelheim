@@ -219,8 +219,10 @@ public class RunKelheimScenario extends MATSimApplication {
             addRunOption(config, "k", strategy.k);
         }
 
-        if (strategy.massConservation)
+        if (strategy.massConservation) {
             addRunOption(config, "mass-conv");
+        } else
+            config.subtourModeChoice().setChainBasedModes(new String[0]);
 
         if (!strategy.timeMutation)
             addRunOption(config, "no-tm");
@@ -353,7 +355,7 @@ public class RunKelheimScenario extends MATSimApplication {
                 schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ReRoute, "person", 0.78));
 
                 if (strategy.forceInnovation > 0)
-                    bind(new TypeLiteral<StrategyChooser<Plan, Person>>() {}).toInstance(new ForceInnovationStrategyChooser<>(strategy.forceInnovation, true));
+                    bind(new TypeLiteral<StrategyChooser<Plan, Person>>() {}).toInstance(new ForceInnovationStrategyChooser<>(strategy.forceInnovation, ForceInnovationStrategyChooser.Permute.yes));
 
                 // bind(StrategyChooser<Plan, Person>.class).toInstance(new ForceInnovationStrategyChooser<>(strategy.forceInnovation, true));
 
@@ -452,8 +454,9 @@ public class RunKelheimScenario extends MATSimApplication {
         none ("none"),
         changeSingleTrip (DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode),
         subTourModeChoice (DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice),
-        selectSingleTrip (InformedModeChoiceModule.SELECT_SINGLE_TRIP_MODE_STRATEGY),
+        selectSingleTripMode (InformedModeChoiceModule.SELECT_SINGLE_TRIP_MODE_STRATEGY),
         selectBestKPlanModes (InformedModeChoiceModule.SELECT_BEST_K_PLAN_MODES_STRATEGY),
+        selectSubtourMode (InformedModeChoiceModule.SELECT_SUBTOUR_MODE_STRATEGY),
         informedModeChoice (InformedModeChoiceModule.INFORMED_MODE_CHOICE);
 
         private final String name;
