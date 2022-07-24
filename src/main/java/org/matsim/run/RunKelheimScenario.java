@@ -210,13 +210,23 @@ public class RunKelheimScenario extends MATSimApplication {
 
         InformedModeChoiceConfigGroup imc = ConfigUtils.addOrGetModule(config, InformedModeChoiceConfigGroup.class);
         imc.setTopK(strategy.k);
+        imc.setAvoidK(strategy.avoidK);
 		imc.setInvBeta(strategy.invBeta);
 		imc.setAnneal(strategy.anneal);
+        imc.setPruning(strategy.prune);
 
         addRunOption(config, "mc", strategy.modeChoice);
 
         if (strategy.modeChoice == ModeChoice.selectBestKPlanModes || strategy.modeChoice == ModeChoice.informedModeChoice) {
             addRunOption(config, "k", strategy.k);
+        }
+
+        if  (strategy.avoidK != 10) {
+            addRunOption(config, "ak", strategy.avoidK);
+        }
+
+        if (strategy.prune != null) {
+            addRunOption(config, "prune", strategy.prune);
         }
 
         if (strategy.massConservation) {
@@ -430,6 +440,9 @@ public class RunKelheimScenario extends MATSimApplication {
         @CommandLine.Option(names = "--top-k", defaultValue = "5", description = "Top k options for some of the strategies")
         private int k;
 
+        @CommandLine.Option(names = "--avoid-k", defaultValue = "10", description = "Avoid using recent mode types again")
+        private int avoidK;
+
         // picocli has strange behaviour regarding default values of these boolean options
         // Like this the default will be true
         @CommandLine.Option(names = "--no-time-mutation", defaultValue = "true", description = "Enable time mutation strategy", negatable = true)
@@ -443,6 +456,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
         @CommandLine.Option(names = "--inv-beta", defaultValue = "1", description = "Inv beta parameter (0 = best choice)")
         private double invBeta;
+
+        @CommandLine.Option(names = "--prune", description = "Name of pruner to enable")
+        private String prune;
 
         @CommandLine.Option(names = "--anneal", defaultValue = "off", description = "Parameter annealing")
         private InformedModeChoiceConfigGroup.Schedule anneal = InformedModeChoiceConfigGroup.Schedule.off;
