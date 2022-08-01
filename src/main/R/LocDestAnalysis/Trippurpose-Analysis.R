@@ -5,8 +5,8 @@ library(plotly)
 library(hrbrthemes)
 library(ggpubr)
 library(patchwork)
-
 library(RColorBrewer)
+library(optparse)
 
 require(readr)
 
@@ -16,8 +16,19 @@ require(readr)
 #  !!!INCLUDE TRAILING SLASH!!!
 #the output_trips file should be there
 
-#runDirectory <- "D:/svn/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/output/KEXI-base-case/"
-runDirectory <- "C:/Users/Simon/Documents/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/output/KEXI-base-case/"
+option_list <- list(
+  make_option(c("-d", "--runDir"), type="character", default=NULL,
+              help="Path of run directory. Avoid using '\', use '/' instead", metavar="character"))
+
+opt_parser <- OptionParser(option_list=option_list)
+opt <- parse_args(opt_parser)
+
+if (is.null(opt$runDir)){
+  print_help(opt_parser)
+  stop("At least 1 argument must be supplied. Use -h for help.", call.=FALSE)
+}
+
+runDirectory <- opt$runDir
 
 interactiveMode <-FALSE
 
@@ -42,6 +53,10 @@ TripDataframe <- TripDataframe %>%
 counts <- TripDataframe %>%
     group_by(main_mode,end_activity_type) %>%
         summarise(count = n())
+
+#get the csv file for the simwrapper dashboard
+csvFile <-paste(outputDir,"/kelheim.output_trips.edit.csv",sep="")
+write.csv(counts,csvFile,quote=FALSE, row.names=FALSE)
 
 
 
