@@ -1,6 +1,6 @@
 
 JAR := matsim-kelheim-*.jar
-V := v1.4
+V := v2.1
 CRS := EPSG:25832
 
 export SUMO_HOME := $(abspath ../../sumo-1.8.0/)
@@ -85,11 +85,14 @@ scenarios/input/kelheim-$V-network.xml.gz: scenarios/input/sumo.net.xml
 
 scenarios/input/kelheim-$V-network-with-pt.xml.gz: scenarios/input/kelheim-$V-network.xml.gz
 	java -Xmx20G -jar $(JAR) prepare transit-from-gtfs --network $<\
-	 ../shared-svn/projects/KelRide/data/20210816_regio.zip\
-	 ../shared-svn/projects/KelRide/data/20210816_train_long.zip\
-	 ../shared-svn/projects/KelRide/data/20210816_train_short.zip\
 	 --name kelheim-$V --date "2021-08-18" --target-crs $(CRS) \
-	 --shp ../shared-svn/projects/KelRide/data/pt-area/pt-area.shp
+	 ../shared-svn/projects/KelRide/data/20210816_regio.zip\
+	 ../shared-svn/projects/KelRide/data/20210816_train_short.zip\
+	 ../shared-svn/projects/KelRide/data/20210816_train_long.zip\
+	 --prefix regio_,short_,long_\
+	 --shp ../shared-svn/projects/KelRide/data/pt-area/pt-area.shp\
+	 --shp ../shared-svn/projects/KelRide/data/Bayern.zip\
+	 --shp ../shared-svn/projects/KelRide/data/germany-area/germany-area.shp\
 
 scenarios/input/freight-trips.xml.gz: scenarios/input/kelheim-$V-network.xml.gz
 	java -jar $(JAR) prepare extract-freight-trips ../shared-svn/projects/german-wide-freight/v1.2/german-wide-freight-25pct.xml.gz\
