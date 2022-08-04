@@ -71,14 +71,15 @@ import java.util.Set;
 @MATSimApplication.Prepare({
         CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
         MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
-        CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class
+        CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class,
+        XYToLinks.class
 })
 @MATSimApplication.Analysis({
         TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-    static final String VERSION = "2.x";
+    static final String VERSION = "3.x";
 
     @CommandLine.Mixin
     private final SampleOptions sample = new SampleOptions(25, 10, 1);

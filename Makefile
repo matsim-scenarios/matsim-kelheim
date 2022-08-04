@@ -1,6 +1,6 @@
 
 JAR := matsim-kelheim-*.jar
-V := v2.1
+V := v3.0
 CRS := EPSG:25832
 
 export SUMO_HOME := $(abspath ../../sumo-1.8.0/)
@@ -108,7 +108,7 @@ scenarios/input/landuse/landuse.shp: ${SHP_FILES}
 	 --target-crs ${CRS}\
 	 --output $@
 
-scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml.gz
+scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml.gz scenarios/input/kelheim-$V-network.xml.gz
 	java -jar $(JAR) prepare trajectory-to-plans\
 	 --name prepare --sample-size 0.25\
 	 --population ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim//population.xml.gz\
@@ -130,13 +130,15 @@ scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml
  	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)\
  	 --num-trips 15216
 
-	java -jar $(JAR) prepare merge-populations scenarios/input/prepare-25pct.plans-with-trips.xml.gz $<\
-     --output scenarios/input/kelheim-$V-25pct.plans.xml.gz
+	java -jar $(JAR) prepare xy-to-links --network scenarios/input/kelheim-$V-network.xml.gz --input scenarios/input/prepare-25pct.plans-with-trips.xml.gz --output $@
 
-	java -jar $(JAR) prepare extract-home-coordinates scenarios/input/kelheim-$V-25pct.plans.xml.gz\
-	 --csv scenarios/input/kelheim-$V-homes.csv
+	java -jar $(JAR) prepare fix-subtour-modes --input $@ --output $@
 
-	java -jar $(JAR) prepare downsample-population scenarios/input/kelheim-$V-25pct.plans.xml.gz\
+	java -jar $(JAR) prepare merge-populations $@ $< --output $@
+
+	java -jar $(JAR) prepare extract-home-coordinates $@ --csv scenarios/input/kelheim-$V-homes.csv
+
+	java -jar $(JAR) prepare downsample-population $@\
     	 --sample-size 0.25\
     	 --samples 0.1 0.01\
 
