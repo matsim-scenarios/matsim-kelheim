@@ -1,0 +1,99 @@
+---
+title: "Bad weather Kelheim Demo"
+author: "Oleksandr Soboliev"
+#always_allow_html: true
+output:
+  #pdf_document: default
+  html_notebook:
+    theme: cosmo
+    highlight: monochrome
+    code_folding: show
+editor_options: 
+  chunk_output_type: inline
+---
+```{r, include= FALSE}
+library(tidyverse)
+library(lubridate)
+library(plotly)
+```
+
+
+## **Research Meteostat**
+After some researches about meteostat data nearest station in DE that belongs to Kelheim region 
+are:
+
+* "Mallersdorf-Pfaffenberg/Niederbayern" with an id: "D3147"
+* "Neumarkt / Höhenberg" with and id: "69110"
+* Uebungsdorf / Emhof
+
+there are many of them so I am starting to think about extracting all from the Bayern or extract the nearest from longtitude/latitude point with the Kelheim shapefile(using json and Euclid distances) 
+
+[Kelheim has no weather station, but it could be reconstructed with 2 other](https://weatherspark.com/y/70370/Average-Weather-in-Kelheim-Germany-Year-Round)
+
+Hohenfels with id: "10775" and Ingolstadt with id:"10860"
+**kelheim_data = {weight1}x{hohenfels} + {weight2}x{inglstadt}**
+
+Also this site shows, that there are many of the Kelheim stations in this area, but meteostat doesn't contain them
+https://www.wunderground.com/dashboard/pws/IKELHE5
+
+
+
+## **Research Weatherstack**
+
+```{r first look at weatherstack data specific to Kelheim}
+weatherstack_kelheim = read_delim("data/Kelheim_weather_since_july_2008.csv",delim = ",")
+print(weatherstack_kelheim)
+```
+What to take as a reffer point isn't clear because of the date(before/after covid) and weather type (sunny,clear,temperature)
+Also there is no temperature in it :/
+
+## **Import mobility from Google**
+```{r including google germany mobility data,message=FALSE}
+global_mobility = read_delim("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv",",")
+de_mobility = global_mobility %>% filter(country_region_code == "DE")
+```
+
+```{r what regions are data provided}
+print(unique(de_mobility$sub_region_1))
+
+```
+As we can see the most precise region to filter data from is Bavaria :/
+
+Relevant data for the , mobility
+
+```{r mobility data bavaria}
+bavaria_mobility = de_mobility %>% filter(sub_region_1 == "Bavaria")
+bavaria_mobility = bavaria_mobility %>% select(country_region,sub_region_1,date,residential_percent_change_from_baseline) %>%
+  mutate(residential_percent_change_from_baseline = -residential_percent_change_from_baseline,
+         source = "Google")%>%
+  rename(BundeslandID = sub_region_1,not_at_home_change = residential_percent_change_from_baseline)
+bavaria_mobility = bavaria_mobility %>% select(date,BundeslandID,not_at_home_change,source)
+#Need to filter out weekends
+
+plt = ggplot(bavaria_mobility)+
+  geom_point(aes(x = date,y = not_at_home_change))
+ggplotly(plt)
+```
+## **Import mobility from Senozon**
+
+```{r import from senozon}
+snz_mobility = read_delim("data/mobilityData_OverviewBL_weekly.csv",";")
+snz_mobility = snz_mobility %>% filter(BundeslandID == "Bayern") %>% mutate(source = "senozon") %>% select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
+snz_mobility$date = as.Date(strptime(snz_mobility$date,"%Y%m%d"))
+plt = ggplot(snz_mobility)+
+  geom_point(aes(x = date,y = not_at_home_change))
+ggplotly(plt)
+```
+
+
+
+## **Aggregate 2 sources**
+
+```{r google+senozon}
+mob_joined = rbind(snz_mobility,bavaria_mobility)
+
+plt = ggplot(mob_joined)+
+  geom_point(aes(x = date,y = not_at_home_change,color = source))
+ggplotly(plt)
+
+```
