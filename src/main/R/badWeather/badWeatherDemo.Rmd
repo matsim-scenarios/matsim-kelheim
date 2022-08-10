@@ -91,9 +91,18 @@ ggplotly(plt)
 
 ```{r google+senozon}
 mob_joined = rbind(snz_mobility,bavaria_mobility)
+weatherstack_kelheim_precip_by_day = weatherstack_kelheim %>% group_by(date) %>% summarize(precip_mean = mean(precip))
+mob_joined_with_weater = mob_joined %>% inner_join(weatherstack_kelheim_precip_by_day, by = "date")
 
-plt = ggplot(mob_joined)+
-  geom_point(aes(x = date,y = not_at_home_change,color = source))
+plt = ggplot(mob_joined_with_weater)+
+  geom_point(aes(x = date,y = not_at_home_change,color = source,size = precip_mean))
+  
+
 ggplotly(plt)
+
+```
+
+
+```{r shiny for html report}
 
 ```
