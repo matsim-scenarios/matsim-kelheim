@@ -1,20 +1,24 @@
 ---
 title: "Bad weather Kelheim Demo"
 author: "Oleksandr Soboliev"
-#always_allow_html: true
 output:
-  #pdf_document: default
+  html_document:
+    df_print: paged
   html_notebook:
     theme: cosmo
     highlight: monochrome
     code_folding: show
-editor_options: 
+runtime: shiny
+editor_options:
   chunk_output_type: inline
 ---
 ```{r, include= FALSE}
 library(tidyverse)
 library(lubridate)
 library(plotly)
+library(leaflet)
+
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
@@ -77,8 +81,8 @@ ggplotly(plt)
 ## **Import mobility from Senozon**
 
 ```{r import from senozon}
-snz_mobility = read_delim("data/mobilityData_OverviewBL_weekly.csv",";")
-snz_mobility = snz_mobility %>% filter(BundeslandID == "Bayern") %>% mutate(source = "senozon") %>% select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
+snz_mobility = read_delim("data/LK_mobilityData_weekdays.csv",";")
+snz_mobility = snz_mobility %>% filter(Landkreis == "Landkreis Kelheim") %>% mutate(source = "senozon") %>% select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
 snz_mobility$date = as.Date(strptime(snz_mobility$date,"%Y%m%d"))
 plt = ggplot(snz_mobility)+
   geom_point(aes(x = date,y = not_at_home_change))
@@ -89,20 +93,47 @@ ggplotly(plt)
 
 ## **Aggregate 2 sources**
 
-```{r google+senozon}
-mob_joined = rbind(snz_mobility,bavaria_mobility)
-weatherstack_kelheim_precip_by_day = weatherstack_kelheim %>% group_by(date) %>% summarize(precip_mean = mean(precip))
-mob_joined_with_weater = mob_joined %>% inner_join(weatherstack_kelheim_precip_by_day, by = "date")
-
-plt = ggplot(mob_joined_with_weater)+
-  geom_point(aes(x = date,y = not_at_home_change,color = source,size = precip_mean))
+```{r define weather data as week data}
+weatherstack_kelheim_daily = weatherstack_kelheim %>%
+  group_by(date) %>%
+  summarize(precip_day = sum(precip),visibility_mean = mean(visibility),totalsnow_daily = mean(totalsnow_daily))
   
+weatherstack_kelheim_weekly = weatherstack_kelheim_daily %>% 
+  mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
+  group_by(year_week) %>%
+  summarize(date = first(date), precip_week = sum(precip_day),visibility_mean = mean(visibility_mean),totalsnow_weekly =sum( totalsnow_daily))
+weatherstack_kelheim_weekly = unique(weatherstack_kelheim_weekly)
+print(weatherstack_kelheim_weekly)
+  
+```
 
-ggplotly(plt)
+```{r google+senozon+weather}
+#mob_joined = rbind(snz_mobility,bavaria_mobility)
+snz_mobility_year_week = snz_mobility %>% 
+  mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
+  group_by(year_week) %>%
+  summarize(date = first(date),not_at_home_change = mean(not_at_home_change))
+mob_joined_with_weather = snz_mobility_year_week %>% inner_join(weatherstack_kelheim_weekly, by = "year_week") %>% select(-date.y) %>% rename(date = date.x)
+print(mob_joined_with_weather)
 
 ```
 
+```{r first plot}
+#First plot with colour as precipitation
+plt_color = ggplot(mob_joined_with_weather)+
+  geom_point(aes(x = date,y = not_at_home_change,colour = precip_week))+
+  scale_color_gradient2()
+  
 
-```{r shiny for html report}
+ggplotly(plt_color)
+```
 
+```{r second plot}
+#Second plot as another line as precipitation
+plt_line = ggplot(mob_joined_with_weather)+
+  geom_point(aes(x = date,y = not_at_home_change))+
+  geom_line(aes(x = date,y = precip_week*0.5,color = "red"))
+  
+
+ggplotly(plt_line)
 ```
