@@ -294,13 +294,3 @@ plt_hist_season = ggplot(mob_joined_with_ingolstadt,aes(x = season,y = not_at_ho
 
 ggplotly(plt_hist_season)
 ```
-
-
-```{r season ~ not_at_home:  plots}
-plt_hist_season = ggplot(mob_joined_with_ingolstadt,aes(x = season,y = not_at_home_change))+
-  stat_summary_bin(fun = "mean",
-                   geom = "bar",
-                   binwidth = 5,fill = "blue")
-
-ggplotly(plt_hist_season)
-```
