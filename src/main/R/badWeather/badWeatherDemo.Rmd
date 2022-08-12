@@ -12,6 +12,7 @@ runtime: shiny
 editor_options:
   chunk_output_type: inline
 ---
+
 ```{r, include= FALSE}
 library(tidyverse)
 library(lubridate)
@@ -22,26 +23,21 @@ library(rmarkdown)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 ## **Research Meteostat**
-After some researches about meteostat data nearest station in DE that belongs to Kelheim region 
-are:
 
-* "Mallersdorf-Pfaffenberg/Niederbayern" with an id: "D3147"
-* "Neumarkt / Höhenberg" with and id: "69110"
-* Uebungsdorf / Emhof
+After some researches about meteostat data nearest station in DE that belongs to Kelheim region are:
 
-there are many of them so I am starting to think about extracting all from the Bayern or extract the nearest from longtitude/latitude point with the Kelheim shapefile(using json and Euclid distances) 
+-   "Mallersdorf-Pfaffenberg/Niederbayern" with an id: "D3147"
+-   "Neumarkt / Höhenberg" with and id: "69110"
+-   Uebungsdorf / Emhof
+
+there are many of them so I am starting to think about extracting all from the Bayern or extract the nearest from longtitude/latitude point with the Kelheim shapefile(using json and Euclid distances)
 
 [Kelheim has no weather station, but it could be reconstructed with 2 other](https://weatherspark.com/y/70370/Average-Weather-in-Kelheim-Germany-Year-Round)
 
-Hohenfels with id: "10775" and Ingolstadt with id:"10860"
-**kelheim_data = {weight1}x{hohenfels} + {weight2}x{inglstadt}**
+Hohenfels with id: "10775" and Ingolstadt with id:"10860" **kelheim_data = {weight1}x{hohenfels} + {weight2}x{inglstadt}**
 
-Also this site shows, that there are many of the Kelheim stations in this area, but meteostat doesn't contain them
-https://www.wunderground.com/dashboard/pws/IKELHE5
-
-
+Also this site shows, that there are many of the Kelheim stations in this area, but meteostat doesn't contain them <https://www.wunderground.com/dashboard/pws/IKELHE5>
 
 ## **Research Weatherstack**
 
@@ -49,36 +45,39 @@ https://www.wunderground.com/dashboard/pws/IKELHE5
 weatherstack_kelheim = read_delim("data/Kelheim_weather_since_july_2008.csv",delim = ",")
 print(weatherstack_kelheim)
 ```
-What to take as a reffer point isn't clear because of the date(before/after covid) and weather type (sunny,clear,temperature)
-Also there is no temperature in it :/
+
+What to take as a reffer point isn't clear because of the date(before/after covid) and weather type (sunny,clear,temperature) Also there is no temperature in it :/
 
 ## **Import mobility from Google**
+
 ```{r including google germany mobility data,message=FALSE}
-global_mobility = read_delim("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv",",")
-de_mobility = global_mobility %>% filter(country_region_code == "DE")
+#global_mobility = read_delim("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv",",")
+#de_mobility = global_mobility %>% filter(country_region_code == "DE")
 ```
 
 ```{r what regions are data provided}
-print(unique(de_mobility$sub_region_1))
+#print(unique(de_mobility$sub_region_1))
 
 ```
+
 As we can see the most precise region to filter data from is Bavaria :/
 
 Relevant data for the , mobility
 
 ```{r mobility data bavaria}
-bavaria_mobility = de_mobility %>% filter(sub_region_1 == "Bavaria")
-bavaria_mobility = bavaria_mobility %>% select(country_region,sub_region_1,date,residential_percent_change_from_baseline) %>%
-  mutate(residential_percent_change_from_baseline = -residential_percent_change_from_baseline,
-         source = "Google")%>%
-  rename(BundeslandID = sub_region_1,not_at_home_change = residential_percent_change_from_baseline)
-bavaria_mobility = bavaria_mobility %>% select(date,BundeslandID,not_at_home_change,source)
+#bavaria_mobility = de_mobility %>% filter(sub_region_1 == "Bavaria")
+#bavaria_mobility = bavaria_mobility %>% #select(country_region,sub_region_1,date,residential_percent_change_from_baseline) %>%
+#  mutate(residential_percent_change_from_baseline = -residential_percent_change_from_baseline,
+#         source = "Google")%>%
+#  rename(BundeslandID = sub_region_1,not_at_home_change = residential_percent_change_from_baseline)
+#bavaria_mobility = bavaria_mobility %>% select(date,BundeslandID,not_at_home_change,source)
 #Need to filter out weekends
 
-plt = ggplot(bavaria_mobility)+
-  geom_point(aes(x = date,y = not_at_home_change))
-ggplotly(plt)
+#plt = ggplot(bavaria_mobility)+
+#  geom_point(aes(x = date,y = not_at_home_change))
+#ggplotly(plt)
 ```
+
 ## **Import mobility from Senozon**
 
 ```{r import from senozon}
@@ -89,8 +88,6 @@ plt = ggplot(snz_mobility)+
   geom_point(aes(x = date,y = not_at_home_change))
 ggplotly(plt)
 ```
-
-
 
 ## **Aggregate 2 sources**
 
@@ -139,7 +136,6 @@ plt_line = ggplot(mob_joined_with_weather)+
 ggplotly(plt_line)
 ```
 
-
 ```{r precipitation histogram}
 plt_hist_precip = ggplot(mob_joined_with_weather,aes(x = precip_week,y = not_at_home_change))+
   stat_summary_bin(fun = "mean",
@@ -148,7 +144,6 @@ plt_hist_precip = ggplot(mob_joined_with_weather,aes(x = precip_week,y = not_at_
 
 ggplotly(plt_hist_precip)
 ```
-
 
 ```{r visibility histogram}
 plt_hist_visibility = ggplot(mob_joined_with_weather,aes(x = visibility_mean,y = not_at_home_change))+
@@ -160,10 +155,152 @@ ggplotly(plt_hist_visibility)
 ```
 
 ```{r totalsnow histogram}
-plt_hist_visibility = ggplot(mob_joined_with_weather,aes(x = totalsnow_weekly,y = not_at_home_change))+
+plt_hist_totalsnow = ggplot(mob_joined_with_weather,aes(x = totalsnow_weekly,y = not_at_home_change))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
                    binwidth = 7,fill = "blue")
 
-ggplotly(plt_hist_visibility)
+ggplotly(plt_hist_totalsnow)
+```
+
+## Let's try it out with meteostat data, that contains scope of the 2022 without restictions
+
+Ingolstadt data from id = 10860 station
+
+```{r Ingolstadt data}
+ingolstadt_weather = read_delim("https://bulk.meteostat.net/v2/daily/10860.csv.gz",",",col_names = FALSE)
+
+colnames(ingolstadt_weather) = c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
+
+
+# We don't need data of weather before 2020, because of snz_mobility date, also data isn't precise
+
+ingolstadt_weather = ingolstadt_weather %>% filter(year(date)>=2020)%>% replace_na(list(snow = 0))
+
+print(ingolstadt_weather)
+```
+
+Hohenfels data from id = 10775 station
+
+```{r Hohenfels data}
+hohenfels_weather = read_delim("https://bulk.meteostat.net/v2/daily/10775.csv.gz",",",col_names = FALSE)
+
+colnames(hohenfels_weather) = c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
+
+
+# We don't need data of weather before 2020, because of snz_mobility date, also data isn't precise
+
+hohenfels_weather = hohenfels_weather %>% filter(year(date)>=2020) %>% replace_na(list(snow = 0))
+
+print(hohenfels_weather)
+```
+
+As we can see in Hohenfels data isn't that accurate and precipitation is data is missing fr year 2020, so for the further analysis we take only Ingolstadt data.
+
+```{r Ingolstadt weekly data}
+ingolstadt_weather_weekly = ingolstadt_weather %>% 
+  mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
+  group_by(year_week) %>%
+  summarize(date = first(date), prcp_week = sum(prcp), tavg= mean(tavg),snow_week =sum( snow),wspd = mean(wspd),tmax = max(tmax)) %>%
+  arrange(year_week)
+#ingolstadt_weather_weekly = unique(weatherstack_kelheim_weekly)
+print(ingolstadt_weather_weekly)
+```
+
+```{r aggregate snz and ingolstadt}
+mob_joined_with_ingolstadt = ingolstadt_weather_weekly %>% 
+  inner_join(snz_mobility_year_week, by = "year_week") %>% 
+  select(-date.x) %>%
+  rename(date = date.y) %>%
+  replace_na(list(tmax = 0))
+
+print(mob_joined_with_ingolstadt)
+```
+```{r colored precipitation plot Ingolstadt}
+#First plot with colour as precipitation
+plt_ing_color = ggplot(mob_joined_with_ingolstadt)+
+  geom_point(aes(x = date,y = not_at_home_change,colour = prcp_week))+
+  scale_color_gradient2()
+
+ggplotly(plt_ing_color)
+```
+
+
+```{r precipitation as line plot}
+plt_ing_color = ggplot(mob_joined_with_ingolstadt)+
+  geom_point(aes(x = date,y = not_at_home_change))+
+  geom_line(aes(x = date,y = prcp_week,color = "red"))
+
+ggplotly(plt_ing_color)
+```
+
+
+```{r histogram with precip}
+plt_hist_precip_ing = ggplot(mob_joined_with_ingolstadt,aes(x = prcp_week,y = not_at_home_change))+
+  stat_summary_bin(fun = "mean",
+                   geom = "bar",
+                   binwidth = 2,fill = "blue")
+
+ggplotly(plt_hist_precip_ing)
+
+```
+
+```{r histogram with average temperature}
+plt_hist_precip_ing = ggplot(mob_joined_with_ingolstadt,aes(x = tavg,y = not_at_home_change))+
+  stat_summary_bin(fun = "mean",
+                   geom = "bar",
+                   binwidth = 2,fill = "blue")
+
+ggplotly(plt_hist_precip_ing)
+
+```
+
+```{r histogram with maximal temperature}
+plt_hist_precip_ing = ggplot(mob_joined_with_ingolstadt,aes(x = tmax,y = not_at_home_change))+
+  stat_summary_bin(fun = "mean",
+                   geom = "bar",
+                   binwidth = 2,fill = "blue")
+
+ggplotly(plt_hist_precip_ing)
+
+```
+
+```{r histogram with snow at the week}
+plt_hist_precip_ing = ggplot(mob_joined_with_ingolstadt,aes(x = snow_week,y = not_at_home_change))+
+  stat_summary_bin(fun = "mean",
+                   geom = "bar",
+                   binwidth = 5,fill = "blue")
+
+ggplotly(plt_hist_precip_ing)
+
+```
+
+After first look at data, we can assume that hours out of home strongly depend on average temperature outside, that sounds logical. Mb categorization seasons of the data will help to understand this function
+
+```{r adding new season column}
+mob_joined_with_ingolstadt = mob_joined_with_ingolstadt %>% 
+  mutate(season = ifelse(month(date) %in% c(12,1,2),"winter",NA)) %>%
+  mutate(season = ifelse(month(date) %in% c(3,4,5),"spring",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(9,10,11),"autumn",season))
+```
+
+
+```{r season ~ not_at_home:  plots}
+plt_hist_season = ggplot(mob_joined_with_ingolstadt,aes(x = season,y = not_at_home_change))+
+  stat_summary_bin(fun = "mean",
+                   geom = "bar",
+                   binwidth = 5,fill = "blue")
+
+ggplotly(plt_hist_season)
+```
+
+
+```{r season ~ not_at_home:  plots}
+plt_hist_season = ggplot(mob_joined_with_ingolstadt,aes(x = season,y = not_at_home_change))+
+  stat_summary_bin(fun = "mean",
+                   geom = "bar",
+                   binwidth = 5,fill = "blue")
+
+ggplotly(plt_hist_season)
 ```
