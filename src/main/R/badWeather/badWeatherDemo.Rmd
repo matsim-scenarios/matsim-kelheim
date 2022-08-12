@@ -17,6 +17,7 @@ library(tidyverse)
 library(lubridate)
 library(plotly)
 library(leaflet)
+library(rmarkdown)
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -141,7 +142,7 @@ ggplotly(plt_line)
 
 ```{r precipitation histogram}
 plt_hist_precip = ggplot(mob_joined_with_weather,aes(x = precip_week,y = not_at_home_change))+
-  stat_summary_bin(fun.y = "mean",
+  stat_summary_bin(fun = "mean",
                    geom = "bar",
                    binwidth = 2,fill = "blue")
 
@@ -151,7 +152,7 @@ ggplotly(plt_hist_precip)
 
 ```{r visibility histogram}
 plt_hist_visibility = ggplot(mob_joined_with_weather,aes(x = visibility_mean,y = not_at_home_change))+
-  stat_summary_bin(fun.y = "mean",
+  stat_summary_bin(fun = "mean",
                    geom = "bar",
                    binwidth = 0.5,fill = "blue")
 
@@ -160,7 +161,7 @@ ggplotly(plt_hist_visibility)
 
 ```{r totalsnow histogram}
 plt_hist_visibility = ggplot(mob_joined_with_weather,aes(x = totalsnow_weekly,y = not_at_home_change))+
-  stat_summary_bin(fun.y = "mean",
+  stat_summary_bin(fun = "mean",
                    geom = "bar",
                    binwidth = 7,fill = "blue")
 
