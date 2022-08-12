@@ -286,6 +286,7 @@ public class RunKelheimScenario extends MATSimApplication {
 										"pt", 0.13576849
 								)))
 								// These are with activity estimation enabled
+								.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
 								.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
 								.withPruner("ad95", new DistanceBasedPruner( 1.72092386, 0.03189323))
 								.withPruner("am99", new ModeDistanceBasedPruner(2.68083795, Map.of(
