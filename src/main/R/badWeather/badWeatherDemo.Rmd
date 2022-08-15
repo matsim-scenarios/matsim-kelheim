@@ -82,45 +82,85 @@ Relevant data for the , mobility
 
 ```{r import from senozon}
 snz_mobility = read_delim("data/LK_mobilityData_weekdays.csv",";")
-snz_mobility = snz_mobility %>% filter(Landkreis == "Landkreis Kelheim") %>% mutate(source = "senozon") %>% select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
-snz_mobility$date = as.Date(strptime(snz_mobility$date,"%Y%m%d"))
-plt = ggplot(snz_mobility)+
-  geom_point(aes(x = date,y = not_at_home_change))
+
+#Kelheim
+snz_mobility_kelheim = snz_mobility %>% filter(Landkreis == "Landkreis Kelheim") %>% mutate(source = "senozon") %>% select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
+snz_mobility_kelheim$date = as.Date(strptime(snz_mobility_kelheim$date,"%Y%m%d"))
+
+#Berlin
+snz_mobility_berlin = snz_mobility %>% filter(Landkreis == "Berlin") %>% mutate(source = "senozon") %>% select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
+snz_mobility_berlin$date = as.Date(strptime(snz_mobility_berlin$date,"%Y%m%d"))
+
+colors <- c("Berlin" = "blue", "Kelheim" = "red")
+
+plt = ggplot()+
+  geom_point(data = snz_mobility_kelheim,aes(x = date,y = not_at_home_change,color = "Berlin"))+
+  geom_point(data = snz_mobility_berlin,aes(x = date,y = not_at_home_change,color = "Kelheim"))+
+  scale_colour_manual(values = colors)
 ggplotly(plt)
 ```
 
 ## **Aggregate 2 sources**
 
+We take berlin weather from station in Schoenefeld with id = 10384
+```{r adding berlin weather, echo=FALSE}
+berlin_weather_daily = read_delim("https://bulk.meteostat.net/v2/daily/10385.csv.gz",",",col_names = FALSE)
+colnames(berlin_weather_daily) = c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
+```
+
+
 ```{r define weather data as week data}
+# think about duration of description column
+# Kelheim
 weatherstack_kelheim_daily = weatherstack_kelheim %>%
   group_by(date) %>%
-  summarize(precip_day = sum(precip),visibility_mean = mean(visibility),totalsnow_daily = mean(totalsnow_daily))
+  summarize(description = description,precip_day = sum(precip),visibility_mean = mean(visibility),totalsnow_daily = mean(totalsnow_daily))
   
 weatherstack_kelheim_weekly = weatherstack_kelheim_daily %>% 
   mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
   group_by(year_week) %>%
-  summarize(date = first(date), precip_week = sum(precip_day),visibility_mean = mean(visibility_mean),totalsnow_weekly =sum( totalsnow_daily))
+  summarize(description = description,date = first(date), precip_week = sum(precip_day),visibility_mean = mean(visibility_mean),totalsnow_weekly =sum( totalsnow_daily))
 weatherstack_kelheim_weekly = unique(weatherstack_kelheim_weekly)
 print(weatherstack_kelheim_weekly)
+
+#Berlin
+  
+berlin_weather_weekly = berlin_weather_daily %>% filter(year(date) >=2020) %>%
+  mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
+  group_by(year_week) %>%
+  summarize(date = first(date), prcp_week = sum(prcp), tavg= mean(tavg),snow_week =sum( snow),wspd = mean(wspd),tmax = max(tmax)) %>%
+  arrange(year_week)
+print(berlin_weather_weekly)
   
 ```
 
 ```{r google+senozon+weather}
-#mob_joined = rbind(snz_mobility,bavaria_mobility)
-snz_mobility_year_week = snz_mobility %>% 
+#mob_joined = rbind(snz_mobility_kelheim,bavaria_mobility)
+#Kelheim
+snz_mobility_kelheim_year_week = snz_mobility_kelheim %>% 
   mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
   group_by(year_week) %>%
   summarize(date = first(date),not_at_home_change = mean(not_at_home_change))
-mob_joined_with_weather = snz_mobility_year_week %>% inner_join(weatherstack_kelheim_weekly, by = "year_week") %>% select(-date.y) %>% rename(date = date.x)
-print(mob_joined_with_weather)
+mob_joined_with_weather_kelheim = snz_mobility_kelheim_year_week %>% inner_join(weatherstack_kelheim_weekly, by = "year_week") %>% select(-date.y) %>% rename(date = date.x)
+print(mob_joined_with_weather_kelheim)
 
+#Berlin
+snz_mobility_berlin_year_week = snz_mobility_berlin %>% 
+  mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
+  group_by(year_week) %>%
+  summarize(date = first(date),not_at_home_change = mean(not_at_home_change))
+mob_joined_with_weather_berlin = snz_mobility_berlin_year_week %>% inner_join(berlin_weather_weekly, by = "year_week") %>% select(-date.y) %>% rename(date = date.x)
+print(mob_joined_with_weather_berlin)
 ```
 
 ```{r first plot}
 #First plot with colour as precipitation
-plt_color = ggplot(mob_joined_with_weather)+
-  geom_point(aes(x = date,y = not_at_home_change,colour = precip_week))+
-  scale_color_gradient2()
+shapes <- c("Berlin" = 5, "Kelheim" = 3)
+plt_color = ggplot()+
+  geom_point(data = mob_joined_with_weather_kelheim,aes(x = date,y = not_at_home_change,colour = precip_week,shape = "Kelheim"))+
+  #geom_point(data = mob_joined_with_weather_berlin,aes(x = date,y = not_at_home_change,colour = prcp_week,shape = "Berlin"))+
+  scale_color_gradient2()+
+  scale_shape_manual(values = shapes)
   
 
 ggplotly(plt_color)
@@ -128,7 +168,7 @@ ggplotly(plt_color)
 
 ```{r second plot}
 #Second plot as another line as precipitation
-plt_line = ggplot(mob_joined_with_weather)+
+plt_line = ggplot(mob_joined_with_weather_kelheim)+
   geom_point(aes(x = date,y = not_at_home_change))+
   geom_line(aes(x = date,y = precip_week*0.5,color = "red"))
   
@@ -137,7 +177,7 @@ ggplotly(plt_line)
 ```
 
 ```{r precipitation histogram}
-plt_hist_precip = ggplot(mob_joined_with_weather,aes(x = precip_week,y = not_at_home_change))+
+plt_hist_precip = ggplot(mob_joined_with_weather_kelheim,aes(x = precip_week,y = not_at_home_change))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
                    binwidth = 2,fill = "blue")
@@ -146,7 +186,7 @@ ggplotly(plt_hist_precip)
 ```
 
 ```{r visibility histogram}
-plt_hist_visibility = ggplot(mob_joined_with_weather,aes(x = visibility_mean,y = not_at_home_change))+
+plt_hist_visibility = ggplot(mob_joined_with_weather_kelheim,aes(x = visibility_mean,y = not_at_home_change))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
                    binwidth = 0.5,fill = "blue")
@@ -155,12 +195,23 @@ ggplotly(plt_hist_visibility)
 ```
 
 ```{r totalsnow histogram}
-plt_hist_totalsnow = ggplot(mob_joined_with_weather,aes(x = totalsnow_weekly,y = not_at_home_change))+
+plt_hist_totalsnow = ggplot(mob_joined_with_weather_kelheim,aes(x = totalsnow_weekly,y = not_at_home_change))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
                    binwidth = 7,fill = "blue")
 
 ggplotly(plt_hist_totalsnow)
+```
+
+```{r looking at description column}
+#this is a bad plot because it takes description of 1 day of the week
+plt_hist_descr = ggplot(mob_joined_with_weather_kelheim,aes(x = description,y = not_at_home_change))+
+  stat_summary_bin(fun = "mean",
+                   geom = "bar",
+                   binwidth = 5,fill = "blue")+
+  coord_flip()
+
+ggplotly(plt_hist_descr)
 ```
 
 ## Let's try it out with meteostat data, that contains scope of the 2022 without restictions
@@ -209,18 +260,22 @@ print(ingolstadt_weather_weekly)
 
 ```{r aggregate snz and ingolstadt}
 mob_joined_with_ingolstadt = ingolstadt_weather_weekly %>% 
-  inner_join(snz_mobility_year_week, by = "year_week") %>% 
+  inner_join(snz_mobility_kelheim_year_week, by = "year_week") %>% 
   select(-date.x) %>%
   rename(date = date.y) %>%
   replace_na(list(tmax = 0))
 
 print(mob_joined_with_ingolstadt)
 ```
+
 ```{r colored precipitation plot Ingolstadt}
 #First plot with colour as precipitation
+fills <- c("Ingolstadt" = "blue", "Berlin" = "red")
 plt_ing_color = ggplot(mob_joined_with_ingolstadt)+
-  geom_point(aes(x = date,y = not_at_home_change,colour = prcp_week))+
-  scale_color_gradient2()
+  geom_point(aes(x = date,y = not_at_home_change,colour = prcp_week,fill = "Ingolstadt"))+
+  geom_point(data = mob_joined_with_weather_berlin,aes(x = date,y = not_at_home_change,colour = prcp_week,fill = "Berlin"))+
+  scale_color_gradient(low = "white",high = "black")+
+  scale_fill_manual(values = fills)
 
 ggplotly(plt_ing_color)
 ```
@@ -229,47 +284,61 @@ ggplotly(plt_ing_color)
 ```{r precipitation as line plot}
 plt_ing_color = ggplot(mob_joined_with_ingolstadt)+
   geom_point(aes(x = date,y = not_at_home_change))+
-  geom_line(aes(x = date,y = prcp_week,color = "red"))
+  geom_line(aes(x = date,y = prcp_week,color = "Ingolstadt"))+
+  #geom_line(data = berlin_weather_weekly,aes(x = date,y = prcp_week,color = "Berlin"))+
+  scale_color_manual(values = fills)+
+  ggtitle("Kelheim mobility with precipitation as line plot on same axis")
 
 ggplotly(plt_ing_color)
 ```
 
+```{r join ingolstadt and berlin in 1 table}
+# replace coluumn positioning
+
+mob_joined_with_weather_berlin = mob_joined_with_weather_berlin %>% select(year_week,prcp_week,tavg,snow_week,wspd,tmax,date,not_at_home_change)
+
+mob_joined_with_weather_berlin = mob_joined_with_weather_berlin %>% mutate(landkreis = "Berlin")
+
+mob_joined_with_ingolstadt = mob_joined_with_ingolstadt %>% mutate(landkreis = "Ingolstadt")
+
+mob_joined_with_ing_berlin = rbind(mob_joined_with_ingolstadt,mob_joined_with_weather_berlin)
+```
 
 ```{r histogram with precip}
-plt_hist_precip_ing = ggplot(mob_joined_with_ingolstadt,aes(x = prcp_week,y = not_at_home_change))+
+plt_hist_precip_ing = ggplot(mob_joined_with_ing_berlin,aes(x = prcp_week,y = not_at_home_change,fill = landkreis))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
-                   binwidth = 2,fill = "blue")
+                   binwidth = 2,position =  position_dodge())
 
 ggplotly(plt_hist_precip_ing)
 
 ```
 
 ```{r histogram with average temperature}
-plt_hist_precip_ing = ggplot(mob_joined_with_ingolstadt,aes(x = tavg,y = not_at_home_change))+
+plt_hist_precip_ing = ggplot(mob_joined_with_ing_berlin,aes(x = tavg,y = not_at_home_change,fill = landkreis))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
-                   binwidth = 2,fill = "blue")
+                   binwidth = 2,position = position_dodge2())
 
 ggplotly(plt_hist_precip_ing)
 
 ```
 
 ```{r histogram with maximal temperature}
-plt_hist_precip_ing = ggplot(mob_joined_with_ingolstadt,aes(x = tmax,y = not_at_home_change))+
+plt_hist_precip_ing = ggplot(mob_joined_with_ing_berlin,aes(x = tmax,y = not_at_home_change,fill = landkreis))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
-                   binwidth = 2,fill = "blue")
+                   binwidth = 2)
 
 ggplotly(plt_hist_precip_ing)
 
 ```
 
 ```{r histogram with snow at the week}
-plt_hist_precip_ing = ggplot(mob_joined_with_ingolstadt,aes(x = snow_week,y = not_at_home_change))+
+plt_hist_precip_ing = ggplot(mob_joined_with_ing_berlin,aes(x = snow_week,y = not_at_home_change,fill = landkreis))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
-                   binwidth = 5,fill = "blue")
+                   binwidth = 5)
 
 ggplotly(plt_hist_precip_ing)
 
@@ -278,7 +347,7 @@ ggplotly(plt_hist_precip_ing)
 After first look at data, we can assume that hours out of home strongly depend on average temperature outside, that sounds logical. Mb categorization seasons of the data will help to understand this function
 
 ```{r adding new season column}
-mob_joined_with_ingolstadt = mob_joined_with_ingolstadt %>% 
+mob_joined_with_ing_berlin = mob_joined_with_ing_berlin %>% 
   mutate(season = ifelse(month(date) %in% c(12,1,2),"winter",NA)) %>%
   mutate(season = ifelse(month(date) %in% c(3,4,5),"spring",season)) %>%
   mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
@@ -287,10 +356,16 @@ mob_joined_with_ingolstadt = mob_joined_with_ingolstadt %>%
 
 
 ```{r season ~ not_at_home:  plots}
-plt_hist_season = ggplot(mob_joined_with_ingolstadt,aes(x = season,y = not_at_home_change))+
+#insert also a data about overall in germany
+plt_hist_season = ggplot(mob_joined_with_ing_berlin,aes(x = season,y = not_at_home_change,fill = landkreis))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
-                   binwidth = 5,fill = "blue")
+                   binwidth = 5,position = position_dodge())
 
 ggplotly(plt_hist_season)
 ```
+
+
+
+
+
