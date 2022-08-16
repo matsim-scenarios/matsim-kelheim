@@ -366,6 +366,45 @@ ggplotly(plt_hist_season)
 ```
 
 
+So it seems that season has an enormous impact at mobility of citizens.
+Another important parameter can be description of the weather based on Kelheim statistics, we will merge it into Ingolstadt weather, because of the assumption, that Ingolstadt ad Kelheim have the similar weather properties.
+
+```{r adding description to an ingolstadt data}
+type_of_weather = unique(weatherstack_kelheim$description)
+
+weatherstack_kelheim_year_week = weatherstack_kelheim %>% mutate(year_week = paste0(isoyear(date),"-",isoweek(date)))
+
+week_description_impact = weatherstack_kelheim_year_week %>% group_by(year_week) %>% count(description)
+
+week_description_impact = week_description_impact %>% pivot_wider(names_from = description,values_from = n)
+
+#remove NAs
+week_description_impact[is.na(week_description_impact)] = 0
+print(week_description_impact)
+```
+```{r join it with mobility data Ingolstadt}
+mob_joined_with_ingolstadt_description = mob_joined_with_ingolstadt %>% inner_join(week_description_impact, by = "year_week")
+#normalize it to a percentage
+mob_joined_with_ingolstadt_description[type_of_weather] = mob_joined_with_ingolstadt_description[type_of_weather]/168 #168 hours a week
+
+#Assumption not_at_home_change is calculated through individual weather impact normally
+#=> each type of weather for the weak get its own weather impact based on not_at_home
+
+mob_joined_with_ingolstadt_description[type_of_weather] = mob_joined_with_ingolstadt_description[type_of_weather]*mob_joined_with_ingolstadt_description$not_at_home_change
+
+
+print(mob_joined_with_ingolstadt_description)
+```
+
+
+```{r lets barchart it :)}
+mob_joined_with_ingolstadt_description_longer = mob_joined_with_ingolstadt_description%>% pivot_longer(cols = all_of(type_of_weather),names_to = "description")
+
+description_impact_overall = mob_joined_with_ingolstadt_description_longer %>% 
+  group_by(description) %>% summarize(impact = mean(value))
+
+plot_ly(data = description_impact_overall,x = ~description,y = ~impact,type= "bar")
+```
 
 
 
