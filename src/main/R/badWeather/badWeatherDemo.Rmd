@@ -19,6 +19,7 @@ library(lubridate)
 library(plotly)
 library(leaflet)
 library(rmarkdown)
+library(modelr)
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -390,7 +391,7 @@ mob_joined_with_ingolstadt_description[type_of_weather] = mob_joined_with_ingols
 #Assumption not_at_home_change is calculated through individual weather impact normally
 #=> each type of weather for the weak get its own weather impact based on not_at_home
 
-mob_joined_with_ingolstadt_description[type_of_weather] = mob_joined_with_ingolstadt_description[type_of_weather]*mob_joined_with_ingolstadt_description$not_at_home_change
+#mob_joined_with_ingolstadt_description[type_of_weather] = mob_joined_with_ingolstadt_description[type_of_weather]*mob_joined_with_ingolstadt_description$not_at_home_change
 
 
 print(mob_joined_with_ingolstadt_description)
@@ -406,5 +407,41 @@ description_impact_overall = mob_joined_with_ingolstadt_description_longer %>%
 plot_ly(data = description_impact_overall,x = ~description,y = ~impact,type= "bar")
 ```
 
+## **Take a policy data into table**
+## **Statisctical evaluation of null hypothesis, independency tests**
+## **Starting with a model**
+
+After first data preparation and analysis, let's try to make some predicitions about not_at_home duration based on plots that shown us a major impact on not_at_home variable, like *tavg*, *season*, *description*, *tavg*. Starting with a *linear model* and using *Ingolstadt data* limited by year 2020,2021
+
+```{r add a season}
+mob_joined_with_ingolstadt_description = mob_joined_with_ingolstadt_description %>% 
+  mutate(season = ifelse(month(date) %in% c(12,1,2),"winter",NA)) %>%
+  mutate(season = ifelse(month(date) %in% c(3,4,5),"spring",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(9,10,11),"autumn",season))
+```
+
+```{r modelr}
+
+
+train_data = mob_joined_with_ingolstadt_description %>% filter(year(date)<2022)
+
+first_model = lm(not_at_home_change ~ season*prcp_week*ns(tmax,1)*snow_week,
+                 data = train_data)
+
+```
+
+```{r predictions}
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50")
+
+test_data = mob_joined_with_ingolstadt_description %>% add_predictions(model = first_model) %>% add_residuals(model = first_model)
+
+ggplot(test_data) +
+  geom_line(aes(x = date,y = not_at_home_change,color = "actual"))+
+  geom_line(aes(x = date,y = pred,color = "predicted"))+
+  geom_line(aes(x = date,y = resid,color = "residuals"))+
+  scale_color_manual(values = colors)
+
+```
 
 
