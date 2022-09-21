@@ -43,16 +43,34 @@ public class CollectResultsFromMultipleSeeds implements MATSimAppCommand {
                         "num_av_trips", "av_mean_waiting_time", "av_euclidean_distance", "av_in_vehicle_time");
         tsvWriter.printRecord(titleRow);
 
+        CSVPrinter avVehicleKpiWriter = new CSVPrinter(new FileWriter(directory.toString() + "/av-vehicle_KPI.tsv"), CSVFormat.TDF);
+        CSVPrinter kexiVehicleKPIWriter = new CSVPrinter(new FileWriter(directory.toString() + "/kexi-vehicle_KPI.tsv"), CSVFormat.TDF);
+        List<String> vehicleKPITitleRow = Arrays.asList
+                ("case_study", "num_vehicle", "total_distance", "total_passenger_distance", "total_empty_distance",
+                        "average_vehicle_distance", "d_p/d_t", "empty_ratio");
+        avVehicleKpiWriter.printRecord(vehicleKPITitleRow);
+        kexiVehicleKPIWriter.printRecord(vehicleKPITitleRow);
+
         for (String caseStudy : caseStudies) {
             double totalNumKexiTrips = 0;
             double kexiSumWaitingTime = 0;
             double kexiSumEuclideanDistance = 0;
             double kexiSumInVehicleTime = 0;
+            double kexiSumTotalDistance = 0;
+            double kexiSumTotalPassengerDistance = 0;
+            double kexiSumTotalEmptyDistance = 0;
+            double kexiSumAverageVehicleDistance = 0;
+            int kexiFleetSize = 0;
 
             double totalAvTrips = 0;
             double avSumWaitingTime = 0;
             double avSumEuclideanDistance = 0;
             double avSumInVehicleTime = 0;
+            double avSumTotalDistance = 0;
+            double avSumTotalPassengerDistance = 0;
+            double avSumTotalEmptyDistance = 0;
+            double avSumAverageVehicleDistance = 0;
+            int avFleetSize = 0;
 
             for (String seed : seeds) {
                 String folder = directory.toString() + "/" + commonParts + seed + "-" + caseStudy;
@@ -84,6 +102,27 @@ public class CollectResultsFromMultipleSeeds implements MATSimAppCommand {
                     avSumEuclideanDistance += avEuclideanDistance * avRides;
                 }
 
+                try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(folder + "/kelheim-v2.0-25pct-av.drt_vehicle_stats_av.csv")),
+                        CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
+                    CSVRecord lastRow = null;
+                    for (CSVRecord record : parser.getRecords()) {
+                        lastRow = record;
+                    }
+                    assert lastRow != null;
+                    int numVehicle = Integer.parseInt(lastRow.get(2));
+                    double totalDistance = Double.parseDouble(lastRow.get(3));
+                    double totalPassengerDistance = Double.parseDouble(lastRow.get(6));
+                    double totalEmptyDistance = Double.parseDouble(lastRow.get(4));
+                    double averageDrivingDistance = Double.parseDouble(lastRow.get(7));
+
+                    avSumTotalDistance += totalDistance;
+                    avSumTotalPassengerDistance += totalPassengerDistance;
+                    avSumTotalEmptyDistance += totalEmptyDistance;
+                    avSumAverageVehicleDistance += averageDrivingDistance;
+                    avFleetSize = numVehicle; // It should always be the same for each seed, so we just use the number from the last seed
+                }
+
+
                 // Reading kexi data
                 try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(folder + "/kelheim-v2.0-25pct-av.drt_customer_stats_drt.csv")),
                         CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
@@ -110,6 +149,26 @@ public class CollectResultsFromMultipleSeeds implements MATSimAppCommand {
                     double kexiRides = Double.parseDouble(lastRow.get(0));
                     double kexiEuclideanDistance = Double.parseDouble(lastRow.get(6));
                     kexiSumEuclideanDistance += kexiEuclideanDistance * kexiRides;
+                }
+
+                try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(folder + "/kelheim-v2.0-25pct-av.drt_vehicle_stats_drt.csv")),
+                        CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
+                    CSVRecord lastRow = null;
+                    for (CSVRecord record : parser.getRecords()) {
+                        lastRow = record;
+                    }
+                    assert lastRow != null;
+                    int numVehicle = Integer.parseInt(lastRow.get(2));
+                    double totalDistance = Double.parseDouble(lastRow.get(3));
+                    double totalPassengerDistance = Double.parseDouble(lastRow.get(6));
+                    double totalEmptyDistance = Double.parseDouble(lastRow.get(4));
+                    double averageDrivingDistance = Double.parseDouble(lastRow.get(7));
+
+                    kexiSumTotalDistance += totalDistance;
+                    kexiSumTotalPassengerDistance += totalPassengerDistance;
+                    kexiSumTotalEmptyDistance += totalEmptyDistance;
+                    kexiSumAverageVehicleDistance += averageDrivingDistance;
+                    kexiFleetSize = numVehicle; // It should always be the same for each seed, so we just use the number from the last seed
                 }
             }
 
@@ -142,9 +201,44 @@ public class CollectResultsFromMultipleSeeds implements MATSimAppCommand {
             outputRow.add(Double.toString(averageAvInVehicleTime));
 
             tsvWriter.printRecord(outputRow);
+
+            // kexi vehicle kpi
+            double kexiMeanTotalDistance = kexiSumTotalDistance / seeds.length;
+            double kexiMeanTotalPassengerDistance = kexiSumTotalPassengerDistance / seeds.length;
+            double kexiMeanEmptyDistance = kexiSumTotalEmptyDistance / seeds.length;
+            double kexiMeanAverageDistance = kexiSumAverageVehicleDistance / seeds.length;
+            double kexiMeanDpOverDt = kexiSumTotalPassengerDistance / kexiSumTotalDistance;
+            double kexiMeanEmptyRatio = kexiSumTotalEmptyDistance / kexiSumTotalDistance;
+
+            List<String> kexiVehicleKpiRow = Arrays.asList(
+                    caseStudy, Integer.toString(kexiFleetSize), Double.toString(kexiMeanTotalDistance),
+                    Double.toString(kexiMeanTotalPassengerDistance), Double.toString(kexiMeanEmptyDistance),
+                    Double.toString(kexiMeanAverageDistance), Double.toString(kexiMeanDpOverDt),
+                    Double.toString(kexiMeanEmptyRatio)
+            );
+            kexiVehicleKPIWriter.printRecord(kexiVehicleKpiRow);
+
+            // av vehicle kpi
+            double avMeanTotalDistance = avSumTotalDistance / seeds.length;
+            double avMeanTotalPassengerDistance = avSumTotalPassengerDistance / seeds.length;
+            double avMeanEmptyDistance = avSumTotalEmptyDistance / seeds.length;
+            double avMeanAverageDistance = avSumAverageVehicleDistance / seeds.length;
+            double avMeanDpOverDt = avSumTotalPassengerDistance / kexiSumTotalDistance;
+            double avMeanEmptyRatio = avSumTotalEmptyDistance / kexiSumTotalDistance;
+
+            List<String> avVehicleKpiRow = Arrays.asList(
+                    caseStudy, Integer.toString(avFleetSize), Double.toString(avMeanTotalDistance),
+                    Double.toString(avMeanTotalPassengerDistance), Double.toString(avMeanEmptyDistance),
+                    Double.toString(avMeanAverageDistance), Double.toString(avMeanDpOverDt),
+                    Double.toString(avMeanEmptyRatio)
+            );
+            avVehicleKpiWriter.printRecord(avVehicleKpiRow);
         }
 
         tsvWriter.close();
+        kexiVehicleKPIWriter.close();
+        avVehicleKpiWriter.close();
+
         return 0;
     }
 
