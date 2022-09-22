@@ -223,8 +223,8 @@ public class CollectResultsFromMultipleSeeds implements MATSimAppCommand {
             double avMeanTotalPassengerDistance = avSumTotalPassengerDistance / seeds.length;
             double avMeanEmptyDistance = avSumTotalEmptyDistance / seeds.length;
             double avMeanAverageDistance = avSumAverageVehicleDistance / seeds.length;
-            double avMeanDpOverDt = avSumTotalPassengerDistance / kexiSumTotalDistance;
-            double avMeanEmptyRatio = avSumTotalEmptyDistance / kexiSumTotalDistance;
+            double avMeanDpOverDt = avSumTotalPassengerDistance / avSumTotalDistance;
+            double avMeanEmptyRatio = avSumTotalEmptyDistance / avSumTotalDistance;
 
             List<String> avVehicleKpiRow = Arrays.asList(
                     caseStudy, Integer.toString(avFleetSize), Double.toString(avMeanTotalDistance),
