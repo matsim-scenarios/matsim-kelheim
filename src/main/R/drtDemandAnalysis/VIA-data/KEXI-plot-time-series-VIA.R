@@ -10,10 +10,10 @@ library(hrbrthemes)
 ### INPUT DEFINITIONS ###
 
 # set working directory
-setwd("/Users/tomkelouisa/Documents/VSP/Kehlheimfiles")
+setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
 
 # read data
-allData <- read.csv2("Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+allData <- read.csv2("Via_data_2022-02-08/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 
 # In the VIA data they differentiate between requested PU time and requested DO time. Only 450 requests do not have a requested PU time
 # Therefore the rows will get joined (otherwise it will lead to errors)
@@ -152,7 +152,19 @@ completedRides <- allData %>%
 ridesProTag <- completedRides %>% 
   group_by(date = date(Actual.PU.time)) %>%
   tally()
-  
+
+summer_holiday <- interval(ymd("2021-07-30"), ymd("2021-09-13"))
+autumn_holiday <- interval(ymd("2021-11-01"), ymd("2021-11-05"))
+holiday_bettag <- interval(ymd("2021-11-17"), ymd("2021-11-17"))
+holidays_christmas <- interval(ymd("2021-12-24"), ymd("2022-01-08"))
+
+daysToConsider <- ridesProTag %>%
+  filter(! date %within% summer_holiday,
+         ! date %within% autumn_holiday,
+         ! date %within% holiday_bettag,
+         ! date %within% holidays_christmas,
+  )
+
 # plot time line
 p <- ridesProTag %>%
   ggplot( aes(x=date, y=n)) +
@@ -163,15 +175,24 @@ p <- ridesProTag %>%
   ggtitle("Zeitverlauf der Fahrten pro Tag (VIA)") +
   theme_ipsum()
 
-##would put this behind an if or else condition but does not work for me :/
-plotFile = "plots/KEXI_202106_202201_rides_VIA.png"
+# for paper only
+p <- ggplot(ridesProTag, aes(x=date, y=n)) +
+  geom_line(color="seagreen4", size=1) +
+  geom_area(fill="seagreen4", alpha=0.6) +
+  labs(y="rides", x="day") + #for paper only
+  theme(axis.text.y = element_text(size=39), axis.title.y = element_text(size=40, face="bold"),
+        axis.text.x = element_text(size=34), axis.title.x = element_text(size=40, face="bold"))
+
+
+
+plotFile = "C:/Users/Simon/Desktop/wd/2022-09-27/KEXI_202106_202201_rides_VIA.png"
 paste("printing plot to ", plotFile)
-png(plotFile, width = 1200, height = 800)  
+png(plotFile, width = 2400, height = 800)
 p
 dev.off()
 if(interactiveMode){
-  ggplotly(p)  
-} 
+  ggplotly(p)
+}
 
 
 ################

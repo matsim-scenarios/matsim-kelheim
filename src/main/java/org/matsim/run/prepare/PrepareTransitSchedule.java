@@ -51,6 +51,7 @@ public class PrepareTransitSchedule implements MATSimAppCommand {
 
         Config config = ConfigUtils.createConfig();
         config.transit().setTransitScheduleFile(input);
+        config.global().setCoordinateSystem("EPSG:25832");
         Scenario scenario = ScenarioUtils.loadScenario(config);
         TransitSchedule transitSchedule = scenario.getTransitSchedule();
 
