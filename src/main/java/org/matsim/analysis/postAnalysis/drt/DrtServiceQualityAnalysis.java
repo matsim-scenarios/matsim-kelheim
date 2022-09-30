@@ -5,8 +5,8 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math.stat.StatUtils;
-import org.apache.log4j.Logger;
-import org.geotools.data.shapefile.files.BasicShpFileWriter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.postAnalysis.traffic.TrafficAnalysis;
 import org.matsim.api.core.v01.Coord;
@@ -15,7 +15,6 @@ import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
-import org.matsim.application.options.ShpOptions;
 import org.matsim.contrib.common.util.DistanceUtils;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
@@ -27,7 +26,6 @@ import org.matsim.core.router.speedy.SpeedyALTFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
-import org.matsim.core.utils.geometry.GeometryUtils;
 import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.core.utils.gis.ShapeFileWriter;
 import org.matsim.core.utils.io.IOUtils;
@@ -38,7 +36,6 @@ import org.matsim.vehicles.VehicleUtils;
 import org.opengis.feature.simple.SimpleFeature;
 import picocli.CommandLine;
 
-import javax.annotation.Nullable;
 import java.io.FileWriter;
 import java.net.URL;
 import java.nio.file.Files;
@@ -57,7 +54,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--directory", description = "path to matsim output directory", required = true)
     private Path directory;
 
-    private static final Logger log = Logger.getLogger(DrtServiceQualityAnalysis.class);
+    private static final Logger log = LogManager.getLogger(DrtServiceQualityAnalysis.class);
 
     @CommandLine.Option(names = "--only-shape", defaultValue = "false", description = "only read drt legs file and write shp file")
     private boolean onlyShape;
