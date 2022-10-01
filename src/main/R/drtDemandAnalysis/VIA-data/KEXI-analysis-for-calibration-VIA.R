@@ -138,19 +138,47 @@ avgTravelTime_s <- mean(j$travelTime_s)
 avgTravelTime_s
 
 hist(j$travelTime_s, plot = TRUE)
-boxplot(j$travelTime_s, main = "Boxplot KEXI Travel Time", ylab = "travel time [s]")
-abline(h = avgTravelTime_s - 2 * sd(j$travelTime_s), col="red",lty=2)
-abline(h = avgTravelTime_s + 2 * sd(j$travelTime_s), col="red",lty=2)
+ggplot(j, aes(y=travelTime_s)) +
+  stat_boxplot(geom="errorbar", width=3) +
+  geom_boxplot(width=5) +
+  scale_y_continuous(n.breaks = 10) +
+  scale_x_discrete() +
+  stat_summary(fun=mean, geom="errorbar",aes(ymax=..y.., ymin=..y.., x=0),
+               width=5, colour="red") +
+  # labs(x="", y="travel time [s]", title="Boxplot KEXI Travel Time") +
+  labs(x="", y="travel time [s]") + #for paper only
+  theme(plot.title = element_text(hjust=0.5, size=20, face="bold"), axis.text.y = element_text(size=24),
+        axis.title.y = element_text(size=25, face="bold"))
+
+# boxplot(j$travelTime_s, main = "Boxplot KEXI Travel Time", ylab = "travel time [s]",
+#         pars = list(mar = c(5.0,5.0,5.0), boxwex = 1.5, cex.lab=1.4, cex.axis=1.4, cex.main=1.4))
+#abline(h = avgTravelTime_s - 2 * sd(j$travelTime_s), col="red",lty=2)
+#abline(h = avgTravelTime_s + 2 * sd(j$travelTime_s), col="red",lty=2)
 
 k <- ridesToConsider %>%
   filter(distance_m <= 5000)
 
 avgDistance_m <- mean(k$distance_m)
 avgDistance_m
+
+avgDistance_m_withoutFilter <- mean(ridesToConsider$distance_m)
+avgDistance_m_withoutFilter
+
 hist(k$distance_m, plot = TRUE)
-boxplot(k$distance_m, main = "Boxplot KEXI Travel Distance", ylab = "travel distance [m]")
-abline(h = avgDistance_m - 2 * sd(k$distance_m), col="red",lty=2)
-abline(h = avgDistance_m + 2 * sd(k$distance_m), col="red",lty=2)
+ggplot(k, aes(y=distance_m)) +
+  stat_boxplot(geom="errorbar", width=3) +
+  geom_boxplot(width=5) +
+  scale_y_continuous(n.breaks = 8) +
+  scale_x_discrete() +
+  stat_summary(fun=mean, geom="errorbar",aes(ymax=..y.., ymin=..y.., x=0),
+               width=5, colour="red") +
+  # labs(x="", y="travel distance [m]", title="Boxplot KEXI Travel Distance") +
+  labs(y="travel distance [m]", x="") + #for paper only
+  theme(plot.title = element_text(hjust=0.5, size=20, face="bold"), axis.text.y = element_text(size=24),
+        axis.title.y = element_text(size=25, face="bold"))
+# boxplot(k$distance_m, main = "Boxplot KEXI Travel Distance", ylab = "travel distance [m]")
+# abline(h = avgDistance_m - 2 * sd(k$distance_m), col="red",lty=2)
+# abline(h = avgDistance_m + 2 * sd(k$distance_m), col="red",lty=2)
 
 ############################################################################################################################################################
 
@@ -162,6 +190,18 @@ ridesPerDay <- ridesToConsider %>%
 
 avgRides <- mean(ridesPerDay$n)
 avgRides
+
+ggplot(ridesPerDay, aes(y=n)) +
+  stat_boxplot(geom="errorbar", width=3) +
+  geom_boxplot(width=5) +
+  scale_y_continuous(n.breaks = 8) +
+  scale_x_discrete() +
+  stat_summary(fun=mean, geom="errorbar",aes(ymax=..y.., ymin=..y.., x=0),
+               width=5, colour="red") +
+  # labs(x="", y="rides", title="Boxplot KEXI Rides per day") +
+  labs(x="", y="rides") + #for paper only
+  theme(plot.title = element_text(hjust=0.5, size=20, face="bold"), axis.text.y = element_text(size=24),
+        axis.title.y = element_text(size=25, face="bold"))
 
 #a typical day here can be seen as a day with no of rides close to the average no of rides (119)
 typicalDays <- filter(ridesPerDay, between(n, avgRides - 3, avgRides + 3))
@@ -199,8 +239,8 @@ p
 dev.off()
 ggplotly(p)
 
-boxplot(ridesPerDay$n, main = "Boxplot KEXI Rides per day", ylab = "rides")
-abline(h = avgRides - 2 * sd(ridesPerDay$n), col="red",lty=2)
-abline(h = avgRides + 2 * sd(ridesPerDay$n), col="red",lty=2)
+# boxplot(ridesPerDay$n, main = "Boxplot KEXI Rides per day", ylab = "rides")
+# abline(h = avgRides - 2 * sd(ridesPerDay$n), col="red",lty=2)
+# abline(h = avgRides + 2 * sd(ridesPerDay$n), col="red",lty=2)
 
 

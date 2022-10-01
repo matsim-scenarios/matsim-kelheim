@@ -5,7 +5,11 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math.stat.StatUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.postAnalysis.traffic.TrafficAnalysis;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
@@ -22,18 +26,23 @@ import org.matsim.core.router.speedy.SpeedyALTFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
+import org.matsim.core.utils.gis.ShapeFileReader;
+import org.matsim.core.utils.gis.ShapeFileWriter;
+import org.matsim.core.utils.io.IOUtils;
+import org.matsim.utils.gis.shp2matsim.ShpGeometryUtils;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleType;
 import org.matsim.vehicles.VehicleUtils;
+import org.opengis.feature.simple.SimpleFeature;
 import picocli.CommandLine;
 
 import java.io.FileWriter;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.matsim.application.ApplicationUtils.globFile;
 
@@ -42,8 +51,19 @@ import static org.matsim.application.ApplicationUtils.globFile;
         description = "Analyze DRT service quality"
 )
 public class DrtServiceQualityAnalysis implements MATSimAppCommand {
-    @CommandLine.Option(names = "--directory", description = "path to network file", required = true)
+    @CommandLine.Option(names = "--directory", description = "path to matsim output directory", required = true)
     private Path directory;
+
+    private static final Logger log = LogManager.getLogger(DrtServiceQualityAnalysis.class);
+
+    @CommandLine.Option(names = "--only-shape", defaultValue = "false", description = "only read drt legs file and write shp file")
+    private boolean onlyShape;
+
+    private static final URL SHPFILE = IOUtils.resolveFileOrResource("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/shp/kelheim-v2.0-drtZonalAnalysisSystem.shp");
+    private static final String FEATURE_ORIGINS_ATTRIBUTE_NAME = "starts";
+    private static final String FEATURE_DESTINATIONS_ATTRIBUTE_NAME = "ends";
+    private static final String FEATURE_MEAN_WAIT_ATTRIBUTE_NAME = "meanWait";
+    private static final String FEATURE_95PCT_WAIT_ATTRIBUTE_NAME = "95pctWait";
 
     public static void main(String[] args) {
         new DrtServiceQualityAnalysis().execute(args);
@@ -70,117 +90,180 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
             modes.add(drtCfg.getMode());
         }
 
-        Network network = NetworkUtils.readNetwork(networkPath.toString());
-        TravelTime travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventPath.toString());
-        config.plansCalcRoute().setRoutingRandomness(0);
-        TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutilityFactory
-                (TransportMode.car, config).createTravelDisutility(travelTime);
-        LeastCostPathCalculator router = new SpeedyALTFactory().
-                createPathCalculator(network, travelDisutility, travelTime);
-
-        // a quick fix for the AV speed calculation
         VehicleType vehicleTypeAv = VehicleUtils.createVehicleType(Id.create("av_type_for_route_calculation", VehicleType.class));
         vehicleTypeAv.setMaximumVelocity(5.0);
         Vehicle avVehicle = VehicleUtils.createVehicle(Id.create("dummy_av_vehicle", Vehicle.class), vehicleTypeAv);
+        Network network = null;
+        TravelTime travelTime = null;
+        LeastCostPathCalculator router = null;
+        if(!onlyShape){
+            network = NetworkUtils.readNetwork(networkPath.toString());
+            travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventPath.toString());
+
+            config.plansCalcRoute().setRoutingRandomness(0);
+            TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutilityFactory
+                    (TransportMode.car, config).createTravelDisutility(travelTime);
+            router = new SpeedyALTFactory().
+                    createPathCalculator(network, travelDisutility, travelTime);
+            // a quick fix for the AV speed calculation
+        }
 
         for (String mode : modes) {
             Path tripsFile = globFile(folderOfLastIteration, "*drt_legs_" + mode + ".*");
             Path outputTripsPath = Path.of(outputFolder + "/" + mode + "_trips.tsv");
             Path outputStatsPath = Path.of(outputFolder + "/" + mode + "_KPI.tsv");
 
-            List<Double> waitingTimes = new ArrayList<>();
+            List<Double> allWaitingTimes = new ArrayList<>();
+
+            Map<SimpleFeature, ArrayList<Double>> shpWaitingTimes = null;
+            Set<SimpleFeature> shpFeatures = new HashSet<>(ShapeFileReader.getAllFeatures(SHPFILE));
+            for (SimpleFeature shpFeature : shpFeatures) {
+                shpFeature.setAttribute(FEATURE_ORIGINS_ATTRIBUTE_NAME, 0.d);
+                shpFeature.setAttribute(FEATURE_DESTINATIONS_ATTRIBUTE_NAME, 0.d);
+            }
+            shpWaitingTimes = shpFeatures.stream().collect(Collectors.toMap(feature -> feature, feature -> new ArrayList<Double>()));
+
             List<Double> onboardDelayRatios = new ArrayList<>();
             List<Double> detourDistanceRatios = new ArrayList<>();
             List<Double> euclideanDistances = new ArrayList<>();
             List<Double> directDistances = new ArrayList<>();
 
-            CSVPrinter tsvWriter = new CSVPrinter(new FileWriter(outputTripsPath.toString()), CSVFormat.TDF);
-            List<String> titleRow = Arrays.asList
-                    ("departure_time", "waiting_time", "in_vehicle_time", "total_travel_time",
-                            "est_direct_in_vehicle_time", "actual_travel_distance", "est_direct_drive_distance",
-                            "euclidean_distance", "onboard_delay_ratio", "detour_distance_ratio");
-            tsvWriter.printRecord(titleRow);
+            CSVPrinter tsvWriter = null;
+            if(!onlyShape) {
+                tsvWriter = new CSVPrinter(new FileWriter(outputTripsPath.toString()), CSVFormat.TDF);
+                List<String> titleRow = Arrays.asList
+                        ("departure_time", "waiting_time", "in_vehicle_time", "total_travel_time",
+                                "est_direct_in_vehicle_time", "actual_travel_distance", "est_direct_drive_distance",
+                                "euclidean_distance", "onboard_delay_ratio", "detour_distance_ratio");
+                tsvWriter.printRecord(titleRow);
+            }
 
             int numOfTrips = 0;
             try (CSVParser parser = new CSVParser(Files.newBufferedReader(tripsFile),
                     CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
                 for (CSVRecord record : parser.getRecords()) {
-                    Link fromLink = network.getLinks().get(Id.createLinkId(record.get(3)));
-                    Link toLink = network.getLinks().get(Id.createLinkId(record.get(6)));
-                    double departureTime = Double.parseDouble(record.get(0));
-                    Vehicle vehicle = null;
-                    if (mode.equals("av")) {
-                        vehicle = avVehicle;
-                    }
-                    LeastCostPathCalculator.Path path = router.calcLeastCostPath(fromLink.getToNode(), toLink.getFromNode(),
-                            departureTime, null, vehicle);
-                    path.links.add(toLink);
-                    double estimatedDirectInVehicleTime = path.travelTime + travelTime.getLinkTravelTime(toLink, path.travelTime + departureTime, null, null) + 2;
-                    double estimatedDirectTravelDistance = path.links.stream().map(Link::getLength).mapToDouble(l -> l).sum();
                     double waitingTime = Double.parseDouble(record.get(9));
-                    double actualInVehicleTime = Double.parseDouble(record.get(11));
-                    double totalTravelTime = waitingTime + actualInVehicleTime;
-                    double actualTravelDistance = Double.parseDouble(record.get(12));
-                    double euclideanDistance = DistanceUtils.calculateDistance(fromLink.getToNode().getCoord(), toLink.getToNode().getCoord());
-                    double onboardDelayRatio = actualInVehicleTime / estimatedDirectInVehicleTime - 1;
-                    double detourRatioDistance = actualTravelDistance / estimatedDirectTravelDistance - 1;
 
-                    waitingTimes.add(waitingTime);
-                    onboardDelayRatios.add(onboardDelayRatio);
-                    detourDistanceRatios.add(detourRatioDistance);
-                    euclideanDistances.add(euclideanDistance);
-                    directDistances.add(estimatedDirectTravelDistance);
+                   if(!onlyShape){
+                       Link fromLink = network.getLinks().get(Id.createLinkId(record.get(3)));
+                       Link toLink = network.getLinks().get(Id.createLinkId(record.get(6)));
+                       double departureTime = Double.parseDouble(record.get(0));
+                       Vehicle vehicle = null;
+                       if (mode.equals("av")) {
+                           vehicle = avVehicle;
+                       }
+                       LeastCostPathCalculator.Path path = router.calcLeastCostPath(fromLink.getToNode(), toLink.getFromNode(),
+                               departureTime, null, vehicle);
+                       path.links.add(toLink);
+                       double estimatedDirectInVehicleTime = path.travelTime + travelTime.getLinkTravelTime(toLink, path.travelTime + departureTime, null, null) + 2;
+                       double estimatedDirectTravelDistance = path.links.stream().map(Link::getLength).mapToDouble(l -> l).sum();
+                       double actualInVehicleTime = Double.parseDouble(record.get(11));
+                       double totalTravelTime = waitingTime + actualInVehicleTime;
+                       double actualTravelDistance = Double.parseDouble(record.get(12));
+                       double euclideanDistance = DistanceUtils.calculateDistance(fromLink.getToNode().getCoord(), toLink.getToNode().getCoord());
+                       double onboardDelayRatio = actualInVehicleTime / estimatedDirectInVehicleTime - 1;
+                       double detourRatioDistance = actualTravelDistance / estimatedDirectTravelDistance - 1;
 
-                    List<String> outputRow = new ArrayList<>();
-                    outputRow.add(Double.toString(departureTime));
-                    outputRow.add(Double.toString(waitingTime));
-                    outputRow.add(Double.toString(actualInVehicleTime));
-                    outputRow.add(Double.toString(totalTravelTime));
-                    outputRow.add(Double.toString(estimatedDirectInVehicleTime));
-                    outputRow.add(Double.toString(actualTravelDistance));
-                    outputRow.add(Double.toString(estimatedDirectTravelDistance));
-                    outputRow.add(Double.toString(euclideanDistance));
-                    outputRow.add(Double.toString(onboardDelayRatio));
-                    outputRow.add(Double.toString(detourRatioDistance));
+                       allWaitingTimes.add(waitingTime);
+                       onboardDelayRatios.add(onboardDelayRatio);
+                       detourDistanceRatios.add(detourRatioDistance);
+                       euclideanDistances.add(euclideanDistance);
+                       directDistances.add(estimatedDirectTravelDistance);
 
-                    tsvWriter.printRecord(outputRow);
+                       List<String> outputRow = new ArrayList<>();
+                       outputRow.add(Double.toString(departureTime));
+                       outputRow.add(Double.toString(waitingTime));
+                       outputRow.add(Double.toString(actualInVehicleTime));
+                       outputRow.add(Double.toString(totalTravelTime));
+                       outputRow.add(Double.toString(estimatedDirectInVehicleTime));
+                       outputRow.add(Double.toString(actualTravelDistance));
+                       outputRow.add(Double.toString(estimatedDirectTravelDistance));
+                       outputRow.add(Double.toString(euclideanDistance));
+                       outputRow.add(Double.toString(onboardDelayRatio));
+                       outputRow.add(Double.toString(detourRatioDistance));
+
+                       tsvWriter.printRecord(outputRow);
+                   }
+
+                    //-------------spatial analysis
+                    Coord fromCoord = new Coord(Double.parseDouble(record.get(4)), Double.parseDouble(record.get(5)));
+                    Coord toCoord = new Coord(Double.parseDouble(record.get(7)), Double.parseDouble(record.get(8)));
+
+                    Set<SimpleFeature> originFeatures = getSimpleFeaturesContainingCoord(shpWaitingTimes.keySet(), fromCoord);
+                    //waiting time is monitored for the geometry containing the from coordinate
+                    if(originFeatures != null){
+                        if(originFeatures.size() > 1){
+                            log.warn("from coordinate " + fromCoord + " appears to be covered by several SimpleFeatures. It will be part of all of their statistics.\n" +
+                                    "csv record = " + record);
+                        }
+                        for (SimpleFeature originFeature : originFeatures) {
+                            shpWaitingTimes.get(originFeature).add(waitingTime);
+                            originFeature.setAttribute(FEATURE_ORIGINS_ATTRIBUTE_NAME, (int) originFeature.getAttribute(FEATURE_ORIGINS_ATTRIBUTE_NAME) + 1);
+                        }
+                    }
+                    Set<SimpleFeature> destinationFeatures = getSimpleFeaturesContainingCoord(shpWaitingTimes.keySet(), toCoord);
+                    if(destinationFeatures != null){
+                        for (SimpleFeature destinationFeature : destinationFeatures) {
+                            shpWaitingTimes.get(destinationFeature).add(waitingTime);
+                            destinationFeature.setAttribute(FEATURE_DESTINATIONS_ATTRIBUTE_NAME, (int) destinationFeature.getAttribute(FEATURE_DESTINATIONS_ATTRIBUTE_NAME) + 1);
+                        }
+                    }
 
                     numOfTrips++;
                 }
             }
             tsvWriter.close();
 
-            CSVPrinter tsvWriterKPI = new CSVPrinter(new FileWriter(outputStatsPath.toString()), CSVFormat.TDF);
-            List<String> titleRowKPI = Arrays.asList
-                    ("number_of_requests", "waiting_time_mean", "waiting_time_median", "waiting_time_95_percentile",
-                            "onboard_delay_ratio_mean", "detour_distance_ratio_mean", "trips_euclidean_distance_mean", "trips_direct_network_distance_mean");
-            tsvWriterKPI.printRecord(titleRowKPI);
+            if(!onlyShape){
 
-            int meanWaitingTime = (int) waitingTimes.stream().mapToDouble(w -> w).average().orElse(-1);
-            int medianWaitingTime = (int) StatUtils.percentile(waitingTimes.stream().mapToDouble(t -> t).toArray(), 50);
-            int waitingTime95Percentile = (int) StatUtils.percentile(waitingTimes.stream().mapToDouble(t -> t).toArray(), 95);
+                CSVPrinter tsvWriterKPI = new CSVPrinter(new FileWriter(outputStatsPath.toString()), CSVFormat.TDF);
+                List<String> titleRowKPI = Arrays.asList
+                        ("number_of_requests", "waiting_time_mean", "waiting_time_median", "waiting_time_95_percentile",
+                                "onboard_delay_ratio_mean", "detour_distance_ratio_mean", "trips_euclidean_distance_mean", "trips_direct_network_distance_mean");
+                tsvWriterKPI.printRecord(titleRowKPI);
 
-            DecimalFormat formatter = new DecimalFormat("0.00");
-            String meanDelayRatio = formatter.format(onboardDelayRatios.stream().mapToDouble(r -> r).average().orElse(-1));
-            String meanDetourDistanceRatio = formatter.format(detourDistanceRatios.stream().mapToDouble(d -> d).average().orElse(-1));
+//            List<Double> allWaitingTimes = waitingTimes.values().stream().flatMap(List::stream).collect(Collectors.toList());
+                int meanWaitingTime = (int) allWaitingTimes.stream().mapToDouble(w -> w).average().orElse(-1);
+                int medianWaitingTime = (int) StatUtils.percentile(allWaitingTimes.stream().mapToDouble(t -> t).toArray(), 50);
+                int waitingTime95Percentile = (int) StatUtils.percentile(allWaitingTimes.stream().mapToDouble(t -> t).toArray(), 95);
 
-            String meanEuclideanDistance = formatter.format(euclideanDistances.stream().mapToDouble(r -> r).average().orElse(-1));
-            String meanDirectNetworkDistance = formatter.format(directDistances.stream().mapToDouble(r -> r).average().orElse(-1));
+                DecimalFormat formatter = new DecimalFormat("0.00");
+                String meanDelayRatio = formatter.format(onboardDelayRatios.stream().mapToDouble(r -> r).average().orElse(-1));
+                String meanDetourDistanceRatio = formatter.format(detourDistanceRatios.stream().mapToDouble(d -> d).average().orElse(-1));
 
-            List<String> outputKPIRow = new ArrayList<>();
-            outputKPIRow.add(Integer.toString(numOfTrips));
-            outputKPIRow.add(Integer.toString(meanWaitingTime));
-            outputKPIRow.add(Integer.toString(medianWaitingTime));
-            outputKPIRow.add(Integer.toString(waitingTime95Percentile));
-            outputKPIRow.add(meanDelayRatio);
-            outputKPIRow.add(meanDetourDistanceRatio);
-            outputKPIRow.add(meanEuclideanDistance);
-            outputKPIRow.add(meanDirectNetworkDistance);
+                String meanEuclideanDistance = formatter.format(euclideanDistances.stream().mapToDouble(r -> r).average().orElse(-1));
+                String meanDirectNetworkDistance = formatter.format(directDistances.stream().mapToDouble(r -> r).average().orElse(-1));
 
-            tsvWriterKPI.printRecord(outputKPIRow);
+                List<String> outputKPIRow = new ArrayList<>();
+                outputKPIRow.add(Integer.toString(numOfTrips));
+                outputKPIRow.add(Integer.toString(meanWaitingTime));
+                outputKPIRow.add(Integer.toString(medianWaitingTime));
+                outputKPIRow.add(Integer.toString(waitingTime95Percentile));
+                outputKPIRow.add(meanDelayRatio);
+                outputKPIRow.add(meanDetourDistanceRatio);
+                outputKPIRow.add(meanEuclideanDistance);
+                outputKPIRow.add(meanDirectNetworkDistance);
 
-            tsvWriterKPI.close();
+                tsvWriterKPI.printRecord(outputKPIRow);
+
+                tsvWriterKPI.close();
+            }
+
+            //spatial analysis
+            shpWaitingTimes.forEach((feature, waitingTimes) -> {
+                        feature.setAttribute(FEATURE_MEAN_WAIT_ATTRIBUTE_NAME, StatUtils.mean((waitingTimes.stream().mapToDouble(t -> t).toArray())));
+                        feature.setAttribute(FEATURE_95PCT_WAIT_ATTRIBUTE_NAME, StatUtils.percentile(waitingTimes.stream().mapToDouble(t -> t).toArray(), 95));
+                    }
+            );
+            ShapeFileWriter.writeGeometries(shpWaitingTimes.keySet(), outputFolder + "/" +  mode + "_serviceZones_waitStats.shp");
         }
         return 0;
     }
+
+    private Set<SimpleFeature> getSimpleFeaturesContainingCoord(Set<SimpleFeature> simpleFeatureSet, Coord coord){
+      return simpleFeatureSet.stream()
+                .filter(feature -> ShpGeometryUtils.isCoordInGeometries(coord, List.of((Geometry) feature.getDefaultGeometry())))
+                .collect(Collectors.toSet());
+    }
+
 }

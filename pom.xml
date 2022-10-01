@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.matsim-scenarios</groupId>
 	<artifactId>matsim-kelheim</artifactId>
-	<version>2.x-SNAPSHOT</version>
+	<version>3.x-SNAPSHOT</version>
 
 	<name>MATSim Kelheim Model</name>
 	<description>A transport model of the district of Kelheim and it's surroundings</description>
@@ -18,12 +18,11 @@
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
 <!--		<matsim.version>14.0-SNAPSHOT</matsim.version>-->
-		<matsim.version>15.0-SNAPSHOT</matsim.version>
+		<matsim.version>15.0-PR2210</matsim.version>
 
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<maven.compiler.source>11</maven.compiler.source>
-		<maven.compiler.target>11</maven.compiler.target>
+		<maven.compiler.release>17</maven.compiler.release>
 	</properties>
 
 	<repositories>
@@ -96,7 +95,7 @@
 			<!-- Include the JUnit testing library.  Not transitive. -->
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>4.13.1</version>
+			<version>4.13.2</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -144,6 +143,12 @@
 
 	<build>
 		<plugins>
+			<plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.10.1</version>
+			</plugin>
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>

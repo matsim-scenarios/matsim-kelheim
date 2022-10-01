@@ -12,7 +12,10 @@ import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.pt.transitSchedule.api.TransitScheduleWriter;
 import org.matsim.pt.transitSchedule.api.TransitStopFacility;
+import org.opengis.feature.simple.SimpleFeature;
 import picocli.CommandLine;
+
+import java.util.List;
 
 @CommandLine.Command(
         name = "prepare-transit-schedule",
@@ -34,10 +37,21 @@ public class PrepareTransitSchedule implements MATSimAppCommand {
 
     @Override
     public Integer call() throws Exception {
-        Geometry intermodalArea = shp.getGeometry();
+        Geometry intermodalArea = null;
+        List<SimpleFeature> features = shp.readFeatures();
+        for(SimpleFeature feature : features) {
+            if(intermodalArea == null) {
+                intermodalArea = (Geometry) feature.getDefaultGeometry();
+            } else {
+                intermodalArea =intermodalArea.union((Geometry) feature.getDefaultGeometry());
+            }
+        }
+
+//        Geometry intermodalArea = shp.getGeometry();
 
         Config config = ConfigUtils.createConfig();
         config.transit().setTransitScheduleFile(input);
+        config.global().setCoordinateSystem("EPSG:25832");
         Scenario scenario = ScenarioUtils.loadScenario(config);
         TransitSchedule transitSchedule = scenario.getTransitSchedule();
 

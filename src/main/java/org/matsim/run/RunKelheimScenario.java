@@ -86,7 +86,7 @@ import java.util.*;
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-	static final String VERSION = "2.x";
+	static final String VERSION = "3.x";
 
 	@CommandLine.Mixin
 	private final SampleOptions sample = new SampleOptions(25, 10, 1);

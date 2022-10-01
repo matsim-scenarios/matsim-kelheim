@@ -12,6 +12,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
+import org.matsim.core.scenario.ProjectionUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import picocli.CommandLine;
 
@@ -170,6 +171,8 @@ public class PreparePopulation implements MATSimAppCommand {
             }
             PersonUtils.setIncome(person, income);
         }
+
+        ProjectionUtils.putCRS(population, "EPSG:25832");
         PopulationUtils.writePopulation(population, output.toString());
 
         return 0;
