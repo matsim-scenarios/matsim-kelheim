@@ -427,6 +427,7 @@ mob_joined_with_ingolstadt_description_longer_mapped = mob_joined_with_ingolstad
   inner_join(week_calender,by = "year_week")
 
 
+
 plot_ly(data = description_impact_max,x = ~description,y = ~impact,type= "bar")
 
 print(description_impact_max)
