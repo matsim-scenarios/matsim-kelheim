@@ -419,6 +419,13 @@ mob_joined_with_ingolstadt_description_longer_mapped$description = map_vector[(m
 description_impact_max = mob_joined_with_ingolstadt_description_longer_mapped %>% group_by(year_week)%>%
   top_n(1,value) %>% group_by(description) %>% summarize(impact = mean(not_at_home_change))
 
+week_calender = as.Date(seq(ISOdate(2014,1,3),ISOdate(2022,12,1),by="week"))
+week_calender = data.frame(date = week_calender)
+week_calender = week_calender %>% mutate(year_week = paste0(year(date),"-",isoweek(date)))
+
+mob_joined_with_ingolstadt_description_longer_mapped = mob_joined_with_ingolstadt_description_longer_mapped %>% 
+  inner_join(week_calender,by = "year_week")
+
 
 plot_ly(data = description_impact_max,x = ~description,y = ~impact,type= "bar")
 
