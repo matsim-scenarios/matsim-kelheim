@@ -386,7 +386,7 @@ print(week_description_impact)
 ```{r join it with mobility data Ingolstadt}
 mob_joined_with_ingolstadt_description = mob_joined_with_ingolstadt %>% inner_join(week_description_impact, by = "year_week")
 #normalize it to a percentage
-mob_joined_with_ingolstadt_description[type_of_weather] = mob_joined_with_ingolstadt_description[type_of_weather]/168 #168 hours a week
+#mob_joined_with_ingolstadt_description[type_of_weather] = mob_joined_with_ingolstadt_description[type_of_weather]/168 #168 hours a week
 
 #Assumption not_at_home_change is calculated through individual weather impact normally
 #=> each type of weather for the weak get its own weather impact based on not_at_home
@@ -399,12 +399,31 @@ print(mob_joined_with_ingolstadt_description)
 
 
 ```{r lets barchart it :)}
-mob_joined_with_ingolstadt_description_longer = mob_joined_with_ingolstadt_description%>% pivot_longer(cols = all_of(type_of_weather),names_to = "description")
+mob_joined_with_ingolstadt_description_longer = mob_joined_with_ingolstadt_description%>% pivot_longer(cols = all_of(type_of_weather),names_to = "description",values_to = "value")# %>% filter(value!=0)
 
 description_impact_overall = mob_joined_with_ingolstadt_description_longer %>% 
-  group_by(description) %>% summarize(impact = mean(value))
+  filter(value!=0) %>% #mutate(value = value*not_at_home_change)%>% mutate(value = ifelse(value>0,value*not_at_home_change,-value*not_at_home_change)) %>%
+  group_by(description) %>% summarize(impact = mean(not_at_home_change))
 
 plot_ly(data = description_impact_overall,x = ~description,y = ~impact,type= "bar")
+```
+
+Another approach
+
+```{r}
+map_vector <- c("Clear","Sunny","Cloudy","Light","Light","Light","Light","Light","Light","Light","Light","Medium","Cloudy","Light","Light","Heavy","Heavy","Heavy","Light","Medium","Heavy","Heavy","Light","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Light","Medium","Medium","Light","Heavy","Light","Light","Light","Light","Light","Heavy","Light","Medium","Heavy","Heavy","Heavy")
+names(map_vector)<- type_of_weather
+mob_joined_with_ingolstadt_description_longer_mapped = mob_joined_with_ingolstadt_description_longer
+mob_joined_with_ingolstadt_description_longer_mapped$description = map_vector[(mob_joined_with_ingolstadt_description_longer_mapped$description)]
+
+description_impact_max = mob_joined_with_ingolstadt_description_longer_mapped %>% group_by(year_week)%>%
+  top_n(1,value) %>% group_by(description) %>% summarize(impact = mean(not_at_home_change))
+
+
+plot_ly(data = description_impact_max,x = ~description,y = ~impact,type= "bar")
+
+print(description_impact_max)
+
 ```
 
 ## **Take a policy data into table**
