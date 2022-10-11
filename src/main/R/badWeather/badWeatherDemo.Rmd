@@ -20,6 +20,22 @@ library(plotly)
 library(leaflet)
 library(rmarkdown)
 library(modelr)
+library(splines)
+library(forecast)
+library(fitdistrplus)
+library(rjson)
+
+if ("fitdistrplus" %in% (.packages())){
+  detach(package: fitdistrplus, unload = TRUE)
+}
+
+if ("fitdistrplus" %in% (.packages())){
+  detach(package: MASS, unload = TRUE)
+}
+
+if ("fitdistrplus" %in% (.packages())){
+  detach(package: stats, unload = TRUE)
+}
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -67,11 +83,11 @@ Relevant data for the , mobility
 
 ```{r mobility data bavaria}
 #bavaria_mobility = de_mobility %>% filter(sub_region_1 == "Bavaria")
-#bavaria_mobility = bavaria_mobility %>% #select(country_region,sub_region_1,date,residential_percent_change_from_baseline) %>%
+#bavaria_mobility = bavaria_mobility %>% #dplyr::select(country_region,sub_region_1,date,residential_percent_change_from_baseline) %>%
 #  mutate(residential_percent_change_from_baseline = -residential_percent_change_from_baseline,
 #         source = "Google")%>%
 #  rename(BundeslandID = sub_region_1,not_at_home_change = residential_percent_change_from_baseline)
-#bavaria_mobility = bavaria_mobility %>% select(date,BundeslandID,not_at_home_change,source)
+#bavaria_mobility = bavaria_mobility %>% dplyr::select(date,BundeslandID,not_at_home_change,source)
 #Need to filter out weekends
 
 #plt = ggplot(bavaria_mobility)+
@@ -85,11 +101,11 @@ Relevant data for the , mobility
 snz_mobility = read_delim("data/LK_mobilityData_weekdays.csv",";")
 
 #Kelheim
-snz_mobility_kelheim = snz_mobility %>% filter(Landkreis == "Landkreis Kelheim") %>% mutate(source = "senozon") %>% select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
+snz_mobility_kelheim = snz_mobility %>% filter(Landkreis == "Landkreis Kelheim") %>% mutate(source = "senozon") %>% dplyr::select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
 snz_mobility_kelheim$date = as.Date(strptime(snz_mobility_kelheim$date,"%Y%m%d"))
 
 #Berlin
-snz_mobility_berlin = snz_mobility %>% filter(Landkreis == "Berlin") %>% mutate(source = "senozon") %>% select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
+snz_mobility_berlin = snz_mobility %>% filter(Landkreis == "Berlin") %>% mutate(source = "senozon") %>% dplyr::select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
 snz_mobility_berlin$date = as.Date(strptime(snz_mobility_berlin$date,"%Y%m%d"))
 
 colors <- c("Berlin" = "blue", "Kelheim" = "red")
@@ -142,7 +158,7 @@ snz_mobility_kelheim_year_week = snz_mobility_kelheim %>%
   mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
   group_by(year_week) %>%
   summarize(date = first(date),not_at_home_change = mean(not_at_home_change))
-mob_joined_with_weather_kelheim = snz_mobility_kelheim_year_week %>% inner_join(weatherstack_kelheim_weekly, by = "year_week") %>% select(-date.y) %>% rename(date = date.x)
+mob_joined_with_weather_kelheim = snz_mobility_kelheim_year_week %>% inner_join(weatherstack_kelheim_weekly, by = "year_week") %>% dplyr::select(-date.y) %>% rename(date = date.x)
 print(mob_joined_with_weather_kelheim)
 
 #Berlin
@@ -150,7 +166,7 @@ snz_mobility_berlin_year_week = snz_mobility_berlin %>%
   mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
   group_by(year_week) %>%
   summarize(date = first(date),not_at_home_change = mean(not_at_home_change))
-mob_joined_with_weather_berlin = snz_mobility_berlin_year_week %>% inner_join(berlin_weather_weekly, by = "year_week") %>% select(-date.y) %>% rename(date = date.x)
+mob_joined_with_weather_berlin = snz_mobility_berlin_year_week %>% inner_join(berlin_weather_weekly, by = "year_week") %>% dplyr::select(-date.y) %>% rename(date = date.x)
 print(mob_joined_with_weather_berlin)
 ```
 
@@ -262,7 +278,7 @@ print(ingolstadt_weather_weekly)
 ```{r aggregate snz and ingolstadt}
 mob_joined_with_ingolstadt = ingolstadt_weather_weekly %>% 
   inner_join(snz_mobility_kelheim_year_week, by = "year_week") %>% 
-  select(-date.x) %>%
+  dplyr::select(-date.x) %>%
   rename(date = date.y) %>%
   replace_na(list(tmax = 0))
 
@@ -296,7 +312,7 @@ ggplotly(plt_ing_color)
 ```{r join ingolstadt and berlin in 1 table}
 # replace coluumn positioning
 
-mob_joined_with_weather_berlin = mob_joined_with_weather_berlin %>% select(year_week,prcp_week,tavg,snow_week,wspd,tmax,date,not_at_home_change)
+mob_joined_with_weather_berlin = mob_joined_with_weather_berlin %>% dplyr::select(year_week,prcp_week,tavg,snow_week,wspd,tmax,date,not_at_home_change)
 
 mob_joined_with_weather_berlin = mob_joined_with_weather_berlin %>% mutate(landkreis = "Berlin")
 
@@ -339,7 +355,7 @@ ggplotly(plt_hist_precip_ing)
 plt_hist_precip_ing = ggplot(mob_joined_with_ing_berlin,aes(x = snow_week,y = not_at_home_change,fill = landkreis))+
   stat_summary_bin(fun = "mean",
                    geom = "bar",
-                   binwidth = 5)
+                   binwidth = 50)
 
 ggplotly(plt_hist_precip_ing)
 
@@ -419,6 +435,9 @@ mob_joined_with_ingolstadt_description_longer_mapped$description = map_vector[(m
 description_impact_max = mob_joined_with_ingolstadt_description_longer_mapped %>% group_by(year_week)%>%
   top_n(1,value) %>% group_by(description) %>% summarize(impact = mean(not_at_home_change))
 
+description_impact = mob_joined_with_ingolstadt_description_longer_mapped %>% group_by(year_week)%>%
+  top_n(1,value)
+
 week_calender = as.Date(seq(ISOdate(2014,1,3),ISOdate(2022,12,1),by="week"))
 week_calender = data.frame(date = week_calender)
 week_calender = week_calender %>% mutate(year_week = paste0(year(date),"-",isoweek(date)))
@@ -434,41 +453,97 @@ print(description_impact_max)
 
 ```
 
+## **Add stringency of covid policies to a data**
+```{r import}
+json = fromJSON(file = "data/2022-10-08.json")
+unlisted_json = unlist(json)
+```
+
+```{r}
+deu_stringency = unlisted_json[grep("DEU.stringency_actual",names(unlisted_json))]
+date_stringency = sapply(strsplit(names(deu_stringency),split = ".",fixed = TRUE),"[[",2)
+df_stringency = data.frame(date = date_stringency,stringency = deu_stringency)
+df_stringency = df_stringency %>% mutate(year_week = paste0(year(date),"-",isoweek(date)),stringency = as.numeric(stringency))%>%ungroup() %>% group_by(year_week) %>% summarize(stringency = mean(stringency))
+```
+
 ## **Take a policy data into table**
 ## **Statisctical evaluation of null hypothesis, independency tests**
 ## **Starting with a model**
 
+
+
 After first data preparation and analysis, let's try to make some predicitions about not_at_home duration based on plots that shown us a major impact on not_at_home variable, like *tavg*, *season*, *description*, *tavg*. Starting with a *linear model* and using *Ingolstadt data* limited by year 2020,2021
 
 ```{r add a season}
-mob_joined_with_ingolstadt_description = mob_joined_with_ingolstadt_description %>% 
+description_impact = description_impact %>% 
   mutate(season = ifelse(month(date) %in% c(12,1,2),"winter",NA)) %>%
   mutate(season = ifelse(month(date) %in% c(3,4,5),"spring",season)) %>%
   mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
   mutate(season = ifelse(month(date) %in% c(9,10,11),"autumn",season))
+description_impact = description_impact %>% inner_join(df_stringency, by = "year_week")
+train_data = description_impact %>% filter(year(date)<=2022)
+```
+
+```{r best predictors}
+best_pred <- train_data %>% ungroup() %>%
+  dplyr::select(-not_at_home_change,-landkreis,-description ,-year_week,-date,-value,-season) %>%
+  map_dbl(cor,y = train_data$not_at_home_change) %>%
+  map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print(best_pred)
 ```
 
 ```{r modelr}
 
 
-train_data = mob_joined_with_ingolstadt_description %>% filter(year(date)<2022)
 
-first_model = lm(not_at_home_change ~ season*prcp_week*ns(tmax,1)*snow_week,
+
+
+first_model = lm(not_at_home_change ~ ns(tavg,1)+date+stringency+description,
                  data = train_data)
 
 ```
 
+Need to check auto.arima approach
+
 ```{r predictions}
 colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50")
 
-test_data = mob_joined_with_ingolstadt_description %>% add_predictions(model = first_model) %>% add_residuals(model = first_model)
+test_data = description_impact %>% add_predictions(model = first_model) %>% add_residuals(model = first_model)
 
-ggplot(test_data) +
+ggplotly(ggplot(test_data) +
   geom_line(aes(x = date,y = not_at_home_change,color = "actual"))+
   geom_line(aes(x = date,y = pred,color = "predicted"))+
   geom_line(aes(x = date,y = resid,color = "residuals"))+
-  scale_color_manual(values = colors)
+  geom_smooth(aes(x = date,y = not_at_home_change),method = "lm",formula = y~x)+
+  scale_color_manual(values = colors))
 
 ```
 
 
+
+
+```{r}
+barplot <- ggplot(test_data, aes(x = resid ))+
+  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=2)+
+  geom_density( fill="#FF6666",adjust = 10,alpha = 0.5) 
+
+
+ggplotly(barplot)
+```
+
+```{r residuals verteilung}
+fitdistrplus::descdist(test_data$resid)
+```
+
+```{r}
+normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
+plot(normal_dist)
+```
+
+x~y scatterplot,
+residual stderror,
+kexi verteilung
+```{r}
+
+```
