@@ -466,6 +466,15 @@ df_stringency = data.frame(date = date_stringency,stringency = deu_stringency)
 df_stringency = df_stringency %>% mutate(year_week = paste0(year(date),"-",isoweek(date)),stringency = as.numeric(stringency))%>%ungroup() %>% group_by(year_week) %>% summarize(stringency = mean(stringency))
 ```
 
+## **Insert new data from kexi region**
+
+
+```{r}
+demandDRT = read_delim("data/allDemandByDate.csv")
+```
+
+
+
 ## **Take a policy data into table**
 ## **Statisctical evaluation of null hypothesis, independency tests**
 ## **Starting with a model**
@@ -481,7 +490,20 @@ description_impact = description_impact %>%
   mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
   mutate(season = ifelse(month(date) %in% c(9,10,11),"autumn",season))
 description_impact = description_impact %>% inner_join(df_stringency, by = "year_week")
-train_data = description_impact %>% filter(year(date)<=2022)
+
+```
+
+```{r}
+demandDRT_week = demandDRT %>% mutate(year_week = paste0(year(date),"-",week(date)))%>% ungroup() %>% group_by(year_week) %>% summarize(noRides = sum(noRides),noRequests = sum(noRequests),avgEuclidianDistance_m = mean(avgEuclidianDistance_m), avgTravelTime_s = mean(avgTravelTime_s))
+demand_table = demandDRT_week %>% inner_join(description_impact,by = "year_week")
+
+best_pred <- demand_table %>% ungroup() %>%
+  dplyr::select(-noRides,-landkreis,-description ,-year_week,-date,-value,-season,-noRequests,-avgEuclidianDistance_m,-not_at_home_change,-avgTravelTime_s) %>%
+  map_dbl(cor,y = demand_table$noRides) %>%
+  map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print(best_pred)
+
 ```
 
 ```{r best predictors}
@@ -496,10 +518,13 @@ print(best_pred)
 ```{r modelr}
 
 
+train_data = demand_table 
 
 
+first_model = lm(noRides ~ ns(tavg,1)+date+stringency+description,
+                 data = train_data)
 
-first_model = lm(not_at_home_change ~ ns(tavg,1)+date+stringency+description,
+mass_model = MASS::rlm(not_at_home_change ~ ns(tavg,2)+date+stringency+description,
                  data = train_data)
 
 ```
@@ -508,14 +533,13 @@ Need to check auto.arima approach
 
 ```{r predictions}
 colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50")
-
-test_data = description_impact %>% add_predictions(model = first_model) %>% add_residuals(model = first_model)
+model = first_model
+test_data = train_data %>% add_predictions(model = model) %>% add_residuals(model = model)
 
 ggplotly(ggplot(test_data) +
-  geom_line(aes(x = date,y = not_at_home_change,color = "actual"))+
+  geom_line(aes(x = date,y = noRides,color = "actual"))+
   geom_line(aes(x = date,y = pred,color = "predicted"))+
   geom_line(aes(x = date,y = resid,color = "residuals"))+
-  geom_smooth(aes(x = date,y = not_at_home_change),method = "lm",formula = y~x)+
   scale_color_manual(values = colors))
 
 ```

@@ -1,0 +1,169 @@
+---
+title: "Bad weather Kelheim Demo"
+author: "Oleksandr Soboliev"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    theme: cosmo
+    highlight: monochrome
+    code_folding: show
+runtime: shiny
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r, include= FALSE}
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(leaflet)
+library(rmarkdown)
+library(modelr)
+library(splines)
+library(forecast)
+library(fitdistrplus)
+library(rjson)
+
+if ("fitdistrplus" %in% (.packages())){
+  detach(package: fitdistrplus, unload = TRUE)
+}
+
+if ("fitdistrplus" %in% (.packages())){
+  detach(package: MASS, unload = TRUE)
+}
+
+if ("fitdistrplus" %in% (.packages())){
+  detach(package: stats, unload = TRUE)
+}
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Approach to build a daily model
+## **Import weather**
+```{r import weather}
+ingolstadt_weather = read_delim("https://bulk.meteostat.net/v2/daily/10860.csv.gz",",",col_names = FALSE)
+
+colnames(ingolstadt_weather) = c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
+
+
+# We don't need data of weather before 2020, because of snz_mobility date, also data isn't precise
+
+ingolstadt_weather = ingolstadt_weather %>% filter(year(date)>=2020)%>% replace_na(list(snow = 0))
+
+
+# To get description
+weatherstack_kelheim = read_delim("data/Kelheim_weather_since_july_2008.csv",delim = ",")
+weatherstack_kelheim_daily = weatherstack_kelheim %>%
+  group_by(date) %>%
+  count(description)
+```
+
+## **Add stringency of covid policies to a data**
+```{r import}
+json = fromJSON(file = "data/2022-10-08.json")
+unlisted_json = unlist(json)
+```
+
+```{r}
+deu_stringency = unlisted_json[grep("DEU.stringency_actual",names(unlisted_json))]
+date_stringency = sapply(strsplit(names(deu_stringency),split = ".",fixed = TRUE),"[[",2)
+df_stringency = data.frame(date = date_stringency,stringency = deu_stringency)
+df_stringency = df_stringency %>% mutate(stringency = as.numeric(stringency), date = as.Date(date))
+```
+
+```{r import mobility}
+demand = read_delim("data/allDemandByDate.csv")
+
+```
+## **Modify data**
+
+```{r modify data}
+type_of_weather = unique(weatherstack_kelheim$description)
+map_vector <- c("Clear","Sunny","Cloudy","Light","Light","Light","Light","Light","Light","Light","Light","Medium","Cloudy","Light","Light","Heavy","Heavy","Heavy","Light","Medium","Heavy","Heavy","Light","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Light","Medium","Medium","Light","Heavy","Light","Light","Light","Light","Light","Heavy","Light","Medium","Heavy","Heavy","Heavy")
+names(map_vector)<- type_of_weather
+
+
+
+
+ingolstadt_weather = ingolstadt_weather %>% 
+  mutate(season = ifelse(month(date) %in% c(12,1,2),"winter",NA)) %>%
+  mutate(season = ifelse(month(date) %in% c(3,4,5),"spring",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(9,10,11),"autumn",season))# %>% dplyr::select(-tsun)
+
+
+
+
+day_description_impact = weatherstack_kelheim_daily %>% pivot_wider(names_from = description,values_from = n)
+
+#remove NAs
+day_description_impact[is.na(day_description_impact)] = 0
+
+day_description_impact = day_description_impact %>% pivot_longer(cols = all_of(type_of_weather),names_to = "description",values_to = "value")
+
+day_description_impact = day_description_impact
+day_description_impact$description = map_vector[(day_description_impact$description)]
+
+day_description_impact= day_description_impact %>% group_by(date)%>%
+  top_n(n = 1,value) %>% group_by(date) %>% top_n(n = 1,description) %>% rename(weather_impact = value)
+```
+
+## **Join all data together**
+```{r join data}
+result_data = demand %>% inner_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
+#Also need to be added weekday
+result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1))) %>% mutate(wday = ifelse(wday>=6,"weekend","workday"))
+
+```
+
+```{r best predictors}
+best_pred <- result_data %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
+  map_dbl(cor,y = result_data$noRides) %>%
+  map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print(best_pred)
+```
+
+## **Build a model**
+```{r}
+demand_model = lm(noRides ~ tavg+pres+stringency+wday+date+description,data = result_data)
+```
+
+## **Draw a plot**
+```{r predictions}
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50")
+model = demand_model
+test_data = result_data %>% add_predictions(model = model) %>% add_residuals(model = model)
+
+ggplotly(ggplot(test_data) +
+  geom_line(aes(x = date,y = noRides,color = "actual"))+
+  geom_line(aes(x = date,y = pred,color = "predicted"))+
+  geom_line(aes(x = date,y = resid,color = "residuals"))+
+  geom_ref_line(h = 0)+
+  scale_color_manual(values = colors))
+
+```
+
+
+
+
+```{r}
+barplot <- ggplot(test_data, aes(x = resid ))+
+  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=2)+
+  geom_density( fill="#FF6666",adjust = 10,alpha = 0.5) 
+
+
+ggplotly(barplot)
+```
+
+```{r residuals verteilung}
+fitdistrplus::descdist(test_data$resid)
+```
+
+```{r}
+normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
+plot(normal_dist)
+```
