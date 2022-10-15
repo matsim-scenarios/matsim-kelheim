@@ -72,9 +72,27 @@ date_stringency = sapply(strsplit(names(deu_stringency),split = ".",fixed = TRUE
 df_stringency = data.frame(date = date_stringency,stringency = deu_stringency)
 df_stringency = df_stringency %>% mutate(stringency = as.numeric(stringency), date = as.Date(date))
 ```
-
+## **Import mobility**
 ```{r import mobility}
 demand = read_delim("data/allDemandByDate.csv")
+
+```
+## **Import holidays**
+```{r}
+holidays2020 = read_csv2("data/Holidays2020.csv") %>% dplyr::select(1,2,3)
+holidays2021 = read_csv2("data/Holidays2021.csv") %>% dplyr::select(1,2,3)
+holidays2022 = read_csv2("data/Holidays2022.csv") %>% dplyr::select(1,2,3)
+holidays = rbind(holidays2020,holidays2021,holidays2022)
+holidays = holidays %>% mutate(EndDateTime1 = as.Date(mdy_hm(EndDateTime1)),
+                               StartDateTime1 = as.Date(mdy_hm(StartDateTime1)))
+
+holiday_days = c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days"))
+
+for(i in 1:nrow(holidays)){
+  holiday_days = append(holiday_days,seq(holidays$StartDateTime1[i],holidays$EndDateTime1[i],by = "days"))
+}
+
+df_holidays = data.frame(date = holiday_days,isHoliday = TRUE)
 
 ```
 ## **Modify data**
@@ -116,6 +134,9 @@ result_data = demand %>% inner_join(day_description_impact, by = "date") %>% inn
 #Also need to be added weekday
 result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1))) %>% mutate(wday = ifelse(wday>=6,"weekend","workday"))
 
+#Append holidays
+result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE))
+
 ```
 
 ```{r best predictors}
@@ -129,7 +150,8 @@ print(best_pred)
 
 ## **Build a model**
 ```{r}
-demand_model = lm(noRides ~ tavg+pres+stringency+wday+date+description,data = result_data)
+demand_model = lm(noRides ~ tavg+pres+stringency+wday+date+description+isHoliday,data = result_data)
+summary(demand_model)
 ```
 
 ## **Draw a plot**

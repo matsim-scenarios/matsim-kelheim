@@ -507,9 +507,9 @@ print(best_pred)
 ```
 
 ```{r best predictors}
-best_pred <- train_data %>% ungroup() %>%
+best_pred <- description_impact %>% ungroup() %>%
   dplyr::select(-not_at_home_change,-landkreis,-description ,-year_week,-date,-value,-season) %>%
-  map_dbl(cor,y = train_data$not_at_home_change) %>%
+  map_dbl(cor,y = description_impact$not_at_home_change) %>%
   map_dbl(abs) %>%
   sort(decreasing = TRUE) 
 print(best_pred)
@@ -518,10 +518,10 @@ print(best_pred)
 ```{r modelr}
 
 
-train_data = demand_table 
+train_data = description_impact %>% left_join(df_holidays, by ="date") %>% replace_na(list(isHoliday = FALSE))
 
 
-first_model = lm(noRides ~ ns(tavg,1)+date+stringency+description,
+first_model = lm(not_at_home_change ~ ns(tavg,1)+date+stringency+description+isHoliday,
                  data = train_data)
 
 mass_model = MASS::rlm(not_at_home_change ~ ns(tavg,2)+date+stringency+description,
@@ -537,7 +537,7 @@ model = first_model
 test_data = train_data %>% add_predictions(model = model) %>% add_residuals(model = model)
 
 ggplotly(ggplot(test_data) +
-  geom_line(aes(x = date,y = noRides,color = "actual"))+
+  geom_line(aes(x = date,y = not_at_home_change,color = "actual"))+
   geom_line(aes(x = date,y = pred,color = "predicted"))+
   geom_line(aes(x = date,y = resid,color = "residuals"))+
   scale_color_manual(values = colors))
