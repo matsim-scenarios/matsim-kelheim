@@ -1,6 +1,7 @@
 library(gridExtra)
 library(tidyverse)
 library(lubridate)
+library(patchwork)
 library(viridis)
 library(ggsci)
 library(sf)
@@ -24,19 +25,19 @@ shape <- st_read("../../../scenarios/input/shp/dilutionArea.shp", crs=25832)
 sim_scale <- 4 # set to 4 for 25pct, 10 for 10pct, 100 for 1pct, ...
 f <- "../../../output/output-kelheim-25pct/" # set to run output directory
 
-#homes <- read_csv("../../../scenarios/input/kelheim-v2.0-homes.csv", 
-#                  col_types = cols(
-#                    person = col_character()
-#                  ))
+homes <- read_csv("../../../scenarios/input/kelheim-v3.0-homes.csv", 
+                  col_types = cols(
+                    person = col_character()
+                  ))
 
 persons <- read_delim(list.files(f, pattern = "*.output_persons.csv.gz", full.names = T, include.dirs = F), delim = ";", trim_ws = T, 
                      col_types = cols(
                        person = col_character(),
                        good_type = col_integer()
                      )) %>%
-#          right_join(homes) %>%
-#          st_as_sf(coords = c("home_x", "home_y"), crs = 25832) %>%
-          st_as_sf(coords = c("first_act_x", "first_act_y"), crs = 25832) %>%
+          right_join(homes) %>%
+          st_as_sf(coords = c("home_x", "home_y"), crs = 25832) %>%
+#          st_as_sf(coords = c("first_act_x", "first_act_y"), crs = 25832) %>%
           st_filter(shape)
 
 trips <- read_delim(list.files(f, pattern = "*.output_trips.csv.gz", full.names = T, include.dirs = F), delim = ";", trim_ws = T, 
@@ -85,7 +86,7 @@ p1_aggr <- ggplot(data=srv_aggr, mapping =  aes(x=1, y=share, fill=mode)) +
   labs(subtitle = "Survey data") +
   geom_bar(position="fill", stat="identity") +
   coord_flip() +
-  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 3, position=position_fill(vjust=0.5)) +
+  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 8, angle=90, color="white", position=position_fill(vjust=0.5)) +
   scale_fill_locuszoom() +
   theme_void() +
   theme(legend.position="none")
@@ -94,9 +95,13 @@ p2_aggr <- ggplot(data=aggr, mapping =  aes(x=1, y=share, fill=mode)) +
   labs(subtitle = "Simulation") +
   geom_bar(position="fill", stat="identity") +
   coord_flip() +
-  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 3, position=position_fill(vjust=0.5)) +
+  geom_text(aes(label=scales::percent(share, accuracy = 0.1)), size= 8, angle=90, color="white", position=position_fill(vjust=0.5)) +
   scale_fill_locuszoom() +
-  theme_void()
+  theme_void() +
+  theme(legend.position = "bottom")
+
+combined <- p1_aggr / p2_aggr
+combined + plot_layout(guides = "collect")
 
 g <- arrangeGrob(p1_aggr, p2_aggr, ncol = 2)
 g
