@@ -24,6 +24,7 @@ library(splines)
 library(forecast)
 library(fitdistrplus)
 library(rjson)
+library(knitr)
 
 if ("fitdistrplus" %in% (.packages())){
   detach(package: fitdistrplus, unload = TRUE)
@@ -493,6 +494,37 @@ description_impact = description_impact %>% inner_join(df_stringency, by = "year
 
 ```
 
+## **Import holidays**
+```{r}
+help_function <- function(list1,list2){
+  
+}
+```
+
+
+```{r}
+holidays2020 = read_csv2("data/Holidays2020.csv") %>% dplyr::select(1,2,3)
+holidays2021 = read_csv2("data/Holidays2021.csv") %>% dplyr::select(1,2,3)
+holidays2022 = read_csv2("data/Holidays2022.csv") %>% dplyr::select(1,2,3)
+holidays = rbind(holidays2020,holidays2021,holidays2022)
+holidays = holidays %>% mutate(EndDateTime1 = as.Date(mdy_hm(EndDateTime1)),
+                               StartDateTime1 = as.Date(mdy_hm(StartDateTime1)))
+
+holiday_days = c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days"))
+
+for(i in 1:nrow(holidays)){
+  holiday_days = append(holiday_days,seq(holidays$StartDateTime1[i],holidays$EndDateTime1[i],by = "days"))
+}
+
+df_holidays = data.frame(date = holiday_days,isHoliday = TRUE)
+
+week_calender = data.frame(date = as.Date(seq(ISOdate(2020,1,1),ISOdate(2022,12,31),by = "days")))
+week_calender = week_calender %>% mutate(year_week = paste0(year(date),"-",isoweek(date)))
+
+train_data = description_impact %>% left_join(df_holidays, by ="date") %>% replace_na(list(isHoliday = FALSE))
+
+```
+
 ```{r}
 demandDRT_week = demandDRT %>% mutate(year_week = paste0(year(date),"-",week(date)))%>% ungroup() %>% group_by(year_week) %>% summarize(noRides = sum(noRides),noRequests = sum(noRequests),avgEuclidianDistance_m = mean(avgEuclidianDistance_m), avgTravelTime_s = mean(avgTravelTime_s))
 demand_table = demandDRT_week %>% inner_join(description_impact,by = "year_week")
@@ -504,12 +536,14 @@ best_pred <- demand_table %>% ungroup() %>%
   sort(decreasing = TRUE) 
 print(best_pred)
 
+
+
 ```
 
 ```{r best predictors}
-best_pred <- description_impact %>% ungroup() %>%
+best_pred <- train_data %>% ungroup() %>%
   dplyr::select(-not_at_home_change,-landkreis,-description ,-year_week,-date,-value,-season) %>%
-  map_dbl(cor,y = description_impact$not_at_home_change) %>%
+  map_dbl(cor,y = train_data$not_at_home_change) %>%
   map_dbl(abs) %>%
   sort(decreasing = TRUE) 
 print(best_pred)
@@ -521,12 +555,19 @@ print(best_pred)
 train_data = description_impact %>% left_join(df_holidays, by ="date") %>% replace_na(list(isHoliday = FALSE))
 
 
-first_model = lm(not_at_home_change ~ ns(tavg,1)+date+stringency+description+isHoliday,
+
+first_model = lm(not_at_home_change ~ ns(tavg,2)+stringency+description+isHoliday+date,
+                 data = train_data)
+stringency_coef = first_model$coefficients[3]
+
+#train_data = train_data %>% mutate(not_at_home_change = not_at_home_change + stringency_coef*stringency)
+
+second_model = lm(not_at_home_change ~ ns(tavg,1)+date+snow_week+prcp_week+description+isHoliday,
                  data = train_data)
 
 mass_model = MASS::rlm(not_at_home_change ~ ns(tavg,2)+date+stringency+description,
                  data = train_data)
-
+summary(first_model)
 ```
 
 Need to check auto.arima approach
@@ -564,10 +605,7 @@ fitdistrplus::descdist(test_data$resid)
 normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
 plot(normal_dist)
 ```
-
-x~y scatterplot,
-residual stderror,
-kexi verteilung
+shapiro test p value
 ```{r}
-
+print(shapiro.test(test_data$resid))
 ```

@@ -132,15 +132,15 @@ day_description_impact= day_description_impact %>% group_by(date)%>%
 ```{r join data}
 result_data = demand %>% inner_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
 #Also need to be added weekday
-result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1))) %>% mutate(wday = ifelse(wday>=6,"weekend","workday"))
+result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1)))
 
 #Append holidays
-result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE))
+result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE)) #%>% filter(date <"2021-07-01")
 
 ```
 
-```{r best predictors}
-best_pred <- result_data %>% ungroup() %>%
+```{r best predictors, echo=FALSE}
+best_pred <- result_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
   map_dbl(cor,y = result_data$noRides) %>%
   map_dbl(abs) %>%
@@ -150,22 +150,26 @@ print(best_pred)
 
 ## **Build a model**
 ```{r}
-demand_model = lm(noRides ~ tavg+pres+stringency+wday+date+description+isHoliday,data = result_data)
+
+demand_model = lm(noRides ~ tavg*season+pres+stringency+wday+date+isHoliday+description+snow+prcp,data = result_data)
+reduced.model = step(demand_model,direction = "backward")
 summary(demand_model)
+summary(reduced.model)
 ```
 
 ## **Draw a plot**
 ```{r predictions}
-colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50")
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
 model = demand_model
-test_data = result_data %>% add_predictions(model = model) %>% add_residuals(model = model)
+test_data = result_data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
-ggplotly(ggplot(test_data) +
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
   geom_line(aes(x = date,y = noRides,color = "actual"))+
   geom_line(aes(x = date,y = pred,color = "predicted"))+
   geom_line(aes(x = date,y = resid,color = "residuals"))+
-  geom_ref_line(h = 0)+
-  scale_color_manual(values = colors))
+  geom_point(data = zerorides,aes(x = date,y = resid,color = "zerorides"))+
+  geom_ref_line(h = 0))#+
+  #scale_color_manual(values = colors))
 
 ```
 
@@ -174,7 +178,7 @@ ggplotly(ggplot(test_data) +
 
 ```{r}
 barplot <- ggplot(test_data, aes(x = resid ))+
-  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=2)+
+  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=7)+
   geom_density( fill="#FF6666",adjust = 10,alpha = 0.5) 
 
 
@@ -188,4 +192,13 @@ fitdistrplus::descdist(test_data$resid)
 ```{r}
 normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
 plot(normal_dist)
+```
+```{r}
+shapiro.test(test_data$resid)
+```
+
+1 by 1 plots
+```{r wday}
+ggplot(result_data)+
+  geom_boxplot(aes(x = wday,y = noRides,colour = season ))
 ```
