@@ -73,7 +73,7 @@
 		<dependency>
 			<groupId>com.github.matsim-vsp</groupId>
 			<artifactId>pt-extensions</artifactId>
-			<version>609986ef68</version>
+			<version>662c5ace49</version>
 			<exclusions>
 				<!-- Will pull old drt version -->
 				<exclusion>
