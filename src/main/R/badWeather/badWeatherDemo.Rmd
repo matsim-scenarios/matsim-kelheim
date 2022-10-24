@@ -470,7 +470,7 @@ df_stringency = df_stringency %>% mutate(year_week = paste0(year(date),"-",isowe
 ## **Insert new data from kexi region**
 
 
-```{r}
+```{r message=FALSE}
 demandDRT = read_delim("data/allDemandByDate.csv")
 ```
 
@@ -532,7 +532,7 @@ demand_table = demandDRT_week %>% inner_join(description_impact,by = "year_week"
 best_pred <- demand_table %>% ungroup() %>%
   dplyr::select(-noRides,-landkreis,-description ,-year_week,-date,-value,-season,-noRequests,-avgEuclidianDistance_m,-not_at_home_change,-avgTravelTime_s) %>%
   map_dbl(cor,y = demand_table$noRides) %>%
-  map_dbl(abs) %>%
+  #map_dbl(abs) %>%
   sort(decreasing = TRUE) 
 print(best_pred)
 
@@ -544,7 +544,7 @@ print(best_pred)
 best_pred <- train_data %>% ungroup() %>%
   dplyr::select(-not_at_home_change,-landkreis,-description ,-year_week,-date,-value,-season) %>%
   map_dbl(cor,y = train_data$not_at_home_change) %>%
-  map_dbl(abs) %>%
+  #map_dbl(abs) %>%
   sort(decreasing = TRUE) 
 print(best_pred)
 ```

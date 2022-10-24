@@ -135,7 +135,7 @@ result_data = demand %>% inner_join(day_description_impact, by = "date") %>% inn
 result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1)))
 
 #Append holidays
-result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE)) #%>% filter(date <"2021-07-01")
+result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE)) #%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
 
 ```
 
@@ -143,37 +143,56 @@ result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na
 best_pred <- result_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
   map_dbl(cor,y = result_data$noRides) %>%
-  map_dbl(abs) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print(best_pred)
+```
+
+```{r best predictors without predictors, echo=FALSE}
+pred_data = result_data %>%filter(isHoliday==FALSE, wday != 6 , wday!=7,noRides !=0)
+best_pred <- pred_data %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
+  map_dbl(cor,y = pred_data$noRides) %>%
+  #map_dbl(abs) %>%
   sort(decreasing = TRUE) 
 print(best_pred)
 ```
 
 ## **Build a model**
 ```{r}
-
-demand_model = lm(noRides ~ tavg*season+pres+stringency+wday+date+isHoliday+description+snow+prcp,data = result_data)
+data = pred_data 
+demand_model = lm(noRides ~ ns(tavg,1)+pres++date+stringency+wday+isHoliday+snow,data = data)
 reduced.model = step(demand_model,direction = "backward")
+
+human_model = lm(noRides ~ tavg+pres+stringency+wday+isHoliday+description*weather_impact+snow+prcp,data = data)
+
+#summary(human_model)
 summary(demand_model)
-summary(reduced.model)
+#summary(reduced.model)
 ```
 
 ## **Draw a plot**
 ```{r predictions}
 colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
 model = demand_model
-test_data = result_data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
-ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_line(aes(x = date,y = noRides,color = "actual"))+
-  geom_line(aes(x = date,y = pred,color = "predicted"))+
-  geom_line(aes(x = date,y = resid,color = "residuals"))+
-  geom_point(data = zerorides,aes(x = date,y = resid,color = "zerorides"))+
-  geom_ref_line(h = 0))#+
+#Ask ifwe should conclude this data to our analysis
+zerorides = test_data %>% filter(noRides == 0)
+
+#ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+ # geom_line(aes(x = date,y = noRides,color = "actual"))+
+  #geom_line(aes(x = date,y = pred,color = "predicted"))+
+  #geom_line(aes(x = date,y = resid,color = "residuals"))+
+  #geom_point(data = zerorides,aes(x = date,y = resid,color = "zerorides"))+
+  #geom_ref_line(h = 0))#+
   #scale_color_manual(values = colors))
 
 ```
-
-
+root mean square
+mean absolute error
+residual
+outliers in qqplot
 
 
 ```{r}
@@ -201,4 +220,57 @@ shapiro.test(test_data$resid)
 ```{r wday}
 ggplot(result_data)+
   geom_boxplot(aes(x = wday,y = noRides,colour = season ))
+```
+estimate extremely high residual values
+```{r}
+high_values = test_data %>% mutate(type = ifelse(abs(resid)>=20,"extreme","normal"))
+
+
+```
+
+```{r tavg}
+ggplot(high_values)+
+  geom_point(aes(y = noRides,x = tavg,colour = type,shape = isHoliday))
+```
+
+```{r tavg with season}
+ggplotly(ggplot(high_values)+
+  geom_point(aes(y = noRides,x = tavg,colour = type,shape = season)))
+```
+
+
+```{r tmax}
+ggplot(high_values)+
+  geom_point(aes(y = noRides,x = tmax,colour = type,shape = isHoliday))
+```
+
+```{r prcp}
+ggplot(high_values)+
+  geom_point(aes(y = noRides,x = prcp,colour = type,shape = isHoliday))
+```
+
+```{r snow}
+ggplot(high_values)+
+  geom_point(aes(y = noRides,x = snow,colour = type,shape = isHoliday))
+```
+
+```{r wdir}
+ggplot(high_values)+
+  geom_point(aes(y = noRides,x = wdir,colour = type,shape = isHoliday))
+```
+
+```{r wspd}
+ggplot(high_values)+
+  geom_point(aes(y = noRides,x = wspd,colour = type,shape = isHoliday))
+```
+
+
+```{r pres}
+ggplot(high_values)+
+  geom_point(aes(y = noRides,x = pres,colour = type,shape = isHoliday))
+```
+
+```{r stringency}
+ggplot(high_values)+
+  geom_point(aes(y = noRides,x = stringency,colour = type,shape = isHoliday))
 ```

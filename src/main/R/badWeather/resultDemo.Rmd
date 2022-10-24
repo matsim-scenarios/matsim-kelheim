@@ -1,0 +1,133 @@
+---
+title: "Bad weather Kelheim Demo"
+author: "Oleksandr Soboliev"
+output:
+  html_document:
+    df_print: paged
+    code_folding: "hide"
+runtime: shiny
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r, include= FALSE}
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(leaflet)
+library(rmarkdown)
+library(modelr)
+library(splines)
+library(forecast)
+library(fitdistrplus)
+library(rjson)
+```
+
+# Data
+
+Data is taken from these resources:
+
+* Ingolstadt Weather from Meteostat [Meteostat](https://bulk.meteostat.net/v2/) 
+* Weather Description from weatherstack [Weatherstck](https://svn.vsp.tu-berlin.de/repos/shared-svn/projects/KelRide/data/badWeather/weatherstack/)
+* Mobility data is represented by number of Kexi Rides in Landkreis Kelheim (\shared-svn\projects\KelRide\data\KEXI\2021-04)
+* Stringency (strictness of covid policies) number is from [Oxford COVID-19 Government Response Tracker](https://covidtracker.bsg.ox.ac.uk/)
+* Holiday days are from [Feiertage](https://feiertage-api.de/)
+
+# Regression analysis resources
+
+
+# Importing and preparing data
+
+Main target is to get result table containing all "expected" relevant data/variables that can be connected with changes of demand in Kelheim region, thus mobility data is collected on daily basis, remaining data has to be daily based.
+
+After obtaining such table it would be useful(in sense of building a model and understanding the data) to check correlations between individual independent variable to dependent mobility variable. So the next chapter has a focus on filtering out unrelevant data to pass it to the model.
+
+```{r importing all the data, message=FALSE,echo=FALSE,warning=FALSE}
+# Ingolstadt weather
+ingolstadt_weather = read_delim("https://bulk.meteostat.net/v2/daily/10860.csv.gz",",",col_names = FALSE)
+colnames(ingolstadt_weather) = c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
+
+# Weatherstack data
+weatherstack_kelheim = read_delim("data/Kelheim_weather_since_july_2008.csv",delim = ",")
+
+# Stringency
+json = fromJSON(file = "data/2022-10-08.json")
+json = unlist(json)
+
+#Mobility
+demand = read_delim("data/allDemandByDate.csv")
+
+#Holidays
+holidays2020 = read_csv2("data/Holidays2020.csv") %>% dplyr::select(1,2,3)
+holidays2021 = read_csv2("data/Holidays2021.csv") %>% dplyr::select(1,2,3)
+holidays2022 = read_csv2("data/Holidays2022.csv") %>% dplyr::select(1,2,3)
+holidays = rbind(holidays2020,holidays2021,holidays2022)
+holidays = holidays %>% mutate(EndDateTime1 = as.Date(mdy_hm(EndDateTime1)),
+                               StartDateTime1 = as.Date(mdy_hm(StartDateTime1)))
+
+holiday_days = c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days"))
+
+for(i in 1:nrow(holidays)){
+  holiday_days = append(holiday_days,seq(holidays$StartDateTime1[i],holidays$EndDateTime1[i],by = "days"))
+}
+
+df_holidays = data.frame(date = holiday_days,isHoliday = TRUE)
+
+```
+Modify and join data
+
+```{r modify, message=FALSE, warning=FALSE}
+# Weatherstack
+weatherstack_kelheim_daily = weatherstack_kelheim %>%
+  group_by(date) %>%
+  count(description)
+
+# Stringency 
+deu_stringency = json[grep("DEU.stringency_actual",names(json))]
+date_stringency = sapply(strsplit(names(deu_stringency),split = ".",fixed = TRUE),"[[",2)
+df_stringency = data.frame(date = date_stringency,stringency = deu_stringency)
+df_stringency = df_stringency %>% mutate(stringency = as.numeric(stringency), date = as.Date(date))
+
+
+
+# Ingolstadt
+type_of_weather = unique(weatherstack_kelheim$description)
+map_vector <- c("Clear","Sunny","Cloudy","Light","Light","Light","Light","Light","Light","Light","Light","Medium","Cloudy","Light","Light","Heavy","Heavy","Heavy","Light","Medium","Heavy","Heavy","Light","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Light","Medium","Medium","Light","Heavy","Light","Light","Light","Light","Light","Heavy","Light","Medium","Heavy","Heavy","Heavy")
+names(map_vector)<- type_of_weather
+
+
+
+
+ingolstadt_weather = ingolstadt_weather %>% 
+  mutate(season = ifelse(month(date) %in% c(12,1,2),"winter",NA)) %>%
+  mutate(season = ifelse(month(date) %in% c(3,4,5),"spring",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(9,10,11),"autumn",season))# %>% dplyr::select(-tsun)
+
+
+
+
+day_description_impact = weatherstack_kelheim_daily %>% pivot_wider(names_from = description,values_from = n)
+
+#remove NAs
+day_description_impact[is.na(day_description_impact)] = 0
+
+day_description_impact = day_description_impact %>% pivot_longer(cols = all_of(type_of_weather),names_to = "description",values_to = "value")
+
+day_description_impact = day_description_impact
+day_description_impact$description = map_vector[(day_description_impact$description)]
+
+day_description_impact= day_description_impact %>% group_by(date)%>%
+  top_n(n = 1,value) %>% group_by(date) %>% top_n(n = 1,description) %>% rename(weather_impact = value)
+
+#####Join the data#####
+
+result_data = demand %>% inner_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
+#Also need to be added weekday
+result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1)))
+
+#Append holidays
+result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE)) #%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
+
+head(result_data)
+```
