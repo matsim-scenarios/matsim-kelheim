@@ -114,7 +114,7 @@ public class DrtStopsWriter extends MatsimXmlWriter {
         double shortestDistance = Double.MAX_VALUE;
         Link nearestLink = null;
         for (Link link : network.getLinks().values()) {
-            if (!link.getAllowedModes().contains("car")) {
+            if (!link.getAllowedModes().contains(mode)) {
                 continue;
             }
             double dist = CoordUtils.distancePointLinesegment(link.getFromNode().getCoord(), link.getToNode().getCoord(), coord);
