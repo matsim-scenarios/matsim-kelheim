@@ -1,5 +1,6 @@
 package org.matsim.run.prepare;
 
+import org.apache.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -28,6 +29,8 @@ public class PrepareNetwork implements MATSimAppCommand {
     @CommandLine.Option(names = "--output", description = "Output path of the prepared network", required = true)
     private String outputPath;
 
+    private static final Logger log = Logger.getLogger(PrepareNetwork.class);
+
     public static void main(String[] args) {
         new PrepareNetwork().execute(args);
     }
@@ -46,6 +49,8 @@ public class PrepareNetwork implements MATSimAppCommand {
                 }
             }
 
+            System.out.println(feature.getAttributes());
+
             if (feature.getAttribute("mode").equals("av")) {
                 if (avOperationArea == null) {
                     avOperationArea = (Geometry) feature.getDefaultGeometry();
@@ -55,30 +60,48 @@ public class PrepareNetwork implements MATSimAppCommand {
             }
         }
 
+        boolean isDrtAllowed;
+        boolean isAvAllowed;
+        int linkCount[] = new int[2];
+
         Network network = NetworkUtils.readNetwork(networkFile);
         for (Link link : network.getLinks().values()) {
             if (!link.getAllowedModes().contains("car")){
                 continue;
             }
-            boolean isDrtAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(drtOperationArea) ||
-                    MGC.coord2Point(link.getToNode().getCoord()).within(drtOperationArea);
-            boolean isAvAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(avOperationArea) ||
-                    MGC.coord2Point(link.getToNode().getCoord()).within(avOperationArea);
+
+            if(drtOperationArea != null) {
+                isDrtAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(drtOperationArea) ||
+                        MGC.coord2Point(link.getToNode().getCoord()).within(drtOperationArea);
+            } else {
+                isDrtAllowed = false;
+            }
+
+            if(avOperationArea != null) {
+                isAvAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(avOperationArea) ||
+                        MGC.coord2Point(link.getToNode().getCoord()).within(avOperationArea);
+            } else {
+                isAvAllowed = false;
+            }
 
             if (isDrtAllowed) {
                 Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
                 allowedModes.add("drt");
                 link.setAllowedModes(allowedModes);
+                linkCount[0] = linkCount[0] + 1;
             }
 
             if (isAvAllowed) {
                 Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
                 allowedModes.add("av");
                 link.setAllowedModes(allowedModes);
+                linkCount[1] = linkCount[1] + 1;
             }
         }
 
         NetworkUtils.writeNetwork(network, outputPath);
+        log.info("For " + linkCount[0] + " links drt has been added as an allowed mode.");
+        log.info("For " + linkCount[1] + " links av has been added as an allowed mode.");
         return 0;
     }
 }
