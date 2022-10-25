@@ -161,7 +161,7 @@ print(best_pred)
 ## **Build a model**
 ```{r}
 data = pred_data 
-demand_model = lm(noRides ~ ns(tavg,1)+pres++date+stringency+wday+isHoliday+snow,data = data)
+demand_model = lm(noRides ~ ns(tavg,1)+pres++date+stringency+wday+snow,data = data)
 reduced.model = step(demand_model,direction = "backward")
 
 human_model = lm(noRides ~ tavg+pres+stringency+wday+isHoliday+description*weather_impact+snow+prcp,data = data)
@@ -180,13 +180,13 @@ test_data = data %>% add_predictions(model = model) %>% add_residuals(model = mo
 #Ask ifwe should conclude this data to our analysis
 zerorides = test_data %>% filter(noRides == 0)
 
-#ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
- # geom_line(aes(x = date,y = noRides,color = "actual"))+
-  #geom_line(aes(x = date,y = pred,color = "predicted"))+
-  #geom_line(aes(x = date,y = resid,color = "residuals"))+
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_line(aes(x = date,y = noRides,color = "actual"))+
+  geom_line(aes(x = date,y = pred,color = "predicted"))+
+  geom_line(aes(x = date,y = resid,color = "residuals"))+
   #geom_point(data = zerorides,aes(x = date,y = resid,color = "zerorides"))+
-  #geom_ref_line(h = 0))#+
-  #scale_color_manual(values = colors))
+  geom_ref_line(h = 0)+
+  scale_color_manual(values = colors))
 
 ```
 root mean square

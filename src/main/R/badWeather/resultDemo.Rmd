@@ -29,12 +29,15 @@ Data is taken from these resources:
 
 * Ingolstadt Weather from Meteostat [Meteostat](https://bulk.meteostat.net/v2/) 
 * Weather Description from weatherstack [Weatherstck](https://svn.vsp.tu-berlin.de/repos/shared-svn/projects/KelRide/data/badWeather/weatherstack/)
-* Mobility data is represented by number of Kexi Rides in Landkreis Kelheim (\shared-svn\projects\KelRide\data\KEXI\2021-04)
+* Mobility data is represented by number of Kexi Rides in Landkreis Kelheim (/shared-svn/projects/KelRide/data/KEXI/2021-04)
 * Stringency (strictness of covid policies) number is from [Oxford COVID-19 Government Response Tracker](https://covidtracker.bsg.ox.ac.uk/)
 * Holiday days are from [Feiertage](https://feiertage-api.de/)
 
 # Regression analysis resources
 
+Analysis was proceeded using this statistical sources:
+
+* Linear Models with R (Julian J. Faraway)
 
 # Importing and preparing data
 
@@ -74,7 +77,7 @@ for(i in 1:nrow(holidays)){
 df_holidays = data.frame(date = holiday_days,isHoliday = TRUE)
 
 ```
-Modify and join data
+##Modify and join data
 
 ```{r modify, message=FALSE, warning=FALSE}
 # Weatherstack
@@ -127,7 +130,207 @@ result_data = demand %>% inner_join(day_description_impact, by = "date") %>% inn
 result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1)))
 
 #Append holidays
-result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE)) #%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
+result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0)) #%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
 
 head(result_data)
 ```
+
+From following plots we can see strong correlation between day of the week and number of Rides, because we want to simulate common day using MatSim it was decided to filter weekends out of resulting dataset for the model. Also because day doesn't represent weather impact, like holidays that have strong impact on mobility so they are also excluded. First 4 days are excluded, because they have 0 rides due to KeXi service start.
+
+```{r plotting wday and holidays}
+wday_plot = ggplotly(ggplot(result_data)+
+  geom_boxplot(aes(x = wday,y = noRides)))
+
+holiday_plot = ggplotly(ggplot(result_data)+
+  geom_boxplot(aes(x = isHoliday,y = noRides )))
+
+annotations = list( 
+  list( 
+     x = 0.2,  
+    y = 1.0,  
+    text = "Weekday",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ),  
+  list( 
+     x = 0.75,  
+    y = 1.0,  
+    text = "Is Holiday",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ))
+
+subplot(wday_plot,holiday_plot) %>% layout(annotations = annotations)
+```
+
+```{r}
+result_data = result_data %>% filter(wday!=6 & wday!=7,isHoliday == FALSE, noRides!=0)
+```
+
+After first data processing it would be helpful to find some dependencies in the data using scatter plots mapped to number of rides.
+Here is summary of end dataset 
+```{r}
+result_data$description = factor(result_data$description)
+result_data$season = factor(result_data$season)
+summary(result_data)
+```
+
+# Finding patterns using graphic approach
+
+
+
+```{r noRides~.}
+
+tavg_plot = ggplotly(
+  ggplot(result_data)+
+    geom_point(aes(y= noRides,x = tavg,colour = season))
+  )
+
+
+pres_plot= ggplotly(
+  ggplot(result_data)+
+    geom_point(aes(y= noRides,x = pres,colour = season))
+  )
+prcp_plot = ggplotly(
+  ggplot(result_data %>% filter(prcp!=0))+
+    geom_point(aes(y= noRides,x = prcp,colour = season))
+  )
+snow_plot = ggplotly(
+  ggplot(result_data %>% filter(snow!=0))+
+    geom_point(aes(y= noRides,x = snow,colour = season))
+  )
+
+subplot(tavg_plot,pres_plot,prcp_plot,snow_plot,nrows = 2)
+
+
+```
+
+After looking at these plots we can barely see existing strong dependencies or clusters, but there is one conspicious fact, that only during summer number of rides falls under ~50 while other seasons have more than 50 rides.
+
+# Finding correlations
+
+Correlation coefficients between two variables we calculate using cor() function, later anova oneway test will be used for testing to check categorical variable dependency. 
+
+```{r correlations, warning = FALSE}
+best_pred <- result_data %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
+  map_dbl(cor,y = result_data$noRides) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print(best_pred)
+
+```
+
+As a result highest absolute score in correlation have temperature(max), snow, pressure(air pressure), stringency(strictness of covid19 policy), weather impact(artificial made variable of highest weather description hours).
+
+
+Testing of null hypothesis is made for dependent noRides and independent season, description and wday
+```{r categorical variables}
+
+season_test = oneway.test(result_data$noRides~result_data$season)$p.value
+description_test = oneway.test(result_data$noRides~result_data$description)$p.value
+wday_test = oneway.test(result_data$noRides~result_data$wday)$p.value
+print(c("season" =season_test,"description" =description_test,"wday" =wday_test))
+
+```
+
+From the p-value we can see that null hypothesis can only be rejected for wday (p.value higher than 0.05), for the description and season we can't make such conclusion. But one thing that should be also tested is dependency between seasons and temperature - `r oneway.test(result_data$tavg~result_data$season)$p.value`. As we can see temperature dependent from season, so in our future model one of the variable should be dropped.
+
+# Building a model
+
+After determination of significant variables we can build different models using different set of variables, one thing remains same - first approach is to build linear model to make predictions, also to check which predictors impact number of rides most. In our approach we will firstly larger model using all relevant variables from previous chapter, then we reduce number of variables taking smaller subset and synchronous to check how model quality changes. 
+
+```{r omega model}
+data = result_data
+
+omega_model = lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description,data = data)
+
+summary(omega_model)
+
+```
+
+Low adjusted R^2 doesn't tells that our model doesn't fit the data. Let's take a look on predicted values and residuals.
+
+```{r omega residuals}
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = omega_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+
+
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_line(aes(x = date,y = noRides,color = "actual"))+
+  geom_line(aes(x = date,y = pred,color = "predicted"))+
+  geom_line(aes(x = date,y = resid,color = "residuals"))+
+  geom_ref_line(h = 0)+
+  scale_color_manual(values = colors))
+
+```
+
+As we can see from our residuals plot our data has continuous growing trend, that our model doesn't consider, so taking a date variable to model can drastically improve model "quality".
+
+```{r omega date residuals}
+
+omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description+date+season,data = data)
+
+summary(omega_date_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = omega_date_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+
+
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_line(aes(x = date,y = noRides,color = "actual"))+
+  geom_line(aes(x = date,y = pred,color = "predicted"))+
+  geom_line(aes(x = date,y = resid,color = "residuals"))+
+  geom_ref_line(h = 0)+
+  scale_color_manual(values = colors))
+
+```
+
+As expected R^2 squared increased as well residual standard error is decreased to a number of 15,99. To check correctness of used approach residuals have to be normally distributed.
+
+Residuals histogram
+```{r residual destributions 1}
+
+barplot <- ggplot(test_data, aes(x = resid ))+
+  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=7)+
+  geom_density( fill="#FF6666",adjust = 10,alpha = 0.5) +
+  ggtitle("Omega model residuals")
+
+ggplotly(barplot)
+
+```
+
+```{r, out.width="100%"}
+normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
+plot(normal_dist)
+```
+From described plots we can see that our residuals looks normally distributed with skewness to left tail, with some outliers. But simple Shapiro-Wilk test gives p-value of `r shapiro.test(test_data$resid)$p.value` out, so our residuals aren't 
+
+# Reducing a model
+
+Let's take some variables out and see how model performs on the data and F Statistics
+
+
+```{r}
+
+```
+
+As we can see excluding variables from model doesn't make it worse, we can also use anova test function from stats package to check model varable significance.
+
+```{r}
+
+```
+
+Excluding more variables from a model doesn't impove model as well increases residual error enormous, so we can make conclusion, that represented model is minimal fitting possible with variables that have most impact to number of rides by the weather. Remains only to check residuals of fitted model.  
+
+#Conclusion
+
