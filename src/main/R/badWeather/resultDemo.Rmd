@@ -295,7 +295,7 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
 
 ```
 
-As expected R^2 squared increased as well residual standard error is decreased to a number of 15,99. To check correctness of used approach residuals have to be normally distributed.
+As expected R^2 squared increased as well residual standard error is decreased to a number of 15,99. ~0.7 of R-squared is relatively high in weather statistics. To check correctness of used approach residuals have to be normally distributed.
 
 Residuals histogram
 ```{r residual destributions 1}
@@ -309,7 +309,7 @@ ggplotly(barplot)
 
 ```
 
-```{r, out.width="100%"}
+```{r, out.width="100%",warning=FALSE}
 normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
 plot(normal_dist)
 ```
@@ -317,20 +317,106 @@ From described plots we can see that our residuals looks normally distributed wi
 
 # Reducing a model
 
-Let's take some variables out and see how model performs on the data and F Statistics
+Let's take some variables out and see how model performs on the data and F Statistics. Low correlating variables from "Finding correlations" chapter are snow, stringency and weather_impact multiplied by description. Also there is strong correlation between average temperature and a season so our new model should contain only 1 of the predictors, because temperature have most impact on mobility and more large-scaled (season contains only 4 factors) we will take season out from new reduced_model.
+
+```{r reduced model 1 residuals}
+
+reduced_1_model = lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description+date,data = data)
+
+summary(reduced_1_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = reduced_1_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 
-```{r}
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_line(aes(x = date,y = noRides,color = "actual"))+
+  geom_line(aes(x = date,y = pred,color = "predicted"))+
+  geom_line(aes(x = date,y = resid,color = "residuals"))+
+  geom_ref_line(h = 0)+
+  scale_color_manual(values = colors))
 
 ```
 
-As we can see excluding variables from model doesn't make it worse, we can also use anova test function from stats package to check model varable significance.
+As we can see excluding variables from model doesn't make it worse, we can also use anova test function from stats package to check model varable significance. But firstly we would like to get best best model with possible minimum variables. For this purpose we can inspect p-value from model summary, it says how significant separate variable in model predictions, less p-value - more significant. So we would like to exclude snow, and combined term ow weather_impact and description out of model.
 
-```{r}
+```{r reduced model 2 residuals}
+
+reduced_2_model = lm(noRides ~ tavg+pres+stringency+weather_impact+description+date,data = data)
+
+summary(reduced_2_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = reduced_2_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+
+
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_line(aes(x = date,y = noRides,color = "actual"))+
+  geom_line(aes(x = date,y = pred,color = "predicted"))+
+  geom_line(aes(x = date,y = resid,color = "residuals"))+
+  geom_ref_line(h = 0)+
+  scale_color_manual(values = colors))
 
 ```
+
+As we can see removing snow and separation of weather_impact and description, increased model quality with reducing residual standard error. Anova test between these two models also doesn't show significant difference `r anova(reduced_2_model,reduced_1_model)[["Pr(>F)"]][2]` because p-value is 0.85>>0.05.
+
+After few iterations we get to a model that contains only strictness of the policy restrictions, temperature and data. Represented model explains also explains most of the observations with relatively low residual standard error, but it is minimal for excluding, because anova significance difference between models without any of remaining predictors has p-value<0.05. So we get to our final model, that explains number of KeXi Rides using temperature, covid strictness level and date(positive growing trend). 
+
+```{r reduced model 3 residuals}
+
+reduced_3_model = lm(noRides ~ season+tavg+stringency+date,data = data)
+
+summary(reduced_3_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = reduced_3_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+
+
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_line(aes(x = date,y = noRides,color = "actual"))+
+  geom_line(aes(x = date,y = pred,color = "predicted"))+
+  geom_line(aes(x = date,y = resid,color = "residuals"))+
+  geom_ref_line(h = 0)+
+  scale_color_manual(values = colors))
+
+```
+
+After performing a minimal model we also want to check once again how residuals are distributed and some additional statistics metrics.
+
+```{r residual destributions 3}
+
+barplot <- ggplot(test_data, aes(x = resid ))+
+  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=9)+
+  geom_density( fill="#FF6666",adjust = 10,alpha = 0.5) +
+  ggtitle("Final model residuals")
+
+ggplotly(barplot)
+
+```
+
+We see normal distributed variable with skewness to the legt with 3 outliers at the left (analysis of individual days shows, that extremely low number of rides were when operator collecting data has changed so this is data specific problem that could be ignored or excluded from model)
+```{r}
+test_data = test_data %>% filter(resid>=-50)
+```
+
+```{r, out.width="100%",warning=FALSE}
+normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
+plot(normal_dist)
+```
+
+```{r residuals verteilung}
+fitdistrplus::descdist(test_data$resid)
+```
+
+So our residuals are normally distributed :)
 
 Excluding more variables from a model doesn't impove model as well increases residual error enormous, so we can make conclusion, that represented model is minimal fitting possible with variables that have most impact to number of rides by the weather. Remains only to check residuals of fitted model.  
 
-#Conclusion
+# Conclusion
+
+Performed LINEAR regression analysis shows, that there no strong correlations between number of rides and weather characteristics except of temperature, and temperature is also quite dependent from season, one difference between using season instead of the temperature is that relative temp changes in same season isn't inspected, so it can be that relative fall of the temperature in summer also strongly impacts mobility. Also data was collected during covid-19 pandemie, so stringency-strictness is also significant by building an model. In the end date is used in the model, because there are positive growing trend with using KeXi ride service.
 
