@@ -302,7 +302,7 @@ Residuals histogram
 
 barplot <- ggplot(test_data, aes(x = resid ))+
   geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=7)+
-  geom_density( fill="#FF6666",adjust = 10,alpha = 0.5) +
+  geom_density( fill="#FF6666",adjust = 1,alpha = 0.5) +
   ggtitle("Omega model residuals")
 
 ggplotly(barplot)

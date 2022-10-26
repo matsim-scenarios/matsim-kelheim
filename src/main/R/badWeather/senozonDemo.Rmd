@@ -1,0 +1,209 @@
+---
+title: "Bad weather Kelheim Demo"
+author: "Oleksandr Soboliev"
+output:
+  html_document:
+    df_print: paged
+    code_folding: "hide"
+runtime: shiny
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r, include= FALSE}
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(leaflet)
+library(rmarkdown)
+library(modelr)
+library(splines)
+library(forecast)
+library(fitdistrplus)
+library(rjson)
+```
+
+
+# Data
+
+Data is taken from these resources:
+
+* Ingolstadt Weather from Meteostat [Meteostat](https://bulk.meteostat.net/v2/) 
+* Weather Description from weatherstack [Weatherstck](https://svn.vsp.tu-berlin.de/repos/shared-svn/projects/KelRide/data/badWeather/weatherstack/)
+* Mobility data provided by senozon (/public-svn/matsim/scenarios/countries/de/episim/mobilityData/)
+* Stringency (strictness of covid policies) number is from [Oxford COVID-19 Government Response Tracker](https://covidtracker.bsg.ox.ac.uk/)
+* Holiday days are from [Feiertage](https://feiertage-api.de/)
+
+# Regression analysis resources
+
+Analysis was proceeded using this statistical sources:
+
+* Linear Models with R (Julian J. Faraway)
+
+# Importing and preparing data
+
+Main target is to get result table containing all "expected" relevant data/variables that can be connected with changes of home activities in Kelheim region, thus mobility data is collected on daily basis, remaining data has to be daily based.
+
+After obtaining such table it would be useful(in sense of building a model and understanding the data) to check correlations between individual independent variable to dependent mobility variable. So the next chapter has a focus on filtering out unrelevant data to pass it to the model.
+
+
+```{r importing, message=FALSE,echo=FALSE,warning=FALSE}
+
+# Ingolstadt weather
+ingolstadt_weather = read_delim("https://bulk.meteostat.net/v2/daily/10860.csv.gz",",",col_names = FALSE)
+colnames(ingolstadt_weather) = c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
+
+# Weatherstack data
+weatherstack_kelheim = read_delim("data/Kelheim_weather_since_july_2008.csv",delim = ",")
+
+# Stringency
+json = fromJSON(file = "data/2022-10-08.json")
+json = unlist(json)
+
+#Mobility
+snz_mobility = read_delim("data/LK_mobilityData_weekdays.csv",";")
+snz_mobility_kelheim = snz_mobility %>% filter(Landkreis == "Landkreis Kelheim") %>% mutate(source = "senozon") %>% dplyr::select(-outOfHomeDuration) %>% rename(not_at_home_change = percentageChangeComparedToBeforeCorona)
+snz_mobility_kelheim$date = as.Date(strptime(snz_mobility_kelheim$date,"%Y%m%d"))
+
+#Holidays
+holidays2020 = read_csv2("data/Holidays2020.csv") %>% dplyr::select(1,2,3)
+holidays2021 = read_csv2("data/Holidays2021.csv") %>% dplyr::select(1,2,3)
+holidays2022 = read_csv2("data/Holidays2022.csv") %>% dplyr::select(1,2,3)
+holidays = rbind(holidays2020,holidays2021,holidays2022)
+holidays = holidays %>% mutate(EndDateTime1 = as.Date(mdy_hm(EndDateTime1)),
+                               StartDateTime1 = as.Date(mdy_hm(StartDateTime1)))
+
+holiday_days = c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days"))
+
+for(i in 1:nrow(holidays)){
+  holiday_days = append(holiday_days,seq(holidays$StartDateTime1[i],holidays$EndDateTime1[i],by = "days"))
+}
+
+df_holidays = data.frame(date = holiday_days,isHoliday = TRUE)
+
+```
+
+
+#Modify and join data
+
+```{r modify and join}
+
+#Mobility
+
+snz_mobility_kelheim_year_week = snz_mobility_kelheim %>% 
+  mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
+  group_by(year_week) %>%
+  summarize(date = first(date),not_at_home_change = mean(not_at_home_change))
+
+# Weatherstack
+type_of_weather = unique(weatherstack_kelheim$description)
+
+weatherstack_kelheim_year_week = weatherstack_kelheim %>% mutate(year_week = paste0(isoyear(date),"-",isoweek(date)))
+
+week_description_impact = weatherstack_kelheim_year_week %>% group_by(year_week) %>% count(description)
+
+week_description_impact = week_description_impact %>% pivot_wider(names_from = description,values_from = n)
+
+#remove NAs
+week_description_impact[is.na(week_description_impact)] = 0
+
+
+# Stringency 
+deu_stringency = json[grep("DEU.stringency_actual",names(json))]
+date_stringency = sapply(strsplit(names(deu_stringency),split = ".",fixed = TRUE),"[[",2)
+df_stringency = data.frame(date = date_stringency,stringency = deu_stringency)
+df_stringency = df_stringency %>% mutate(year_week = paste0(year(date),"-",isoweek(date)),stringency = as.numeric(stringency))%>%ungroup() %>% group_by(year_week) %>% summarize(stringency = mean(stringency))
+
+
+
+# Ingolstadt
+type_of_weather = unique(weatherstack_kelheim$description)
+map_vector <- c("Clear","Sunny","Cloudy","Light","Light","Light","Light","Light","Light","Light","Light","Medium","Cloudy","Light","Light","Heavy","Heavy","Heavy","Light","Medium","Heavy","Heavy","Light","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Light","Medium","Medium","Light","Heavy","Light","Light","Light","Light","Light","Heavy","Light","Medium","Heavy","Heavy","Heavy")
+names(map_vector)<- type_of_weather
+
+
+ingolstadt_weather_weekly = ingolstadt_weather%>%filter(year(date)>=2020) %>% replace_na(list(snow = 0)) %>%
+  mutate(year_week = paste0(isoyear(date),"-",isoweek(date))) %>%
+  group_by(year_week) %>%
+  summarize(date = first(date), prcp_week = sum(prcp), tavg= mean(tavg),snow_week =sum( snow),wspd = mean(wspd),tmax = max(tmax)) %>%
+  arrange(year_week)
+
+ingolstadt_weather_weekly = ingolstadt_weather_weekly %>% 
+  mutate(season = ifelse(month(date) %in% c(12,1,2),"winter",NA)) %>%
+  mutate(season = ifelse(month(date) %in% c(3,4,5),"spring",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(9,10,11),"autumn",season))# %>% dplyr::select(-tsun)
+
+day_description_impact = weatherstack_kelheim_daily %>% pivot_wider(names_from = description,values_from = n)
+
+#remove NAs
+day_description_impact[is.na(day_description_impact)] = 0
+
+day_description_impact = day_description_impact %>% pivot_longer(cols = all_of(type_of_weather),names_to = "description",values_to = "value")
+
+day_description_impact = day_description_impact
+day_description_impact$description = map_vector[(day_description_impact$description)]
+
+day_description_impact= day_description_impact %>% group_by(date)%>%
+  top_n(n = 1,value) %>% group_by(date) %>% top_n(n = 1,description) %>% rename(weather_impact = value)
+
+#####Join the data#####
+
+result_data = snz_mobility_kelheim_year_week %>% inner_join(week_description_impact, by = "year_week") %>% inner_join(ingolstadt_weather_weekly,by = "year_week") %>% inner_join(df_stringency,by = "year_week")
+
+#Append holidays
+result_data = result_data #%>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0)) #%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
+
+
+result_data_longer = result_data %>% pivot_longer(cols = all_of(type_of_weather),names_to = "description",values_to = "value")# %>% filter(value!=0)
+
+description_impact_overall = mob_joined_with_ingolstadt_description_longer %>% 
+  filter(value!=0) %>% #mutate(value = value*not_at_home_change)%>% mutate(value = ifelse(value>0,value*not_at_home_change,-value*not_at_home_change)) %>%
+  group_by(description) %>% summarize(impact = mean(not_at_home_change))
+
+map_vector <- c("Clear","Sunny","Cloudy","Light","Light","Light","Light","Light","Light","Light","Light","Medium","Cloudy","Light","Light","Heavy","Heavy","Heavy","Light","Medium","Heavy","Heavy","Light","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Light","Medium","Medium","Light","Heavy","Light","Light","Light","Light","Light","Heavy","Light","Medium","Heavy","Heavy","Heavy")
+names(map_vector)<- type_of_weather
+result_data_longer_mapped = result_data_longer
+result_data_longer_mapped$description = map_vector[(result_data_longer_mapped$description)]
+
+description_impact = result_data_longer_mapped %>% group_by(year_week)%>%
+  top_n(1,value)
+
+description_impact_max = result_data_longer_mapped %>% group_by(year_week)%>%
+  top_n(1,value) %>% group_by(description) %>% summarize(impact = mean(not_at_home_change))
+
+week_calender = as.Date(seq(ISOdate(2014,1,3),ISOdate(2022,12,1),by="week"))
+week_calender = data.frame(date = week_calender)
+week_calender = week_calender %>% mutate(year_week = paste0(year(date),"-",isoweek(date)))
+
+result_data_longer_mapped = result_data_longer_mapped %>% 
+  inner_join(week_calender,by = "year_week")
+
+result_data = description_impact
+plot_ly(data = description_impact_max,x = ~description,y = ~impact,type= "bar")
+
+
+head(result_data)
+```
+
+```{r}
+train_data = result_data%>% dplyr::select(-date.y)%>%rename(date = date.x) %>% left_join(df_holidays, by ="date") %>% replace_na(list(isHoliday = FALSE))
+```
+
+# Selecting predictors
+
+```{r best predictors}
+best_pred <- train_data %>% ungroup() %>%
+  dplyr::select(-not_at_home_change,-description ,-year_week,-date,-value,-season) %>%
+  map_dbl(cor,y = train_data$not_at_home_change) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print(best_pred)
+```
+
+Compared to demand of KeXi stringency is more valuable term in 
+
+
+
+
+

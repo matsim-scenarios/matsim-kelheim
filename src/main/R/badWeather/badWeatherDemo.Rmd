@@ -139,7 +139,6 @@ weatherstack_kelheim_weekly = weatherstack_kelheim_daily %>%
   group_by(year_week) %>%
   summarize(description = description,date = first(date), precip_week = sum(precip_day),visibility_mean = mean(visibility_mean),totalsnow_weekly =sum( totalsnow_daily))
 weatherstack_kelheim_weekly = unique(weatherstack_kelheim_weekly)
-print(weatherstack_kelheim_weekly)
 
 #Berlin
   
