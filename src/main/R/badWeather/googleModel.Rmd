@@ -296,7 +296,7 @@ From the p-value we can see that null hypothesis can only be rejected for descri
 After determination of significant variables we can build different models using different set of variables, one thing remains same - first approach is to build linear model to make predictions, also to check which predictors impact number of rides most. In our approach we will firstly larger model using all relevant variables from previous chapter, then we reduce number of variables taking smaller subset and synchronous to check how model quality changes. 
 
 ```{r omega model}
-data = result_data
+data = result_data %>% filter(wday !=6 & wday !=7 & isHoliday==FALSE)
 
 omega_model = lm(notAtHomeChange ~ tavg+pres+stringency+snow+weather_impact*description,data = data)
 
@@ -310,7 +310,7 @@ Low adjusted R^2 doesn't tells that our model doesn't fit the data. Let's take a
 
 colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
 model = omega_model
-test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal")) 
 
 
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
@@ -357,7 +357,7 @@ Residuals histogram
 ```{r residual destributions 1}
 
 barplot <- ggplot(test_data, aes(x = resid ))+
-  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=2)+
+  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=1)+
   ggtitle("Omega model residuals")
 
 ggplotly(barplot)
@@ -428,19 +428,18 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
 
 ```
 
-After performing a minimal model we also want to check once again how residuals are distributed and some additional statistics metrics.
 
 ```{r residual destributions 3}
 
 barplot <- ggplot(test_data, aes(x = resid ))+
-  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=9)+
+  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=1)+
   ggtitle("Final model residuals")
 
 ggplotly(barplot)
 
 ```
 
-We see normal distributed variable with skewness to the legt with 3 outliers at the left (analysis of individual days shows, that extremely low number of rides were when operator collecting data has changed so this is data specific problem that could be ignored or excluded from model)
+
 ```{r}
 test_data = test_data %>% filter(resid>=-50)
 ```
@@ -450,11 +449,9 @@ normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
 plot(normal_dist)
 ```
 
-So our residuals are normally distributed :)
 
-Excluding more variables from a model doesn't impove model as well increases residual error enormous, so we can make conclusion, that represented model is minimal fitting possible with variables that have most impact to number of rides by the weather. Remains only to check residuals of fitted model.  
 
 # Conclusion
 
-Performed LINEAR regression analysis shows, that there no strong correlations between number of rides and weather characteristics except of temperature, and temperature is also quite dependent from season, one difference between using season instead of the temperature is that relative temp changes in same season isn't inspected, so it can be that relative fall of the temperature in summer also strongly impacts mobility. Also data was collected during covid-19 pandemie, so stringency-strictness is also significant by building an model. In the end date is used in the model, because there are positive growing trend with using KeXi ride service.
+
 
