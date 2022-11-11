@@ -555,7 +555,7 @@ train_data = description_impact %>% left_join(df_holidays, by ="date") %>% repla
 
 
 
-first_model = lm(not_at_home_change ~ ns(tavg,2)+stringency+description+isHoliday+date,
+first_model = lm(not_at_home_change ~ season+stringency+description+date,
                  data = train_data)
 stringency_coef = first_model$coefficients[3]
 
@@ -564,7 +564,7 @@ stringency_coef = first_model$coefficients[3]
 second_model = lm(not_at_home_change ~ ns(tavg,1)+date+snow_week+prcp_week+description+isHoliday,
                  data = train_data)
 
-mass_model = MASS::rlm(not_at_home_change ~ ns(tavg,2)+date+stringency+description,
+mass_model = MASS::rlm(not_at_home_change ~ ns(tavg,1)+date+stringency+season,
                  data = train_data)
 summary(first_model)
 ```

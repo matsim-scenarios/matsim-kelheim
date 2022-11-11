@@ -187,14 +187,18 @@ head(result_data)
 ```
 
 ```{r}
-train_data = result_data%>% dplyr::select(-date.y)%>%rename(date = date.x) %>% left_join(df_holidays, by ="date") %>% replace_na(list(isHoliday = FALSE))
+result_data = read.csv("data/week_data_snz.csv")
+```
+
+```{r}
+train_data = result_data
 ```
 
 # Selecting predictors
 
 ```{r best predictors}
 best_pred <- train_data %>% ungroup() %>%
-  dplyr::select(-not_at_home_change,-description ,-year_week,-date,-value,-season) %>%
+  dplyr::select(-not_at_home_change,-landkreis,-description ,-year_week,-date,-value,-season) %>%
   map_dbl(cor,y = train_data$not_at_home_change) %>%
   #map_dbl(abs) %>%
   sort(decreasing = TRUE) 

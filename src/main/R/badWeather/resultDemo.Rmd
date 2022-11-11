@@ -1,7 +1,9 @@
 ---
 title: "Bad weather Kelheim Demo"
 author: "Oleksandr Soboliev"
-output: pdf_document
+output: 
+  html_document:
+    code_folding: hide
 runtime: shiny
 editor_options:
   chunk_output_type: inline
@@ -126,7 +128,7 @@ day_description_impact= day_description_impact %>% group_by(date)%>%
 
 #####Join the data#####
 
-result_data = demand %>% inner_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
+result_data = demand %>% left_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
 #Also need to be added weekday
 result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1)))
 
@@ -179,8 +181,8 @@ Here is summary of end dataset
 ```{r table}
 result_data$description = factor(result_data$description)
 result_data$season = factor(result_data$season)
-result_sum  = data.frame(c("noRides","description","tavg","tmin","tmax","prcp","snow","wspd","wpgt","pres","tsun"),c("Number of rides in day (dependent variable)","Weather description","The average air temperature in °C","The minimum air temperature in °C	","The maximum air temperature in °C","The daily precipitation total in mm","The maximum snow depth in mm","The average wind speed in km/h","The peak wind gust in km/h","The average sea-level air pressure in hPa","The daily sunshine total in minutes (m)"))
-colnames(result_sum) = c("Variable","Description")
+result_sum  = data.frame(c("noRides","description","weather_impact","tavg","tmin","tmax","prcp","snow","wspd","wpgt","pres"),c("Number of rides in day (dependent variable)","Weather description - the type of the weather with highest absolute duration among descriptions during a day","Number of hours of selected description with maximal hours a day","The average air temperature in °C","The minimum air temperature in °C	","The maximum air temperature in °C","The daily precipitation total in mm","The maximum snow depth in mm","The average wind speed in km/h","The peak wind gust in km/h","The average sea-level air pressure in hPa"),c("Mean: 80.2","Clear, Cloudy, Heavy, Light, Medium, Sunny","Mean: 12 °C","Mean: 10.37 °C","Mean: 5.81 °C","Mean: 15.06","Mean: 1.76","Mean: 0.2348","Mean: 8.6 km/h","Mean: 32.75 km/h","Mean: 1019.3 hPa"))
+colnames(result_sum) = c("Variable","Description","Stat")
 knitr::kable(result_sum)
 ```
 
@@ -267,6 +269,7 @@ After looking at these plots we can barely see existing strong dependencies or c
 Correlation coefficients between two variables we calculate using cor() function, later anova oneway test will be used for testing to check categorical variable dependency. 
 
 ```{r correlations, warning = FALSE}
+
 best_pred <- result_data %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
   map_dbl(cor,y = result_data$noRides) %>%
@@ -298,7 +301,7 @@ After determination of significant variables we can build different models using
 ```{r omega model}
 data = result_data
 
-omega_model = lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description,data = data)
+omega_model = lm(noRides ~ tavg+pres+stringency+snow,data = data)
 
 summary(omega_model)
 
@@ -330,7 +333,7 @@ As we can see from our residuals plot our data has continuous growing trend, tha
 
 ```{r omega date residuals,out.width="100%"}
 
-omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description+date+season,data = data)
+omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+date+season,data = data)
 
 summary(omega_date_model)
 
@@ -364,9 +367,43 @@ ggplotly(barplot)
 
 ```
 
-```{r, out.width="100%",warning=FALSE}
-normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
-plot(normal_dist)
+```{r,out.width="100%"}
+m <- mean(test_data$resid)
+s <- sd(test_data$resid)
+n <- nrow(test_data)
+p <- (1 : n) / n - 0.5 / n
+plot1 = ggplotly(ggplot(test_data) + 
+     geom_qq(aes(sample = rnorm(resid,10,4)))+
+     geom_abline(intercept = 10, slope = 4,
+                 color = "red", size = 1.5, alpha = 0.8))
+plot2 = ggplotly(ggplot(test_data)+
+  geom_point(aes(x = p, y = sort(pnorm(resid, m, s))))+
+  geom_abline(
+                 color = "red",size = 1.5,alpha =0.8))
+
+anno = list( 
+  list( 
+     x = 0.2,  
+    y = 1.0,  
+    text = "Normal QQ Plot",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ),  
+  list( 
+     x = 0.75,  
+    y = 1.0,  
+    text = "Normal PP Plot",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ))
+
+subplot(plot1,plot2) %>% layout(annotations = anno)
 ```
 
 # Reducing a model
@@ -446,9 +483,44 @@ We see normal distributed variable with skewness to the legt with 3 outliers at 
 test_data = test_data %>% filter(resid>=-50)
 ```
 
-```{r, out.width="100%",warning=FALSE}
-normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
-plot(normal_dist)
+
+```{r,out.width="100%"}
+m <- mean(test_data$resid)
+s <- sd(test_data$resid)
+n <- nrow(test_data)
+p <- (1 : n) / n - 0.5 / n
+plot1 = ggplotly(ggplot(test_data) + 
+     geom_qq(aes(sample = rnorm(resid,10,4)))+
+     geom_abline(intercept = 10, slope = 4,
+                 color = "red", size = 1.5, alpha = 0.8))
+plot2 = ggplotly(ggplot(test_data)+
+  geom_point(aes(x = p, y = sort(pnorm(resid, m, s))))+
+  geom_abline(
+                 color = "red",size = 1.5,alpha =0.8))
+
+anno = list( 
+  list( 
+     x = 0.2,  
+    y = 1.0,  
+    text = "Normal QQ Plot",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ),  
+  list( 
+     x = 0.75,  
+    y = 1.0,  
+    text = "Normal PP Plot",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ))
+
+subplot(plot1,plot2) %>% layout(annotations = anno)
 ```
 
 So our residuals are normally distributed :)

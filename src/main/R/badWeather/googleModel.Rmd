@@ -142,6 +142,24 @@ result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na
 head(result_data)
 ```
 
+```{r adding tmean for season}
+
+summer = mean(result_data$tavg[result_data$season == "summer"])
+
+spring = mean(result_data$tavg[result_data$season == "spring"])
+
+autumn = mean(result_data$tavg[result_data$season == "autumn"])
+
+winter = mean(result_data$tavg[result_data$season == "winter"])
+
+result_data = result_data %>% 
+  mutate(tdiff = ifelse(season == "winter",tavg-winter,NA)) %>%
+  mutate(tdiff = ifelse(season == "spring",tavg-spring,tdiff)) %>%
+  mutate(tdiff = ifelse(season == "autumn",tavg-autumn,tdiff)) %>%
+  mutate(tdiff = ifelse(season == "summer",tavg-summer,tdiff))
+
+```
+
 
 From following plots we can see strong correlation between day of the week and number of Rides, because we want to simulate common day using MatSim it was decided to filter weekends out of resulting dataset for the model. Also because day doesn't represent weather impact, like holidays that have strong impact on mobility so they are also excluded. First 4 days are excluded, because they have 0 rides due to KeXi service start.
 
@@ -406,7 +424,7 @@ After few iterations we get to a model that contains only strictness of the poli
 
 ```{r reduced model 3 residuals,out.width="100%"}
 
-reduced_3_model = lm(notAtHomeChange ~ season+tavg+stringency+date,data = data)
+reduced_3_model = lm(notAtHomeChange ~ season+stringency+date,data = data)
 
 summary(reduced_3_model)
 
