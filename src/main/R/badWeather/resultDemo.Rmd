@@ -54,7 +54,7 @@ colnames(ingolstadt_weather) = c("date", "tavg", "tmin", "tmax", "prcp", "snow",
 weatherstack_kelheim = read_delim("data/Kelheim_weather_since_july_2008.csv",delim = ",")
 
 # Stringency
-json = fromJSON(file = "data/2022-10-08.json")
+json = fromJSON(file = "data/2022-11-10.json")
 json = unlist(json)
 
 #Mobility
@@ -138,7 +138,52 @@ result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na
 head(result_data)
 ```
 
-From following plots we can see strong correlation between day of the week and number of Rides, because we want to simulate common day using MatSim it was decided to filter weekends out of resulting dataset for the model. Also because day doesn't represent weather impact, like holidays that have strong impact on mobility so they are also excluded. First 4 days are excluded, because they have 0 rides due to KeXi service start.
+```{r adding tmean for season}
+
+summer = mean(result_data$tavg[result_data$season == "summer"])
+
+spring = mean(result_data$tavg[result_data$season == "spring"])
+
+autumn = mean(result_data$tavg[result_data$season == "autumn"])
+
+winter = mean(result_data$tavg[result_data$season == "winter"])
+
+result_data = result_data %>% 
+  mutate(tdiff = ifelse(season == "winter",tavg-winter,NA)) %>%
+  mutate(tdiff = ifelse(season == "spring",tavg-spring,tdiff)) %>%
+  mutate(tdiff = ifelse(season == "autumn",tavg-autumn,tdiff)) %>%
+  mutate(tdiff = ifelse(season == "summer",tavg-summer,tdiff))
+
+```
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+From following plots we can see strong correlation between day of the week and number of Rides, because we want to simulate common day using MatSim it was decided to filter weekends out of resulting dataset for the model. Also because day doesn't represent weather impact, like holidays that have strong impact on mobility so they are also excluded. First 4 days are excluded, because they have 0 rides due to KeXi service start.  
+
+
+
+
+
+
+
+
 
 ```{r plotting wday and holidays}
 wday_plot = ggplotly(ggplot(result_data)+
@@ -181,10 +226,37 @@ Here is summary of end dataset
 ```{r table}
 result_data$description = factor(result_data$description)
 result_data$season = factor(result_data$season)
-result_sum  = data.frame(c("noRides","description","weather_impact","tavg","tmin","tmax","prcp","snow","wspd","wpgt","pres"),c("Number of rides in day (dependent variable)","Weather description - the type of the weather with highest absolute duration among descriptions during a day","Number of hours of selected description with maximal hours a day","The average air temperature in °C","The minimum air temperature in °C	","The maximum air temperature in °C","The daily precipitation total in mm","The maximum snow depth in mm","The average wind speed in km/h","The peak wind gust in km/h","The average sea-level air pressure in hPa"),c("Mean: 80.2","Clear, Cloudy, Heavy, Light, Medium, Sunny","Mean: 12 °C","Mean: 10.37 °C","Mean: 5.81 °C","Mean: 15.06","Mean: 1.76","Mean: 0.2348","Mean: 8.6 km/h","Mean: 32.75 km/h","Mean: 1019.3 hPa"))
+result_sum  = data.frame(c("noRides","description","weather_impact","tavg","tmin","tmax","prcp","snow","wspd","wpgt","pres","tdiff"),c("Number of rides in day (dependent variable)","Weather description - the type of the weather with highest absolute duration among descriptions during a day","Number of hours of selected description with maximal hours a day","The average air temperature in °C","The minimum air temperature in °C	","The maximum air temperature in °C","The daily precipitation total in mm","The maximum snow depth in mm","The average wind speed in km/h","The peak wind gust in km/h","The average sea-level air pressure in hPa","Difference between season mean temperature and daily average temperature"),c("Mean: 80.2","Clear, Cloudy, Heavy, Light, Medium, Sunny","Mean: 12 °C","Mean: 10.37 °C","Mean: 5.81 °C","Mean: 15.06","Mean: 1.76","Mean: 0.2348","Mean: 8.6 km/h","Mean: 32.75 km/h","Mean: 1019.3 hPa","Mean: 0.12701 °C"))
 colnames(result_sum) = c("Variable","Description","Stat")
 knitr::kable(result_sum)
 ```
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Finding patterns using graphic approach
@@ -269,8 +341,8 @@ After looking at these plots we can barely see existing strong dependencies or c
 Correlation coefficients between two variables we calculate using cor() function, later anova oneway test will be used for testing to check categorical variable dependency. 
 
 ```{r correlations, warning = FALSE}
-
-best_pred <- result_data %>% ungroup() %>%
+temp = result_data %>% filter(season == "summer")
+best_pred <- result_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
   map_dbl(cor,y = result_data$noRides) %>%
   #map_dbl(abs) %>%
@@ -279,7 +351,7 @@ print(best_pred)
 
 ```
 
-As a result highest absolute score in correlation have temperature(max during a day), snow(depth in mm), pressure(air pressure in hPa), stringency(strictness of covid19 policy), weather impact(highest hours of same description a day).
+As a result highest absolute score in correlation have wspd(average windspeed), wpgt(peak wind gust), tdiff(seasonal temperature difference), pressure(air pressure in hPa), stringency(strictness of covid19 policy), weather impact(highest hours of same description a day).
 
 
 Testing of null hypothesis is made for dependent noRides and independent season, description and wday
@@ -301,7 +373,7 @@ After determination of significant variables we can build different models using
 ```{r omega model}
 data = result_data
 
-omega_model = lm(noRides ~ tavg+pres+stringency+snow,data = data)
+omega_model = lm(noRides ~ tavg+pres+stringency+snow+wspd,data = data)
 
 summary(omega_model)
 
@@ -321,6 +393,10 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
   geom_point(aes(x = date,y = pred,color = "predicted"))+
   scale_color_manual(values = colors)+
   ggtitle("Model fit without date"))
+```
+ 
+
+```{r ,out.width="100%"}
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
             geom_line(aes(x = date,y = resid,color = "residuals"))+
             geom_ref_line(h = 0)+
@@ -333,10 +409,31 @@ As we can see from our residuals plot our data has continuous growing trend, tha
 
 ```{r omega date residuals,out.width="100%"}
 
-omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+date+season,data = data)
+omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+date+season+wspd,data = data)
 
 summary(omega_date_model)
+```
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+  
+   
+    
+     
+      
+       
+  
+   
+    
+     
+      
 
+```{r,out.width="100%"}
 colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
 model = omega_date_model
 test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
@@ -355,7 +452,27 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
 ```
 
 As expected R^2 squared increased as well residual standard error is decreased to a number of 15,99. ~0.7 of R-squared is relatively high in weather statistics. To check correctness of used approach residuals have to be normally distributed.
-
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+  
+   
+    
+     
+      
+       
+  
+   
+ 
 Residuals histogram
 ```{r residual destributions 1}
 
@@ -412,7 +529,7 @@ Let's take some variables out and see how model performs on the data and F Stati
 
 ```{r reduced model 1 residuals}
 
-reduced_1_model = lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description+date,data = data)
+reduced_1_model = lm(noRides ~ tavg+pres+stringency+snow+date+wspd,data = data)
 
 summary(reduced_1_model)
 
@@ -426,7 +543,7 @@ As we can see excluding variables from model doesn't make it worse residual st. 
 
 ```{r reduced model 2 residuals,message=FALSE,echo=FALSE,include=FALSE}
 
-reduced_2_model = lm(noRides ~ tavg+pres+stringency+weather_impact+description+date,data = data)
+reduced_2_model = lm(noRides ~ tavg+pres+stringency+date,data = data)
 
 summary(reduced_2_model)
 
@@ -438,13 +555,15 @@ test_data = data %>% add_predictions(model = model) %>% add_residuals(model = mo
 
 ```
 
-As we can see removing snow and separation of weather_impact and description, increased model quality with reducing residual standard error. Anova test between these two models also doesn't show significant difference `r anova(reduced_2_model,reduced_1_model)[["Pr(>F)"]][2]` because p-value is 0.85>>0.05.
+As we can see removing snow and separation of weather_impact and description, increased model quality with reducing residual standard error. Anova(analysis of variance) test between these two models also doesn't show significant difference `r anova(reduced_2_model,reduced_1_model)[["Pr(>F)"]][2]` because p-value is much greater than 0.05.
 
-After few iterations we get to a model that contains only strictness of the policy restrictions, temperature and data. Represented model explains also explains most of the observations with relatively low residual standard error, but it is minimal for excluding, because anova significance difference between models without any of remaining predictors has p-value<0.05. So we get to our final model, that explains number of KeXi Rides using temperature, covid strictness level and date(positive growing trend). 
+After few iterations we get to a model that contains only strictness of the policy restrictions, temperature and data. Represented model explains also explains most of the observations with relatively low residual standard error, but it is minimal for excluding, because anova significance test difference between models without any of remaining predictors has p-value<0.05. So we get to our final model, that explains number of KeXi Rides using temperature, covid strictness level and date(positive growing trend). 
+
+Critical point there, is that using season variable instead of temperature variable doesn't decrease model quality, even slightly increases. As a conclusion temperature plays a role of a season in model by fitting data, because average temperature correlates with season. But filtering a data to a specific season(e.g. summer) with model fit(using temperature), returns a R squared result of 0.809, that is relatively high for an weather analysis. Anova test of model with excluded temperature variable and model with temperature returns a value of 2.14*e^-10, so difference of model with weather and without have significant difference.
 
 ```{r reduced model 3 residuals,out.width="100%"}
-
-reduced_3_model = lm(noRides ~ season+tavg+stringency+date,data = data)
+#data = data %>% filter(season == "summer")
+reduced_3_model = lm(noRides ~ date+tavg,data = data)
 
 summary(reduced_3_model)
 
@@ -458,6 +577,8 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
   geom_point(aes(x = date,y = pred,color = "predicted"))+
   scale_color_manual(values = colors)+
   ggtitle("Final model fit"))
+```
+```{r,,out.width="100%",out.height="95%"}
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
             geom_line(aes(x = date,y = resid,color = "residuals"))+
             geom_ref_line(h = 0)+
@@ -465,9 +586,9 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
             ggtitle("Residuals"))
 
 ```
-
 After performing a minimal model we also want to check once again how residuals are distributed and some additional statistics metrics.
-
+      
+            
 ```{r residual destributions 3}
 
 barplot <- ggplot(test_data, aes(x = resid ))+
@@ -523,9 +644,13 @@ anno = list(
 subplot(plot1,plot2) %>% layout(annotations = anno)
 ```
 
-So our residuals are normally distributed :)
+So our residuals are normally distributed, that is also verified by shapiro wilk normality test because value of test `r shapiro.test(test_data$resid)$p.value` is much greater than 0.05.
 
 Excluding more variables from a model doesn't impove model as well increases residual error enormous, so we can make conclusion, that represented model is minimal fitting possible with variables that have most impact to number of rides by the weather. Remains only to check residuals of fitted model.  
+
+
+
+
 
 # Conclusion
 
