@@ -222,7 +222,7 @@ public class RunKelheimScenario extends MATSimApplication {
                 addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
                 addControlerListenerBinding().to(StrategyWeightFadeout.class).in(Singleton.class);
-                Multibinder<StrategyWeightFadeout.Schedule> schedules = Multibinder.newSetBinder(binder(), StrategyWeightFadeout.Schedule.class);
+                Multibinder<StrategyWeightFadeout.Schedule> schedules = StrategyWeightFadeout.getBinder(binder());
 
                 schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode, "person", 0.75, 0.85));
                 schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice, "person", 0.75, 0.85));

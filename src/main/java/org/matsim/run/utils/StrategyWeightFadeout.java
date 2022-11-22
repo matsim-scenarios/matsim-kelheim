@@ -20,7 +20,9 @@
 
 package org.matsim.run.utils;
 
+import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.population.Person;
@@ -74,7 +76,7 @@ public final class StrategyWeightFadeout implements IterationStartsListener {
 
 			if (settings == null) {
 				log.info("Strategy settings for {} not found", s.name);
-				return;
+				continue;
 			}
 
 			String strategyName = settings.getStrategyName();
@@ -102,7 +104,7 @@ public final class StrategyWeightFadeout implements IterationStartsListener {
 			Optional<GenericPlanStrategy<Plan, Person>> strategy = strategies.stream().filter(st -> st.toString().contains(strategyName)).findFirst();
 
 			if (strategy.isEmpty()) {
-				log.warn("Could not find loaded strategy for {}", strategy);
+				log.warn("Could not find loaded strategy for {}", s.name);
 				return;
 			}
 
@@ -115,6 +117,13 @@ public final class StrategyWeightFadeout implements IterationStartsListener {
 				strategyManager.changeWeightOfStrategy(strategy.get(), s.subpopulation, weight);
 			}
 		}
+	}
+
+	/**
+	 * Get the binder which is needed to add {@link  Schedule}.
+	 */
+	public static Multibinder<Schedule> getBinder(Binder binder) {
+		return Multibinder.newSetBinder(binder, StrategyWeightFadeout.Schedule.class);
 	}
 
 	/**
