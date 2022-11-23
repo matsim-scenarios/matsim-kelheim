@@ -57,24 +57,28 @@ public class PrepareNetwork implements MATSimAppCommand {
 
         Network network = NetworkUtils.readNetwork(networkFile);
         for (Link link : network.getLinks().values()) {
-            if (!link.getAllowedModes().contains("car")){
+            if (!link.getAllowedModes().contains("car")) {
                 continue;
             }
-            boolean isDrtAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(drtOperationArea) ||
-                    MGC.coord2Point(link.getToNode().getCoord()).within(drtOperationArea);
-            boolean isAvAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(avOperationArea) ||
-                    MGC.coord2Point(link.getToNode().getCoord()).within(avOperationArea);
 
-            if (isDrtAllowed) {
-                Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
-                allowedModes.add("drt");
-                link.setAllowedModes(allowedModes);
+            if (drtOperationArea != null) {
+                boolean isDrtAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(drtOperationArea) ||
+                        MGC.coord2Point(link.getToNode().getCoord()).within(drtOperationArea);
+                if (isDrtAllowed) {
+                    Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
+                    allowedModes.add("drt");
+                    link.setAllowedModes(allowedModes);
+                }
             }
 
-            if (isAvAllowed) {
-                Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
-                allowedModes.add("av");
-                link.setAllowedModes(allowedModes);
+            if (avOperationArea != null) {
+                boolean isAvAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(avOperationArea) ||
+                        MGC.coord2Point(link.getToNode().getCoord()).within(avOperationArea);
+                if (isAvAllowed) {
+                    Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
+                    allowedModes.add("av");
+                    link.setAllowedModes(allowedModes);
+                }
             }
         }
 
