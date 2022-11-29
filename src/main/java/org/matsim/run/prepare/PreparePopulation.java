@@ -84,7 +84,7 @@ public class PreparePopulation implements MATSimAppCommand {
 
             // Set car availability to "never" for agents below 18 years old
             // Standardize the attribute "age"
-            String avail = (String) person.getAttributes().getAttribute("sim_carAvailability");
+            String avail = "always";
             Object age = person.getAttributes().getAttribute("microm:modeled:age");
             if (age != null) {
                 PersonUtils.setAge(person, (int) age);
