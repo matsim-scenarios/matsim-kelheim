@@ -30,6 +30,10 @@ import org.matsim.application.prepare.freight.tripExtraction.ExtractRelevantFrei
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
+import org.matsim.contrib.drt.estimator.MultiModalDrtLegEstimator;
+import org.matsim.contrib.drt.estimator.run.DrtEstimatorConfigGroup;
+import org.matsim.contrib.drt.estimator.run.DrtEstimatorModule;
+import org.matsim.contrib.drt.estimator.run.MultiModeDrtEstimatorConfigGroup;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
@@ -274,6 +278,7 @@ public class RunKelheimScenario extends MATSimApplication {
 						builder.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
 								.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
 								.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
+								.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, "drt", "av")
 								.withTripEstimator(PtTripFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
 								.withActivityEstimator(DefaultActivityEstimator.class)
 								.withPruner("d99", new DistanceBasedPruner(3.28179737, 0.16710464))
@@ -329,6 +334,7 @@ public class RunKelheimScenario extends MATSimApplication {
 			controler.addOverridingModule(new MultiModeDrtModule());
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
 
+
             // Add speed limit to av vehicle
             double maxSpeed = controler.getScenario()
                     .getVehicles()
@@ -345,6 +351,14 @@ public class RunKelheimScenario extends MATSimApplication {
                     KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
                 }
             }
+
+			controler.addOverridingModule(new DrtEstimatorModule());
+			MultiModeDrtEstimatorConfigGroup estimatorConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtEstimatorConfigGroup.class);
+
+			// Use estimators with default values
+			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("drt"));
+			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));
+
 
 //            if (intermodal){
 //                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
