@@ -334,6 +334,7 @@ public class RunKelheimScenario extends MATSimApplication {
 			controler.addOverridingModule(new MultiModeDrtModule());
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
 
+			MultiModeDrtEstimatorConfigGroup estimatorConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtEstimatorConfigGroup.class);
 
             // Add speed limit to av vehicle
             double maxSpeed = controler.getScenario()
@@ -353,11 +354,12 @@ public class RunKelheimScenario extends MATSimApplication {
             }
 
 			controler.addOverridingModule(new DrtEstimatorModule());
-			MultiModeDrtEstimatorConfigGroup estimatorConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtEstimatorConfigGroup.class);
 
 			// Use estimators with default values
 			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("drt"));
-			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));
+
+			// TODO: when to include AV?
+			//estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));
 
 
 //            if (intermodal){
