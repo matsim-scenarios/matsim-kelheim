@@ -54,7 +54,7 @@ colnames(ingolstadt_weather) = c("date", "tavg", "tmin", "tmax", "prcp", "snow",
 weatherstack_kelheim = read_delim("data/Kelheim_weather_since_july_2008.csv",delim = ",")
 
 # Stringency
-json = fromJSON(file = "data/2022-11-10.json")
+json = fromJSON(file = "data/2022-10-08.json")
 json = unlist(json)
 
 #Mobility
@@ -155,35 +155,27 @@ result_data = result_data %>%
   mutate(tdiff = ifelse(season == "summer",tavg-summer,tdiff))
 
 ```
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 From following plots we can see strong correlation between day of the week and number of Rides, because we want to simulate common day using MatSim it was decided to filter weekends out of resulting dataset for the model. Also because day doesn't represent weather impact, like holidays that have strong impact on mobility so they are also excluded. First 4 days are excluded, because they have 0 rides due to KeXi service start.  
-
-
-
-
-
-
-
-
 
 ```{r plotting wday and holidays}
 wday_plot = ggplotly(ggplot(result_data)+
@@ -230,20 +222,6 @@ result_sum  = data.frame(c("noRides","description","weather_impact","tavg","tmin
 colnames(result_sum) = c("Variable","Description","Stat")
 knitr::kable(result_sum)
 ```
-
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
-
 
 
 
@@ -338,20 +316,68 @@ After looking at these plots we can barely see existing strong dependencies or c
 
 # Finding correlations
 
-Correlation coefficients between two variables we calculate using cor() function, later anova oneway test will be used for testing to check categorical variable dependency. 
+Correlation coefficients(Pearson coefficient) between two variables we calculate using cor() function, later anova oneway test will be used for testing to check categorical variable dependency. 
 
-```{r correlations, warning = FALSE}
-temp = result_data %>% filter(season == "summer")
+```{r overall correlations, warning = FALSE}
+
 best_pred <- result_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
   map_dbl(cor,y = result_data$noRides) %>%
   #map_dbl(abs) %>%
   sort(decreasing = TRUE) 
+print("overall predictors")
+print(best_pred)
+```
+
+As a result highest absolute score in correlation have wspd(average windspeed), wpgt(peak wind gust), tdiff(seasonal temperature difference), pressure(air pressure in hPa), stringency(strictness of covid19 policy). But for the specific season different variables play different role. Let's examine data subset filtered by season. 
+
+```{r, warning = FALSE}
+summer_pred = result_data %>% filter(season == "summer")
+best_pred <- summer_pred  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
+  map_dbl(cor,y = summer_pred$noRides) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print("summer predictors")
+print(best_pred)
+```
+By comparison with whole dataset we can see that in summer windspeed has less correlation coefficient, and wind directions have different signs. Main sifnificant variable during summer is temperature
+```{r, warning = FALSE}
+autumn_pred = result_data %>% filter(season == "autumn")
+best_pred <- autumn_pred  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
+  map_dbl(cor,y = autumn_pred$noRides) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+
+print("autumn predictors")
+print(best_pred)
+```
+In autumn pressure, windspeed, snow and temperature have the highest correlation to number of rides.
+```{r, warning = FALSE}
+spring_pred = result_data %>% filter(season == "spring")
+best_pred <- spring_pred  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
+  map_dbl(cor,y = spring_pred$noRides) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print("spring predictors")
+print(best_pred)
+```
+Compared to other seasons in spring precipitation have more impact on number of rides, as well as snow and temperature. 
+```{r, warning = FALSE}
+winter_pred = result_data %>% filter(season == "winter")
+best_pred <- winter_pred  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
+  map_dbl(cor,y = winter_pred$noRides) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print("winter predictors")
 print(best_pred)
 
 ```
+In winter windspeed, pressure and temperature have weak correlation with number of rides.
 
-As a result highest absolute score in correlation have wspd(average windspeed), wpgt(peak wind gust), tdiff(seasonal temperature difference), pressure(air pressure in hPa), stringency(strictness of covid19 policy), weather impact(highest hours of same description a day).
 
 
 Testing of null hypothesis is made for dependent noRides and independent season, description and wday
@@ -394,7 +420,20 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
   scale_color_manual(values = colors)+
   ggtitle("Model fit without date"))
 ```
- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r ,out.width="100%"}
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
@@ -413,25 +452,14 @@ omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+date+season+wspd,data 
 
 summary(omega_date_model)
 ```
- 
- 
- 
- 
- 
- 
- 
-  
-  
-   
-    
-     
-      
-       
-  
-   
-    
-     
-      
+
+
+
+
+
+
+
+
 
 ```{r,out.width="100%"}
 colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
@@ -452,27 +480,18 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
 ```
 
 As expected R^2 squared increased as well residual standard error is decreased to a number of 15,99. ~0.7 of R-squared is relatively high in weather statistics. To check correctness of used approach residuals have to be normally distributed.
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
-  
-  
-   
-    
-     
-      
-       
-  
-   
- 
+
+
+
+
+
+
+
+
+
+
+
+
 Residuals histogram
 ```{r residual destributions 1}
 
@@ -529,7 +548,7 @@ Let's take some variables out and see how model performs on the data and F Stati
 
 ```{r reduced model 1 residuals}
 
-reduced_1_model = lm(noRides ~ tavg+pres+stringency+snow+date+wspd,data = data)
+reduced_1_model = lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description+date+wspd,data = data)
 
 summary(reduced_1_model)
 
@@ -543,7 +562,7 @@ As we can see excluding variables from model doesn't make it worse residual st. 
 
 ```{r reduced model 2 residuals,message=FALSE,echo=FALSE,include=FALSE}
 
-reduced_2_model = lm(noRides ~ tavg+pres+stringency+date,data = data)
+reduced_2_model = lm(noRides ~ tavg+pres+stringency+weather_impact+description+date,data = data)
 
 summary(reduced_2_model)
 
@@ -563,7 +582,7 @@ Critical point there, is that using season variable instead of temperature varia
 
 ```{r reduced model 3 residuals,out.width="100%"}
 #data = data %>% filter(season == "summer")
-reduced_3_model = lm(noRides ~ date+tavg,data = data)
+reduced_3_model = lm(noRides ~ tavg+stringency,data = data)
 
 summary(reduced_3_model)
 
@@ -587,8 +606,7 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
 
 ```
 After performing a minimal model we also want to check once again how residuals are distributed and some additional statistics metrics.
-      
-            
+
 ```{r residual destributions 3}
 
 barplot <- ggplot(test_data, aes(x = resid ))+
@@ -649,8 +667,27 @@ So our residuals are normally distributed, that is also verified by shapiro wilk
 Excluding more variables from a model doesn't impove model as well increases residual error enormous, so we can make conclusion, that represented model is minimal fitting possible with variables that have most impact to number of rides by the weather. Remains only to check residuals of fitted model.  
 
 
+# Critical discussion
+
+Predicting potential in our model mostly based on growing trend of number of rides related to service start(linear regression model using only date have r squared of >0.7). In future when population get to know service and user quantity will be stabilized our model will provide other results.
+
+```{r model using only a date,out.width="100%"}
+#data = data %>% filter(season == "summer")
+reduced_3_model = lm(noRides ~ date,data = data)
+
+summary(reduced_3_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = reduced_3_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_point(aes(x = date,y = noRides,color = "actual"))+
+  geom_point(aes(x = date,y = pred,color = "predicted"))+
+  scale_color_manual(values = colors)+
+  ggtitle("Final model fit"))
+```
 
 # Conclusion
 

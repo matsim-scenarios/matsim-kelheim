@@ -1,7 +1,9 @@
 ---
 title: "Bad weather Kelheim Demo"
 author: "Oleksandr Soboliev"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide
 runtime: shiny
 editor_options:
   chunk_output_type: inline
@@ -161,7 +163,7 @@ result_data = result_data %>%
 ```
 
 
-From following plots we can see strong correlation between day of the week and number of Rides, because we want to simulate common day using MatSim it was decided to filter weekends out of resulting dataset for the model. Also because day doesn't represent weather impact, like holidays that have strong impact on mobility so they are also excluded. First 4 days are excluded, because they have 0 rides due to KeXi service start.
+From following plots we can see strong correlation between day of the week and notAtHomeChange, because we want to simulate common day using MatSim it was decided to filter weekends out of resulting dataset for the model. Also because day doesn't represent weather impact, like holidays that have strong impact on mobility so they are also excluded.
 
 ```{r plotting wday and holidays}
 wday_plot = ggplotly(ggplot(result_data)+
@@ -285,6 +287,7 @@ subplot(tavg_plot,pres_plot,prcp_plot,snow_plot,nrows = 2,titleY = TRUE,titleX =
 Correlation coefficients between two variables we calculate using cor() function, later anova oneway test will be used for testing to check categorical variable dependency. 
 
 ```{r correlations, warning = FALSE}
+result_data = result_data %>% filter(wday !=6 & wday !=7 & isHoliday==FALSE)
 best_pred <- result_data %>% ungroup() %>%
   dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
   map_dbl(cor,y = result_data$notAtHomeChange) %>%
@@ -294,7 +297,54 @@ print(best_pred)
 
 ```
 
-As a result highest absolute score in correlation have temperature(max during a day), snow(depth in mm), pressure(air pressure in hPa), stringency(strictness of covid19 policy), weather impact(highest hours of same description a day).
+As a result highest absolute score in correlation have temperature(max during a day), snow(depth in mm), pressure(air pressure in hPa), stringency(strictness of covid19 policy), weather impact(highest hours of same description a day) and windspeed. Let's examine data subset filtered by season. 
+
+```{r, warning = FALSE}
+summer_pred = result_data %>% filter(season == "summer")
+best_pred <- summer_pred  %>% ungroup() %>%
+  dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
+  map_dbl(cor,y = summer_pred$notAtHomeChange) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print("summer predictors")
+print(best_pred)
+```
+By comparison with whole dataset we can see that in summer windspeed has less correlation coefficient, and wind directions have different signs. Main sifnificant variable during summer is temperature, pressure and precipitation.
+```{r, warning = FALSE}
+autumn_pred = result_data %>% filter(season == "autumn")
+best_pred <- autumn_pred  %>% ungroup() %>%
+  dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
+  map_dbl(cor,y = autumn_pred$notAtHomeChange) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+
+print("autumn predictors")
+print(best_pred)
+```
+In autumn pressure, snow and temperature have the highest correlation to number of rides.
+```{r, warning = FALSE}
+spring_pred = result_data %>% filter(season == "spring")
+best_pred <- spring_pred  %>% ungroup() %>%
+  dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
+  map_dbl(cor,y = spring_pred$notAtHomeChange) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print("spring predictors")
+print(best_pred)
+```
+Compared to other seasons in spring precipitation have more impact on home duration, during snow and temperature correlation values decreased. 
+```{r, warning = FALSE}
+winter_pred = result_data %>% filter(season == "winter")
+best_pred <- winter_pred  %>% ungroup() %>%
+  dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
+  map_dbl(cor,y = winter_pred$notAtHomeChange) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print("winter predictors")
+print(best_pred)
+
+```
+In winter correlation between windspeed, pressure, temperature and home duration is week, while correlation with pressure is stronger.
 
 
 Testing of null hypothesis is made for dependent notAtHomeChange and independent season, description and wday
@@ -307,16 +357,16 @@ print(c("season" =season_test,"description" =description_test,"wday" =wday_test)
 
 ```
 
-From the p-value we can see that null hypothesis can only be rejected for description (p.value higher than 0.05), for the wday and season we can't make such conclusion. But one thing that should be also tested is dependency between seasons and temperature - `r oneway.test(result_data$tavg~result_data$season)$p.value`. As we can see temperature dependent from season, so in our future model one of the variable should be dropped.
+From the p-value we can see that null hypothesis can only be rejected for description (p.value higher than 0.05), forseason we can't make such conclusion. But one thing that should be also tested is dependency between seasons and temperature - `r oneway.test(result_data$tavg~result_data$season)$p.value`. As we can see temperature dependent from season, so in our future model one of the variable should be dropped.
 
 # Building a model
 
-After determination of significant variables we can build different models using different set of variables, one thing remains same - first approach is to build linear model to make predictions, also to check which predictors impact number of rides most. In our approach we will firstly larger model using all relevant variables from previous chapter, then we reduce number of variables taking smaller subset and synchronous to check how model quality changes. 
+After determination of significant variables we can build different models using different set of variables, one thing remains same - first approach is to build linear model to make predictions, also to check which predictors impact not at home duration most. In our approach we will firstly larger model using all relevant variables from previous chapter, then we reduce number of variables taking smaller subset and synchronous to check how model quality changes. 
 
 ```{r omega model}
-data = result_data %>% filter(wday !=6 & wday !=7 & isHoliday==FALSE)
+data = result_data
 
-omega_model = lm(notAtHomeChange ~ tavg+pres+stringency+snow+wspd+prcp+season,data = data)
+omega_model = lm(notAtHomeChange ~ tavg+pres+snow+wspd+stringency+prcp+season,data = data)
 
 summary(omega_model)
 
@@ -359,13 +409,16 @@ ggplotly(barplot)
 normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
 plot(normal_dist)
 ```
+
+Also compared to regression analysis provided for number of rides, there are no strong correlation between notAtHomeChange and the date. 
+
 # Reducing a model
 
-Let's take some variables out and see how model performs on the data and F Statistics. Low correlating variables from "Finding correlations" chapter are snow, stringency. Also there is strong correlation between average temperature and a season so our new model should contain only 1 of the predictors, because temperature have most impact on mobility and more large-scaled (season contains only 4 factors) we will take season out from new reduced_model.
+Let's take some variables out and see how model performs on the data and F Statistics. Low correlating variables from "Finding correlations" chapter are snow, stringency. Also there is strong correlation between average temperature and a season so our new model should contain only 1 of the predictors, because temperature have most impact on mobility and more large-scaled (season contains only 4 factors) we will take snow out from new reduced_model.
 
 ```{r reduced model 1 residuals}
 
-reduced_1_model = lm(notAtHomeChange ~ tavg+pres+stringency+date+wspd+season,data = data)
+reduced_1_model = lm(notAtHomeChange ~ tavg+pres+stringency+wspd+season,data = data)
 
 summary(reduced_1_model)
 
@@ -397,7 +450,7 @@ After few iterations we get to a model that contains only strictness of the poli
 
 ```{r reduced model 3 residuals,out.width="100%"}
 
-reduced_3_model = lm(notAtHomeChange ~ season+stringency+season+tavg,data = data)
+reduced_3_model = lm(notAtHomeChange ~ season+stringency+tavg,data = data)
 
 summary(reduced_3_model)
 
@@ -437,9 +490,29 @@ normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
 plot(normal_dist)
 ```
 
+# Critical discussion
 
+Predicting potential in our model mostly based on stringency(strictness of covid-19 policies). R - squared value of model based only on stringency has value of 0.47, but this value is lower than model that using temperature.
+
+```{r model using only a date,out.width="100%"}
+#data = data %>% filter(season == "summer")
+reduced_3_model = lm(notAtHomeChange ~ stringency,data = data)
+
+summary(reduced_3_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = reduced_3_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+
+
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_point(aes(x = date,y = notAtHomeChange,color = "actual"))+
+  geom_point(aes(x = date,y = pred,color = "predicted"))+
+  scale_color_manual(values = colors)+
+  ggtitle("Final model fit"))
+```
 
 # Conclusion
 
-
+Compared to KeXi number of Rides analysis we see stronger correlation between dependent variable (not at home change) and weather characteristics. Built model is more stable, because not at home change in this approach depends additionally on stringency, but not on growing trend of the service use. Also low residual st. error as well R-squared value shows that our model fits the data with high predicting "score".
 
