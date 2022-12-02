@@ -74,13 +74,15 @@ holidays2020 = read_csv2("data/Holidays2020.csv") %>% dplyr::select(1,2,3)
 holidays2021 = read_csv2("data/Holidays2021.csv") %>% dplyr::select(1,2,3)
 holidays2022 = read_csv2("data/Holidays2022.csv") %>% dplyr::select(1,2,3)
 holidays = rbind(holidays2020,holidays2021,holidays2022)
-holidays = holidays %>% mutate(EndDateTime1 = as.Date(mdy_hm(EndDateTime1)),
-                               StartDateTime1 = as.Date(mdy_hm(StartDateTime1)))
+holidays = holidays %>% mutate(EndDateTime1 = as.Date(as.POSIXct(EndDateTime1, format = "%m.%d.%Y %H:%M")),
+                               StartDateTime1 = as.Date(as.POSIXct(StartDateTime1, format = "%m.%d.%Y %H:%M")))
 
-holiday_days = c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days"))
+holiday_days = unique(c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days")))
 
 for(i in 1:nrow(holidays)){
-  holiday_days = append(holiday_days,seq(holidays$StartDateTime1[i],holidays$EndDateTime1[i],by = "days"))
+  if(i!=1){
+      holiday_days = append(holiday_days,seq(holidays$StartDateTime1[i],holidays$EndDateTime1[i],by = "days"))
+  }
 }
 
 df_holidays = data.frame(date = holiday_days,isHoliday = TRUE)
