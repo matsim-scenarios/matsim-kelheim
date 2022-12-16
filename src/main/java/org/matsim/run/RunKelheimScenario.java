@@ -187,6 +187,11 @@ public class RunKelheimScenario extends MATSimApplication {
 			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
 		}
 
+		// Config is always needed
+		MultiModeDrtEstimatorConfigGroup estimatorConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtEstimatorConfigGroup.class);
+		// Use estimators with default values
+		estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("drt"));
+
 		PtFareConfigGroup ptFareConfigGroup = ConfigUtils.addOrGetModule(config, PtFareConfigGroup.class);
 		DistanceBasedPtFareParams distanceBasedPtFareParams = ConfigUtils.addOrGetModule(config, DistanceBasedPtFareParams.class);
 
@@ -334,8 +339,6 @@ public class RunKelheimScenario extends MATSimApplication {
 			controler.addOverridingModule(new MultiModeDrtModule());
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
 
-			MultiModeDrtEstimatorConfigGroup estimatorConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtEstimatorConfigGroup.class);
-
             // Add speed limit to av vehicle
             double maxSpeed = controler.getScenario()
                     .getVehicles()
@@ -354,9 +357,6 @@ public class RunKelheimScenario extends MATSimApplication {
             }
 
 			controler.addOverridingModule(new DrtEstimatorModule());
-
-			// Use estimators with default values
-			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("drt"));
 
 			// TODO: when to include AV?
 			//estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));
