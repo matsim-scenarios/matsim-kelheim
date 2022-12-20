@@ -119,6 +119,9 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--plans", defaultValue = "", description = "Use different input plans")
 	private String planOrigin;
 
+	@CommandLine.Option(names = "--anneal-replanning", defaultValue = "false", description = "Anneal strategy weights")
+	private boolean anneal;
+
 	@CommandLine.Mixin
 	StrategyOptions strategy = new StrategyOptions(StrategyOptions.ModeChoice.subTourModeChoice, "person");
 
@@ -272,40 +275,41 @@ public class RunKelheimScenario extends MATSimApplication {
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
+				if (anneal) {
+					addControlerListenerBinding().to(StrategyWeightFadeout.class).in(Singleton.class);
+					Multibinder<StrategyWeightFadeout.Schedule> schedules = Multibinder.newSetBinder(binder(), StrategyWeightFadeout.Schedule.class);
+					schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(strategy.getModeChoice().getName(), "person", 0));
+					schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ReRoute, "person", 0.7));
+				}
+
 				// Configure mode-choice strategy
-				addControlerListenerBinding().to(StrategyWeightFadeout.class).in(Singleton.class);
-				Multibinder<StrategyWeightFadeout.Schedule> schedules = Multibinder.newSetBinder(binder(), StrategyWeightFadeout.Schedule.class);
-				schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(strategy.getModeChoice().getName(), "person", 0.75));
-				schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ReRoute, "person", 0.78));
-
-
 				install(strategy.applyModule(binder(), config, builder ->
-						builder.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
-								.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
-								.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
-								.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, "drt", "av")
-								.withTripEstimator(PtTripFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
-								.withActivityEstimator(DefaultActivityEstimator.class)
-								.withPruner("d99", new DistanceBasedPruner(3.28179737, 0.16710464))
-								.withPruner("d95", new DistanceBasedPruner(3.09737874, 0.03390164))
-								.withPruner("m99", new ModeDistanceBasedPruner(2.54076057, Map.of(
-										"bike", 0.32642463,
-										"walk", 0.13978577,
-										"car", 0.0448102,
-										"ride", 0.07041452,
-										"pt", 0.13576849
-								)))
-								// These are with activity estimation enabled
-								.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
-								.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
-								.withPruner("ad95", new DistanceBasedPruner( 1.72092386, 0.03189323))
-								.withPruner("am99", new ModeDistanceBasedPruner(2.68083795, Map.of(
-										"bike", 0.22681661,
-										"walk", 0d,
-										"car", 0.052746,
-										"ride", 0.11132056,
-										"pt", 0.07964946
-								)))
+								builder.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
+										.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
+										.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
+										.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, "drt", "av")
+										.withTripEstimator(PtTripFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
+										.withActivityEstimator(DefaultActivityEstimator.class)
+										.withPruner("d99", new DistanceBasedPruner(3.28179737, 0.16710464))
+										.withPruner("d95", new DistanceBasedPruner(3.09737874, 0.03390164))
+										.withPruner("m99", new ModeDistanceBasedPruner(2.54076057, Map.of(
+												"bike", 0.32642463,
+												"walk", 0.13978577,
+												"car", 0.0448102,
+												"ride", 0.07041452,
+												"pt", 0.13576849
+										)))
+										// These are with activity estimation enabled
+										.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
+										.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
+										.withPruner("ad95", new DistanceBasedPruner(1.72092386, 0.03189323))
+										.withPruner("am99", new ModeDistanceBasedPruner(2.68083795, Map.of(
+												"bike", 0.22681661,
+												"walk", 0d,
+												"car", 0.052746,
+												"ride", 0.11132056,
+												"pt", 0.07964946
+										)))
 						)
 				);
 
@@ -339,22 +343,22 @@ public class RunKelheimScenario extends MATSimApplication {
 			controler.addOverridingModule(new MultiModeDrtModule());
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
 
-            // Add speed limit to av vehicle
-            double maxSpeed = controler.getScenario()
-                    .getVehicles()
-                    .getVehicleTypes()
-                    .get(Id.create("autonomous_vehicle", VehicleType.class))
-                    .getMaximumVelocity();
-            controler.addOverridingModule(
-                    new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
-                            maxSpeed));
+			// Add speed limit to av vehicle
+			double maxSpeed = controler.getScenario()
+					.getVehicles()
+					.getVehicleTypes()
+					.get(Id.create("autonomous_vehicle", VehicleType.class))
+					.getMaximumVelocity();
+			controler.addOverridingModule(
+					new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
+							maxSpeed));
 
-            for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-                controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
-                if (drtCfg.getMode().equals("av")) {
-                    KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
-                }
-            }
+			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
+				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
+				if (drtCfg.getMode().equals("av")) {
+					KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
+				}
+			}
 
 			controler.addOverridingModule(new DrtEstimatorModule());
 
