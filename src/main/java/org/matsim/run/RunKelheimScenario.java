@@ -123,7 +123,7 @@ public class RunKelheimScenario extends MATSimApplication {
 	private boolean anneal;
 
 	@CommandLine.Mixin
-	StrategyOptions strategy = new StrategyOptions(StrategyOptions.ModeChoice.subTourModeChoice, "person");
+	private StrategyOptions strategy = new StrategyOptions(StrategyOptions.ModeChoice.subTourModeChoice, "person");
 
 	public RunKelheimScenario(@Nullable Config config) {
 		super(config);
