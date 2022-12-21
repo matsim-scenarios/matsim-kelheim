@@ -222,6 +222,9 @@ public class RunKelheimScenario extends MATSimApplication {
 			addRunOption(config, planOrigin);
 		}
 
+		if (anneal)
+			addRunOption(config, "anneal-replanning");
+
 		config.planCalcScore().setExplainScores(true);
 
 		return config;
