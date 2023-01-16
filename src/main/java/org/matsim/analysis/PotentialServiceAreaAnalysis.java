@@ -39,6 +39,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.network.NetworkUtils;
+import org.matsim.core.network.algorithms.TransportModeNetworkFilter;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.router.FastAStarLandmarksFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
@@ -67,13 +68,13 @@ public class PotentialServiceAreaAnalysis {
 
 
 
-	private static final String INPUT_STOPS_FILE = "../../svn/shared-svn/projects/KelRide/data/KEXI/KEXI_Haltestellen_Liste_Kelheim_utm32n.csv";
-	private static final String INPUT_DEMAND_FILE = "../../svn/shared-svn/projects/KelRide/data/KEXI/IOKI_Rides_202006_202105.csv";
-	private static final String INPUT_NETWORK = "../../svn/shared-svn/projects/matsim-kelheim/input/kelheim-v1.0-network.xml.gz";
+	private static final String INPUT_STOPS_FILE = "C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/Haltestellen/KEXI_Haltestellen_Liste_Kelheim_utm32n.csv";
+	private static final String INPUT_DEMAND_FILE = "C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/IOKI_Rides_202006_202105.csv";
+	private static final String INPUT_NETWORK = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v2.0/input/kelheim-v2.0-network-with-pt.xml.gz";
 	/**
 	 * shape file with multiple polygons each of which represents a possible service area
 	 */
-	private static final String INPUT_SERVICE_AREAS_SHAPE = "D:/svn/shared-svn/projects/KelRide/data/ServiceAreas/2021_07_possibleServiceAreasForAutomatedVehicles.shp";
+	private static final String INPUT_SERVICE_AREAS_SHAPE = "C:/Users/Simon/Desktop/wd/2022-10-18/2022-10_possibleAreasForAV.shp";
 
 
 
@@ -84,12 +85,21 @@ public class PotentialServiceAreaAnalysis {
 		Map<Id<Stop>, Stop> stops = readStops();
 		Map<Tuple<Id<Stop>, Id<Stop>>, Integer> relations = readDemandAndGetRelations(stops);
 
-		Network network = NetworkUtils.readNetwork(INPUT_NETWORK);
+		Network fullNetwork = NetworkUtils.readNetwork(INPUT_NETWORK);
+
+		//filter out pt links
+		TransportModeNetworkFilter networkFilter = new TransportModeNetworkFilter(fullNetwork);
+		Network network = NetworkUtils.createNetwork();
+
+		HashSet<String> modes = new HashSet<String>();
+		modes.add(TransportMode.car);
+		networkFilter.filter(network, modes);
+
 
 		//read in service area map
 		PreparedGeometryFactory factory = new PreparedGeometryFactory();
 		Map<String, PreparedGeometry> serviceAreas = StreamEx.of(ShapeFileReader.getAllFeatures(IOUtils.getFileUrl(INPUT_SERVICE_AREAS_SHAPE)))
-				.mapToEntry(sf -> (String) sf.getAttribute("NAME"), sf -> factory.create((Geometry) sf.getDefaultGeometry()))
+				.mapToEntry(sf -> (String) sf.getAttribute("name"), sf -> factory.create((Geometry) sf.getDefaultGeometry()))
 				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 
 		//map service area geometry to a collection of stops inside of it
@@ -287,7 +297,7 @@ public class PotentialServiceAreaAnalysis {
 		} else if(areaName.contains("Altstadt")) {
 			depotLink = Id.createLinkId("-96590898");
 		} else {
-			depotLink = Id.createLinkId("26526533#9");
+			depotLink = Id.createLinkId("485579462#0");
 		}
 		Link l = network.getLinks().get(depotLink);
 		CarrierVehicle.Builder vBuilder = CarrierVehicle.Builder.newInstance(Id.create((areaName + "_shuttle"), Vehicle.class), depotLink);
