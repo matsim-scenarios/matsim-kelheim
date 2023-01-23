@@ -55,7 +55,8 @@ holidays <-c(growingPhase,
 
 allRelevantData <- allData %>% filter(!Ride.request.time %within% holidays)
 
-demand <-allRelevantData %>% group_by(Number.of.passengers) %>% count()
+demand <-allRelevantData %>% group_by(Number.of.passengers) %>%
+  summarize(Number.of.trips =n()) %>%  mutate(Relative.number.of.trips = Number.of.trips/sum(demand$Number.of.trips))
 
 write.csv(demand, "numberOfPassengersDemand.csv",row.names = FALSE)
 
