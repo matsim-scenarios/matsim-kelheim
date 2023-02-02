@@ -5,6 +5,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
@@ -81,6 +82,17 @@ public class PrepareNetwork implements MATSimAppCommand {
                 link.setCapacity(10);
                 link.setFreespeed(0.1);
                 linkCount++;
+            }
+
+            //if we block the bridge between AS and DP we need to have 2 separate AV modes
+            if(shp.getShapeFile().toString().contains("Maximiliansbruecke")) {
+                if(link.getAllowedModes().contains("av")) {
+                    Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
+                    allowedModes.remove("av");
+                    allowedModes.add("avDP");
+                    allowedModes.add("avAS");
+                    link.setAllowedModes(allowedModes);
+                }
             }
         }
 
