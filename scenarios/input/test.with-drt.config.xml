@@ -6,7 +6,7 @@
     </module>
 
     <module name="controler">
-        <param name="lastIteration" value="1"/>
+        <param name="lastIteration" value="50"/>
         <param name="overwriteFiles" value="deleteDirectoryIfExists"/>
         <param name="runId" value="kelheim"/>
         <param name="outputDirectory" value="./output/test"/>
@@ -278,6 +278,10 @@
                     <param name="targetBeta" value="0.5"/>
                 </parameterset>
             </parameterset>
+            <!--<parameterset type="companions" >
+                &lt;!&ndash; Weights to sample an additional drt passenger. E.g. 70 % +0 pax, 30 % +1 pax. Please specify at least two values. &ndash;&gt;
+                <param name="drtCompanionSamplingWeights" value="0.7,0.3" />
+            </parameterset>-->
         </parameterset>
         
         <parameterset type="drt">
@@ -317,6 +321,7 @@
                     <param name="targetBeta" value="0.5"/>
                 </parameterset>
             </parameterset>
+
         </parameterset>
     </module>
 
