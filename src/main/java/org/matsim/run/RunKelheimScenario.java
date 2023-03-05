@@ -18,18 +18,21 @@ import org.matsim.api.core.v01.events.PersonScoreEvent;
 import org.matsim.api.core.v01.events.handler.PersonDepartureEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.traffic.LinkStats;
 import org.matsim.application.analysis.travelTimeValidation.TravelTimeAnalysis;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
-import org.matsim.application.prepare.freight.ExtractRelevantFreightTrips;
+import org.matsim.application.prepare.freight.tripExtraction.ExtractRelevantFreightTrips;
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
+import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
+import org.matsim.contrib.drt.extension.companions.DrtCompanionControlerCreator;
+import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
+import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
@@ -42,12 +45,14 @@ import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
@@ -61,27 +66,38 @@ import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
+
 import javax.annotation.Nullable;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.lang.reflect.Array;
+import java.util.*;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION)
 @MATSimApplication.Prepare({
         CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
         MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
-        CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class
+        CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class,
+
 })
 @MATSimApplication.Analysis({
         TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
+
+    private final static double WEIGHT_1_PASSENGER = 26387.;
+    private final static double WEIGHT_2_PASSENGER = 3843.;
+    private final static double WEIGHT_3_PASSENGER = 879.;
+    private final static double WEIGHT_4_PASSENGER = 409.;
+    private final static double WEIGHT_5_PASSENGER = 68.;
+    private final static double WEIGHT_6_PASSENGER = 18.;
+    private final static double WEIGHT_7_PASSENGER = 4.;
+    private final static double WEIGHT_8_PASSENGER = 1.;
+
     static final String VERSION = "2.x";
 
+
     @CommandLine.Mixin
-    private final SampleOptions sample = new SampleOptions(25, 10, 1);
+    private final SampleOptions sample = new SampleOptions(25,10,1);
 
     @CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
     private boolean drt;
@@ -109,16 +125,39 @@ public class RunKelheimScenario extends MATSimApplication {
     }
 
     public RunKelheimScenario() {
-        super(String.format("scenarios/input/kelheim-v%s-25pct.config.xml", VERSION));
+        super(String.format("scenarios/input/kexi.output_config.xml"));
     }
 
     public static void main(String[] args) {
+
+
         MATSimApplication.run(RunKelheimScenario.class, args);
     }
 
     @Nullable
     @Override
     protected Config prepareConfig(Config config) {
+
+        ConfigGroup[] customModulesToAdd = new ConfigGroup[0];
+        //customModulesToAdd = new ConfigGroup[]{new DrtWithExtensionsConfigGroup()};
+
+        ConfigGroup[] customModules = new ConfigGroup[]{new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new)};
+        ConfigGroup[] customModulesAll = new ConfigGroup[customModules.length + customModulesToAdd.length];
+
+
+
+        int counter = 0;
+        for (ConfigGroup customModule : customModules) {
+            customModulesAll[counter] = customModule;
+            counter++;
+        }
+
+        for (ConfigGroup customModule : customModulesToAdd) {
+            customModulesAll[counter] = customModule;
+            counter++;
+        }
+
+        config.addModule(customModulesAll[0]);
 
         for (long ii = 600; ii <= 97200; ii += 600) {
 
@@ -148,8 +187,11 @@ public class RunKelheimScenario extends MATSimApplication {
         config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("freight_end").setTypicalDuration(60 * 15));
 
         config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
+        config.controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
         config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
         config.controler().setRunId(sample.adjustName(config.controler().getRunId()));
+
+
 
         config.qsim().setFlowCapFactor(sample.getSize() / 100.0);
         config.qsim().setStorageCapFactor(sample.getSize() / 100.0);
@@ -164,11 +206,26 @@ public class RunKelheimScenario extends MATSimApplication {
         }
 
         if (drt) {
-            MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
+            MultiModeDrtConfigGroup multiModeDrtConfigGroup = ConfigUtils.addOrGetModule(config,MultiModeDrtConfigGroup.class);
+            //var test = multiModeDrtConfigGroup.getModalElements().iterator().next();
+            DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup  = (DrtWithExtensionsConfigGroup) multiModeDrtConfigGroup.getModalElements().iterator().next();
+            DrtCompanionParams drtCompanionParams  = new DrtCompanionParams();
+            drtCompanionParams.setDrtCompanionSamplingWeights(List.of(
+                    WEIGHT_1_PASSENGER,
+                    WEIGHT_2_PASSENGER,
+                    WEIGHT_3_PASSENGER,
+                    WEIGHT_4_PASSENGER,
+                    WEIGHT_5_PASSENGER,
+                    WEIGHT_6_PASSENGER,
+                    WEIGHT_7_PASSENGER,
+                    WEIGHT_8_PASSENGER
+            ));
+            drtWithExtensionsConfigGroup.addParameterSet(drtCompanionParams);
             ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
-            DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
-        }
+            DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfigGroup , config.planCalcScore(), config.plansCalcRoute());
 
+        }
+        ConfigUtils.writeConfig(config,"test.xml");
         return config;
     }
 
@@ -192,6 +249,29 @@ public class RunKelheimScenario extends MATSimApplication {
                     .getFactory()
                     .getRouteFactories()
                     .setRouteFactory(DrtRoute.class, new DrtRouteFactory());
+            var persons = scenario.getPopulation().getPersons();
+            for (Person person:persons.values()
+                 ) {
+                var selectedPlan = person.getSelectedPlan();
+                var planElements = selectedPlan.getPlanElements();
+                for (PlanElement element:planElements
+                     ) {
+                    if(element instanceof Leg){
+                        if(((Leg) element).getMode().equals("drt")){//USE EQUALS
+                            ((Leg) element).setDepartureTimeUndefined();
+                            ((Leg) element).setTravelTimeUndefined();
+                            ((Leg) element).setRoute(null);
+                        }
+                    }
+                }
+                var plans = new ArrayList<>(person.getPlans());
+                plans.remove(selectedPlan);
+                for (Plan plan:plans
+                     ) {
+
+                    person.removePlan(plan);
+                }
+            }
         }
 
         if (bikeRnd) {
@@ -210,6 +290,7 @@ public class RunKelheimScenario extends MATSimApplication {
         Config config = controler.getConfig();
         Network network = controler.getScenario().getNetwork();
 
+        
         controler.addOverridingModule(new AbstractModule() {
             @Override
             public void install() {
@@ -224,6 +305,8 @@ public class RunKelheimScenario extends MATSimApplication {
                 Multibinder<StrategyWeightFadeout.Schedule> schedules = Multibinder.newSetBinder(binder(), StrategyWeightFadeout.Schedule.class);
 
                 schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ChangeSingleTripMode, "person", 0.75, 0.85));
+
+
 
                 if (incomeDependent) {
                     bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
@@ -252,6 +335,7 @@ public class RunKelheimScenario extends MATSimApplication {
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
             controler.addOverridingModule(new DvrpModule());
             controler.addOverridingModule(new MultiModeDrtModule());
+            controler.addOverridingModule(new MultiModeDrtCompanionModule());
             controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
 
             // Add speed limit to av vehicle
@@ -265,22 +349,17 @@ public class RunKelheimScenario extends MATSimApplication {
                             maxSpeed));
 
             for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
+                System.out.println(drtCfg.getMode());
+                System.out.println(drtCfg.maxWaitTime);
+                System.out.println(drtCfg.stopDuration);
                 controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
                 if (drtCfg.getMode().equals("av")) {
                     KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
                 }
+
             }
 
-//            if (intermodal){
-//                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
-//                controler.addOverridingModule(new PtIntermodalRoutingModesModule());
-//                controler.addOverridingModule(new AbstractModule() {
-//                    @Override
-//                    public void install() {
-//                        bind(RaptorIntermodalAccessEgress.class).to(EnhancedRaptorIntermodalAccessEgress.class);
-//                    }
-//                });
-//            }
+
         }
     }
 }
