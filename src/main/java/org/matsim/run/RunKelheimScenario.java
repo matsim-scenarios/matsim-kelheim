@@ -274,5 +274,7 @@ public class RunKelheimScenario extends MATSimApplication {
 //                });
 //            }
         }
+
+        controler.getConfig().vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.abort);
     }
 }
