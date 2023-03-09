@@ -1,7 +1,7 @@
 ---
-title: "Bad weather Kelheim Demo"
-author: "Oleksandr Soboliev"
-output: 
+title: "Linear regression model on Kelheim weather data"
+author: "Oleksandr Soboliev, Simon Meinhardt, Tilmann Schlenther (VSP @ TU Berlin)"
+output:
   html_document:
     code_folding: hide
 runtime: shiny
@@ -23,88 +23,86 @@ library(rjson)
 rendername = "resultDemo.Rmd"
 ```
 
-# Data
+# Input data
 
-Data is taken from these resources:
+Input data is taken from the following resources:
 
-* Ingolstadt Weather from Meteostat [Meteostat](https://bulk.meteostat.net/v2/) 
-* Weather Description from weatherstack [Weatherstck](https://svn.vsp.tu-berlin.de/repos/shared-svn/projects/KelRide/data/badWeather/weatherstack/)
-* Mobility data is represented by number of Kexi Rides in Landkreis Kelheim (/shared-svn/projects/KelRide/data/KEXI/2021-04)
-* Stringency (strictness of covid policies) number is from [Oxford COVID-19 Government Response Tracker](https://covidtracker.bsg.ox.ac.uk/)
-* Holiday days are from [Feiertage](https://feiertage-api.de/)
+* Ingolstadt Weather data from Meteostat [Meteostat](https://bulk.meteostat.net/v2/) 
+* Weather Description data from weatherstack [Weatherstack](https://svn.vsp.tu-berlin.de/repos/shared-svn/projects/KelRide/data/badWeather/weatherstack/)
+* Mobility data is represented by the number of Kexi Rides inside Landkreis Kelheim (/shared-svn/projects/KelRide/data/KEXI/2021-04)
+* Stringency (strictness of covid policies) data is taken from [Oxford COVID-19 Government Response Tracker](https://covidtracker.bsg.ox.ac.uk/)
+* Holidays are taken from [German holidays](https://feiertage-api.de/)
 
 # Regression analysis resources
 
-Analysis was proceeded using this statistical sources:
+The analysis was proceeded using the following sources:
 
 * Linear Models with R (Julian J. Faraway)
 
 # Importing and preparing data
 
-Main target is to get result table containing all "expected" relevant data/variables that can be connected with changes of demand in Kelheim region, thus mobility data is collected on daily basis, remaining data has to be daily based.
-
-After obtaining such table it would be useful(in sense of building a model and understanding the data) to check correlations between individual independent variable to dependent mobility variable. So the next chapter has a focus on filtering out unrelevant data to pass it to the model.
+The main goal of this analysis is to determine possible relations between the daily number of KEXI rides and weather parameters. The mobility data is collected on a daily basis.
 
 ```{r importing all the data, message=FALSE,echo=FALSE,warning=FALSE}
 # Ingolstadt weather
-ingolstadt_weather = read_delim("https://bulk.meteostat.net/v2/daily/10860.csv.gz",",",col_names = FALSE)
-colnames(ingolstadt_weather) = c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
+ingolstadt_weather <- read_delim("https://bulk.meteostat.net/v2/daily/10860.csv.gz",",",col_names = FALSE)
+colnames(ingolstadt_weather) <- c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
 
 # Weatherstack data
-weatherstack_kelheim = read_delim("data/Kelheim_weather_since_july_2008.csv",delim = ",")
+weatherstack_kelheim <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Kelheim_weather_since_july_2008.csv",delim = ",")
 
 # Stringency
-json = fromJSON(file = "data/2022-10-08.json")
-json = unlist(json)
+json <- fromJSON(file = "C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/2022-11-10.json")
+json <- unlist(json)
 
 #Mobility
-demand = read_delim("data/allDemandByDate2022.csv")
+demand <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate2022.csv")
 
 #Expanding the data
-demand2022 = read_delim("data/VIA_Rides_202201_202210.csv")
+demand2022 <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/VIA_Rides_202201_202210.csv")
 
 #Holidays
-holidays2020 = read_csv2("data/Holidays2020.csv") %>% dplyr::select(1,2,3)
-holidays2021 = read_csv2("data/Holidays2021.csv") %>% dplyr::select(1,2,3)
-holidays2022 = read_csv2("data/Holidays2022.csv") %>% dplyr::select(1,2,3)
-holidays = rbind(holidays2020,holidays2021,holidays2022)
-holidays = holidays %>% mutate(EndDateTime1 = as.Date(as.POSIXct(EndDateTime1, format = "%m.%d.%Y %H:%M")),
+holidays2020 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
+holidays2021 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2021.csv") %>% dplyr::select(1,2,3)
+holidays2022 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2022.csv") %>% dplyr::select(1,2,3)
+holidays <- rbind(holidays2020,holidays2021,holidays2022)
+holidays <- holidays %>% mutate(EndDateTime1 = as.Date(as.POSIXct(EndDateTime1, format = "%m.%d.%Y %H:%M")),
                                StartDateTime1 = as.Date(as.POSIXct(StartDateTime1, format = "%m.%d.%Y %H:%M")))
 
-holiday_days = unique(c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days")))
+holiday_days <- unique(c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days")))
 
 for(i in 1:nrow(holidays)){
   holiday_days = append(holiday_days,seq(holidays$StartDateTime1[i],holidays$EndDateTime1[i],by = "days"))
 }
 
-df_holidays = data.frame(date = holiday_days,isHoliday = TRUE)
+df_holidays <- data.frame(date = holiday_days,isHoliday = TRUE)
 
 ```
 ##Modify and join data
 
 ```{r modify, message=FALSE, warning=FALSE}
 # Weatherstack
-weatherstack_kelheim_daily = weatherstack_kelheim %>%
+weatherstack_kelheim_daily <- weatherstack_kelheim %>%
   group_by(date) %>%
   count(description)
 
 # Stringency 
-deu_stringency = json[grep("DEU.stringency_actual",names(json))]
-date_stringency = sapply(strsplit(names(deu_stringency),split = ".",fixed = TRUE),"[[",2)
-df_stringency = data.frame(date = date_stringency,stringency = deu_stringency)
-df_stringency = df_stringency %>% mutate(stringency = as.numeric(stringency), date = as.Date(date))
+deu_stringency <- json[grep("DEU.stringency_actual",names(json))]
+date_stringency <- sapply(strsplit(names(deu_stringency),split = ".",fixed = TRUE),"[[",2)
+df_stringency <- data.frame(date = date_stringency,stringency = deu_stringency)
+df_stringency <- df_stringency %>% mutate(stringency = as.numeric(stringency), date = as.Date(date))
 
 
 
 # Ingolstadt
-type_of_weather = unique(weatherstack_kelheim$description)
+type_of_weather <- unique(weatherstack_kelheim$description)
 map_vector <- c("Clear","Sunny","Cloudy","Light","Light","Light","Light","Light","Light","Light","Light","Medium","Cloudy","Light","Light","Heavy","Heavy","Heavy","Light","Medium","Heavy","Heavy","Light","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Light","Medium","Medium","Light","Heavy","Light","Light","Light","Light","Light","Heavy","Light","Medium","Heavy","Heavy","Heavy")
 names(map_vector)<- type_of_weather
 
 
 
 
-ingolstadt_weather = ingolstadt_weather %>% 
+ingolstadt_weather <- ingolstadt_weather %>% 
   mutate(season = ifelse(month(date) %in% c(12,1,2),"winter",NA)) %>%
   mutate(season = ifelse(month(date) %in% c(3,4,5),"spring",season)) %>%
   mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
@@ -113,42 +111,42 @@ ingolstadt_weather = ingolstadt_weather %>%
 
 
 
-day_description_impact = weatherstack_kelheim_daily %>% pivot_wider(names_from = description,values_from = n)
+day_description_impact <- weatherstack_kelheim_daily %>% pivot_wider(names_from = description,values_from = n)
 
 #remove NAs
 day_description_impact[is.na(day_description_impact)] = 0
 
-day_description_impact = day_description_impact %>% pivot_longer(cols = all_of(type_of_weather),names_to = "description",values_to = "value")
+day_description_impact <- day_description_impact %>% pivot_longer(cols = all_of(type_of_weather),names_to = "description",values_to = "value")
 
-day_description_impact = day_description_impact
+day_description_impact <- day_description_impact
 day_description_impact$description = map_vector[(day_description_impact$description)]
 
-day_description_impact= day_description_impact %>% group_by(date)%>%
+day_description_impact <- day_description_impact %>% group_by(date)%>%
   top_n(n = 1,value) %>% group_by(date) %>% top_n(n = 1,description) %>% rename(weather_impact = value)
 
 #####Join the data#####
 
-result_data = demand %>% left_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
+result_data <- demand %>% left_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
 #Also need to be added weekday
-result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1)))
+result_data <- result_data %>% mutate(wday = as.character(wday(date,week_start = 1)))
 
 #Append holidays
-result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0)) #%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
+result_data <- result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0)) #%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
 
 head(result_data)
 ```
 
 ```{r adding tmean for season}
 
-summer = mean(result_data$tavg[result_data$season == "summer"])
+summer <- mean(result_data$tavg[result_data$season == "summer"])
 
-spring = mean(result_data$tavg[result_data$season == "spring"])
+spring <- mean(result_data$tavg[result_data$season == "spring"])
 
-autumn = mean(result_data$tavg[result_data$season == "autumn"])
+autumn <- mean(result_data$tavg[result_data$season == "autumn"])
 
-winter = mean(result_data$tavg[result_data$season == "winter"])
+winter <- mean(result_data$tavg[result_data$season == "winter"])
 
-result_data = result_data %>% 
+result_data <- result_data %>% 
   mutate(tdiff = ifelse(season == "winter",tavg-winter,NA)) %>%
   mutate(tdiff = ifelse(season == "spring",tavg-spring,tdiff)) %>%
   mutate(tdiff = ifelse(season == "autumn",tavg-autumn,tdiff)) %>%
@@ -157,61 +155,56 @@ result_data = result_data %>%
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-From following plots we can see strong correlation between day of the week and number of Rides, because we want to simulate common day using MatSim it was decided to filter weekends out of resulting dataset for the model. Also because day doesn't represent weather impact, like holidays that have strong impact on mobility so they are also excluded. First 4 days are excluded, because they have 0 rides due to KeXi service start.  
+From already conducted analysis as well as the following plots we can see a strong impact of the different weekdays as well as holidays on the number of daily KEXI rides. As this analysis is thought of as a preparation for building a potential transport model using the simulation tool MATSim (Multi Agent Transport Simulation), where typical weekdays are simulated, holidays and non-typical weekdays are filtered out.
 
 ```{r plotting wday and holidays}
-wday_plot = ggplotly(ggplot(result_data)+
-  geom_boxplot(aes(x = wday,y = noRides)))
+wday_plot <- ggplot(result_data)+
+  geom_boxplot(aes(x = wday,y = noRides)) +
+  xlab("Weekday") + 
+  ylab("Number of rides") +
+  labs(title="Daily no of KEXI rides per weekday") +
+  theme(plot.title = element_text(hjust=0.5))
 
-holiday_plot = ggplotly(ggplot(result_data)+
-  geom_boxplot(aes(x = isHoliday,y = noRides )))
+holiday_plot <- ggplot(result_data)+
+  geom_boxplot(aes(x = isHoliday,y = noRides )) +
+    xlab("Is holiday") +
+    ylab("Number of rides") +
+    labs(title="Daily no of KEXI rides per holiday / non-holiday") +
+  theme(plot.title = element_text(hjust=0.5))
 
-annotations = list( 
-  list( 
-     x = 0.2,  
-    y = 1.0,  
-    text = "Weekday",  
-    xref = "paper",  
-    yref = "paper",  
-    xanchor = "center",  
-    yanchor = "bottom",  
-    showarrow = FALSE 
-  ),  
-  list( 
-     x = 0.75,  
-    y = 1.0,  
-    text = "Is Holiday",  
-    xref = "paper",  
-    yref = "paper",  
-    xanchor = "center",  
-    yanchor = "bottom",  
-    showarrow = FALSE 
-  ))
+ggplotly(wday_plot)
+ggplotly(holiday_plot)
 
-subplot(wday_plot,holiday_plot) %>% layout(annotations = annotations)
+# annotations = list( 
+#   list( 
+#      x = 0.2,  
+#     y = 1.0,  
+#     text = "Weekday",  
+#     xref = "paper",  
+#     yref = "paper",  
+#     xanchor = "center",  
+#     yanchor = "bottom",  
+#     showarrow = FALSE 
+#   ),  
+#   list( 
+#      x = 0.75,  
+#     y = 1.0,  
+#     text = "Is Holiday",  
+#     xref = "paper",  
+#     yref = "paper",  
+#     xanchor = "center",  
+#     yanchor = "bottom",  
+#     showarrow = FALSE 
+#   ))
+# 
+# subplot(wday_plot,holiday_plot) %>% layout(annotations = annotations)
 ```
 
 ```{r}
-result_data = result_data %>% filter(wday!=6 & wday!=7,isHoliday == FALSE, noRides!=0)
+result_data <- result_data %>% filter(wday!=6 & wday!=7,isHoliday == FALSE, noRides!=0)
 ```
+
+The following table gives an overview of the used parameters, a short description and the parameters' dimensions.
 
 After first data processing it would be helpful to find some dependencies in the data using scatter plots mapped to number of rides.
 Here is summary of end dataset 
@@ -223,100 +216,9 @@ colnames(result_sum) = c("Variable","Description","Stat")
 knitr::kable(result_sum)
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Finding patterns using graphic approach
-
-
-
-```{r noRides~., out.width="100%"}
-
-tavg_plot = ggplotly(
-  ggplot(result_data)+
-    geom_point(aes(y= noRides,x = tavg,colour = season))
-  )%>%layout(xaxis = list(title = 'tavg'), yaxis = list(title = 'noRides'))
-
-
-pres_plot= ggplotly(
-  ggplot(result_data)+
-    geom_point(aes(y= noRides,x = pres,colour = season))
-  
-  )%>%
-  layout(xaxis = list(title = 'pres'), yaxis = list(title = 'noRides'))
-prcp_plot = ggplotly(
-  ggplot(result_data %>% filter(prcp!=0))+
-    geom_point(aes(y= noRides,x = prcp,colour = season))
-  )%>%
-  layout(xaxis = list(title = 'prcp'), yaxis = list(title = 'noRides'))
-snow_plot = ggplotly(
-  ggplot(result_data %>% filter(snow!=0))+
-    geom_point(aes(y= noRides,x = snow,colour = season))
-  )%>% layout(xaxis = list(title = 'snow'), yaxis = list(title = 'noRides'))
-
-anno = list( 
-  list( 
-     x = 0.2,  
-    y = 1.0,  
-    text = "noRides from avg temp",  
-    xref = "paper",  
-    yref = "paper",  
-    xanchor = "center",  
-    yanchor = "bottom",  
-    showarrow = FALSE 
-  ),  
-  list( 
-     x = 0.75,  
-    y = 1.0,  
-    text = "noRides from avg pressure",  
-    xref = "paper",  
-    yref = "paper",  
-    xanchor = "center",  
-    yanchor = "bottom",  
-    showarrow = FALSE 
-  ),
-  list( 
-     x = 0.2,  
-    y = 0.4,  
-    text = "noRides from avg precipitation",  
-    xref = "paper",  
-    yref = "paper",  
-    xanchor = "center",  
-    yanchor = "bottom",  
-    showarrow = FALSE 
-  ),
-  list( 
-     x = 0.75,  
-    y = 0.4,  
-    text = "noRides from avg snow depth",  
-    xref = "paper",  
-    yref = "paper",  
-    xanchor = "center",  
-    yanchor = "bottom",  
-    showarrow = FALSE 
-  ))
-
-subplot(tavg_plot,pres_plot,prcp_plot,snow_plot,nrows = 2,titleY = TRUE,titleX = TRUE,margin = 0.1) %>% layout(annotations =anno)
-
-
-```
-
-After looking at these plots we can barely see existing strong dependencies or clusters, but there is one conspicious fact, that only during summer number of rides falls under ~50 while other seasons have more than 50 rides.
-
 # Finding correlations
 
-Correlation coefficients(Pearson coefficient) between two variables we calculate using cor() function, later anova oneway test will be used for testing to check categorical variable dependency. 
+To get a general impression of the above weather parameters' influence on the number of daily KEXI rides correlation coefficients (Pearson coefficients) are calculated.
 
 ```{r overall correlations, warning = FALSE}
 
@@ -325,114 +227,41 @@ best_pred <- result_data  %>% ungroup() %>%
   map_dbl(cor,y = result_data$noRides) %>%
   #map_dbl(abs) %>%
   sort(decreasing = TRUE) 
-print("overall predictors")
+#print("overall predictors")
 print(best_pred)
 ```
 
-As a result highest absolute score in correlation have wspd(average windspeed), wpgt(peak wind gust), tdiff(seasonal temperature difference), pressure(air pressure in hPa), stringency(strictness of covid19 policy). But for the specific season different variables play different role. Let's examine data subset filtered by season. 
+The correlation analysis shows that only the covid19 policy stringency has a strong influence on the daily number of KEXI rides (-0.56). Weather parameters do not seem to have a high impact, which might be due to the strong effects of the pandemic. Therefore weather parameters with a correlation value of bigger than |0.05| (TODO check if this makes sense!-sm0223) are taken into account. This includes some parameters in relation to wind (wspd, wpgt, wdir), temperature (tdiff, tmax, tavg, tmin) and air (pres).
 
-```{r, warning = FALSE}
-summer_pred = result_data %>% filter(season == "summer")
-best_pred <- summer_pred  %>% ungroup() %>%
-  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
-  map_dbl(cor,y = summer_pred$noRides) %>%
-  #map_dbl(abs) %>%
-  sort(decreasing = TRUE) 
-print("summer predictors")
-print(best_pred)
-```
-By comparison with whole dataset we can see that in summer windspeed has less correlation coefficient, and wind directions have different signs. Main sifnificant variable during summer is temperature
-```{r, warning = FALSE}
-autumn_pred = result_data %>% filter(season == "autumn")
-best_pred <- autumn_pred  %>% ungroup() %>%
-  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
-  map_dbl(cor,y = autumn_pred$noRides) %>%
-  #map_dbl(abs) %>%
-  sort(decreasing = TRUE) 
+# Building a linear regression model
 
-print("autumn predictors")
-print(best_pred)
-```
-In autumn pressure, windspeed, snow and temperature have the highest correlation to number of rides.
-```{r, warning = FALSE}
-spring_pred = result_data %>% filter(season == "spring")
-best_pred <- spring_pred  %>% ungroup() %>%
-  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
-  map_dbl(cor,y = spring_pred$noRides) %>%
-  #map_dbl(abs) %>%
-  sort(decreasing = TRUE) 
-print("spring predictors")
-print(best_pred)
-```
-Compared to other seasons in spring precipitation have more impact on number of rides, as well as snow and temperature. 
-```{r, warning = FALSE}
-winter_pred = result_data %>% filter(season == "winter")
-best_pred <- winter_pred  %>% ungroup() %>%
-  dplyr::select(-noRides,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
-  map_dbl(cor,y = winter_pred$noRides) %>%
-  #map_dbl(abs) %>%
-  sort(decreasing = TRUE) 
-print("winter predictors")
-print(best_pred)
-
-```
-In winter windspeed, pressure and temperature have weak correlation with number of rides.
-
-
-
-Testing of null hypothesis is made for dependent noRides and independent season, description and wday
-```{r categorical variables}
-
-season_test = oneway.test(result_data$noRides~result_data$season)$p.value
-description_test = oneway.test(result_data$noRides~result_data$description)$p.value
-wday_test = oneway.test(result_data$noRides~result_data$wday)$p.value
-print(c("season" =season_test,"description" =description_test,"wday" =wday_test))
-
-```
-
-From the p-value we can see that null hypothesis can only be rejected for wday (p.value higher than 0.05), for the description and season we can't make such conclusion. But one thing that should be also tested is dependency between seasons and temperature - `r oneway.test(result_data$tavg~result_data$season)$p.value`. As we can see temperature dependent from season, so in our future model one of the variable should be dropped.
-
-# Building a model
-
-After determination of significant variables we can build different models using different set of variables, one thing remains same - first approach is to build linear model to make predictions, also to check which predictors impact number of rides most. In our approach we will firstly larger model using all relevant variables from previous chapter, then we reduce number of variables taking smaller subset and synchronous to check how model quality changes. 
+After the determination of correlations between the daily number of KEXI rides and the weather parameters a regression model is built. In a first try a linear approach is chosen. Therefore, all of the above parameters, which have been marked as "impactful", will be included into the linear regression model. It is then the goal to exclude all parameters, which turn out to be non-significant, from the model.
 
 ```{r omega model}
-data = result_data
+data <- result_data
 
-omega_model = lm(noRides ~ tavg+pres+stringency+snow+wspd,data = data)
+# omega_model <- lm(noRides ~ tavg+pres+stringency+snow+wspd,data = data)
+omega_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+tdiff+tmax+tavg+tmin+pres,data = data)
 
 summary(omega_model)
 
 ```
 
-Low adjusted R^2 doesn't tells that our model doesn't fit the data. Let's take a look on predicted values and residuals.
+The above model implies that only the parameters stringency, tdiff and tavg are significant for the daily number of KEXI rides. The value for Adjusted R^2 (0.492) is rather low, so the calculated linear regression model is not very accurate. To get a better impression on the model the predicted values should be prepared to the actual values and the residuals are plotted.
 
 ```{r omega residuals,out.width="100%"}
 
-colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
-model = omega_model
-test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+colors <- c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model <- omega_model
+test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
   geom_point(aes(x = date,y = noRides,color = "actual"))+
   geom_point(aes(x = date,y = pred,color = "predicted"))+
   scale_color_manual(values = colors)+
-  ggtitle("Model fit without date"))
+  ggtitle("Linear regression model"))
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ```{r ,out.width="100%"}
@@ -444,33 +273,28 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
 
 ```
 
-As we can see from our residuals plot our data has continuous growing trend, that our model doesn't consider, so taking a date variable to model can drastically improve model "quality".
+The residuals plot indicates a continuous growing trend for the number of daily KEXI rides, which the linear regression model should consider. In a new model version a parameter representing the date will be integrated.
 
 ```{r omega date residuals,out.width="100%"}
 
-omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+date+season+wspd,data = data)
+# omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+date+season+wspd,data = data)
+omega_date_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+tdiff+tmax+tavg+tmin+pres+date,data = data)
 
 summary(omega_date_model)
 ```
 
 
 
-
-
-
-
-
-
 ```{r,out.width="100%"}
-colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
-model = omega_date_model
-test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+colors <- c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model <- omega_date_model
+test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
   geom_point(aes(x = date,y = noRides,color = "actual"))+
   geom_point(aes(x = date,y = pred,color = "predicted"))+
   scale_color_manual(values = colors)+
-  ggtitle("Model fit with date"))
+  ggtitle("Linear regression model with date parameter"))
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
             geom_line(aes(x = date,y = resid,color = "residuals"))+
             geom_ref_line(h = 0)+
@@ -479,147 +303,112 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
 
 ```
 
-As expected R^2 squared increased as well residual standard error is decreased to a number of 15,99. ~0.7 of R-squared is relatively high in weather statistics. To check correctness of used approach residuals have to be normally distributed.
+The inclusion of a date parameter the model accuracy to 0.7876, which is a rather high value in weather statistics (TODO ask Sasha where he got that -sm0223) This goes in line with a decrease of the residual standard error by 8.75 to 16.01. The distribution of the predicted model values as well as the residuals show a typical form. To further check the model's correctness, a histogram of the residuals is plotted.
 
-
-
-
-
-
-
-
-
-
-
-
-Residuals histogram
 ```{r residual destributions 1}
 
 barplot <- ggplot(test_data, aes(x = resid ))+
   geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=7)+
-  ggtitle("Omega model residuals")
+  ggtitle("Residuals histogram")
 
 ggplotly(barplot)
 
 ```
 
-```{r,out.width="100%"}
-m <- mean(test_data$resid)
-s <- sd(test_data$resid)
-n <- nrow(test_data)
-p <- (1 : n) / n - 0.5 / n
-plot1 = ggplotly(ggplot(test_data) + 
-     geom_qq(aes(sample = rnorm(resid,10,4)))+
-     geom_abline(intercept = 10, slope = 4,
-                 color = "red", size = 1.5, alpha = 0.8))
-plot2 = ggplotly(ggplot(test_data)+
-  geom_point(aes(x = p, y = sort(pnorm(resid, m, s))))+
-  geom_abline(
-                 color = "red",size = 1.5,alpha =0.8))
+The residuals histogram is bell shaped, which indicates a proper model quality. @Sydney Why is that? Why does it have to be bell shaped?
 
-anno = list( 
-  list( 
-     x = 0.2,  
-    y = 1.0,  
-    text = "Normal QQ Plot",  
-    xref = "paper",  
-    yref = "paper",  
-    xanchor = "center",  
-    yanchor = "bottom",  
-    showarrow = FALSE 
-  ),  
-  list( 
-     x = 0.75,  
-    y = 1.0,  
-    text = "Normal PP Plot",  
-    xref = "paper",  
-    yref = "paper",  
-    xanchor = "center",  
-    yanchor = "bottom",  
-    showarrow = FALSE 
-  ))
 
-subplot(plot1,plot2) %>% layout(annotations = anno)
-```
 
-# Reducing a model
+# Reducing the linear regression model
 
-Let's take some variables out and see how model performs on the data and F Statistics. Low correlating variables from "Finding correlations" chapter are snow, stringency and weather_impact multiplied by description. Also there is strong correlation between average temperature and a season so our new model should contain only 1 of the predictors, because temperature have most impact on mobility and more large-scaled (season contains only 4 factors) we will take season out from new reduced_model.
+The above linear regression model includes multiple parameters, which are marked as non-significant. Thus it should be possible to exclude those parameters from the regression model without decreasing the model accuracy. As tavg and tmin are both a description of the temperature, 2 reduced models are calculated, one for each variable while the other variables (stringency and date) are the same.
 
 ```{r reduced model 1 residuals}
 
-reduced_1_model = lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description+date+wspd,data = data)
+# reduced_1_model <- lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description+date+wspd,data = data)
+reduced_1_model <- lm(noRides ~ stringency+tavg+date, data = data)
 
 summary(reduced_1_model)
 
-colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
-model = reduced_1_model
-test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+# colors <- c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+# model <- reduced_1_model
+# test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 ```
 
-As we can see excluding variables from model doesn't make it worse residual st. error remains near 16.32, we can also use anova test function from stats package to check model variable significance. But firstly we would like to get best best model with possible minimum variables. For this purpose we can inspect p-value from model summary, it says how significant separate variable in model predictions, less p-value - more significant. So we would like to exclude snow, and combined term ow weather_impact and description out of model.
 
-```{r reduced model 2 residuals,message=FALSE,echo=FALSE,include=FALSE}
+```{r reduced model 2 residuals}
 
-reduced_2_model = lm(noRides ~ tavg+pres+stringency+weather_impact+description+date,data = data)
+# reduced_2_model <- lm(noRides ~ tavg+pres+stringency+weather_impact+description+date,data = data)
+reduced_2_model <- lm(noRides ~ stringency+tmin+date, data = data)
 
 summary(reduced_2_model)
 
-colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
-model = reduced_2_model
-test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+colors <- c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model <- reduced_2_model
+test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 
 
 ```
 
-As we can see removing snow and separation of weather_impact and description, increased model quality with reducing residual standard error. Anova(analysis of variance) test between these two models also doesn't show significant difference `r anova(reduced_2_model,reduced_1_model)[["Pr(>F)"]][2]` because p-value is much greater than 0.05.
+For both 'reduced models' the Adjusted R-squared value remain roughly the same as does the Residual standard error. In terms of both values the model including tavg as the main temperature value performs a little better. Therefore, it will be used as the main variable representing the temperature. In opposition to the correlation analysis, which was performed to get a first impression of variable impact on the number of daily KEXI rides, the calculated linear regression model shows that due to its p-value (0.824) the strictness of covid-related policies (stringency) is not relevant for projecting the daily number of KEXI rides. Hence it is excluded from the model, too.
 
-After few iterations we get to a model that contains only strictness of the policy restrictions, temperature and data. Represented model explains also explains most of the observations with relatively low residual standard error, but it is minimal for excluding, because anova significance test difference between models without any of remaining predictors has p-value<0.05. So we get to our final model, that explains number of KeXi Rides using temperature, covid strictness level and date(positive growing trend). 
+<!-- As we can see excluding variables from model doesn't make it worse residual st. error remains near 16.32, we can also use anova test function from stats package to check model variable significance. But firstly we would like to get best best model with possible minimum variables. For this purpose we can inspect p-value from model summary, it says how significant separate variable in model predictions, less p-value - more significant. So we would like to exclude snow, and combined term ow weather_impact and description out of model. -->
 
-Critical point there, is that using season variable instead of temperature variable doesn't decrease model quality, even slightly increases. As a conclusion temperature plays a role of a season in model by fitting data, because average temperature correlates with season. But filtering a data to a specific season(e.g. summer) with model fit(using temperature), returns a R squared result of 0.809, that is relatively high for an weather analysis. Anova test of model with excluded temperature variable and model with temperature returns a value of 2.14*e^-10, so difference of model with weather and without have significant difference.
+<!-- As we can see removing snow and separation of weather_impact and description, increased model quality with reducing residual standard error. Anova(analysis of variance) test between these two models also doesn't show significant difference `r anova(reduced_2_model,reduced_1_model)[["Pr(>F)"]][2]` because p-value is much greater than 0.05. -->
+
+<!-- After few iterations we get to a model that contains only strictness of the policy restrictions, temperature and data. Represented model explains also explains most of the observations with relatively low residual standard error, but it is minimal for excluding, because anova significance test difference between models without any of remaining predictors has p-value<0.05. So we get to our final model, that explains number of KeXi Rides using temperature, covid strictness level and date(positive growing trend).  -->
+
+<!-- Critical point there, is that using season variable instead of temperature variable doesn't decrease model quality, even slightly increases. As a conclusion temperature plays a role of a season in model by fitting data, because average temperature correlates with season. But filtering a data to a specific season(e.g. summer) with model fit(using temperature), returns a R squared result of 0.809, that is relatively high for an weather analysis. Anova test of model with excluded temperature variable and model with temperature returns a value of 2.14*e^-10, so difference of model with weather and without have significant difference. -->
 
 ```{r reduced model 3 residuals,out.width="100%"}
 #data = data %>% filter(season == "summer")
-reduced_3_model = lm(noRides ~ tavg+stringency,data = data)
+# reduced_3_model <- lm(noRides ~ tavg+stringency,data = data)
+reduced_3_model <- lm(noRides ~ tavg+date, data = data)
 
 summary(reduced_3_model)
 
-colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
-model = reduced_3_model
-test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+colors <- c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model <- reduced_3_model
+test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
   geom_point(aes(x = date,y = noRides,color = "actual"))+
   geom_point(aes(x = date,y = pred,color = "predicted"))+
   scale_color_manual(values = colors)+
-  ggtitle("Final model fit"))
+  ggtitle("Linear regression model with independent variables tavg + date"))
 ```
 ```{r,,out.width="100%",out.height="95%"}
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
             geom_line(aes(x = date,y = resid,color = "residuals"))+
             geom_ref_line(h = 0)+
             scale_color_manual(values = colors)+
-            ggtitle("Residuals"))
+            ggtitle("Residuals for linear regression model with independent variables tavg + date"))
 
 ```
-After performing a minimal model we also want to check once again how residuals are distributed and some additional statistics metrics.
+
+The final linear regression model projects the daily number of KEXI rides as the dependent variable with the variables tavg and date as independent variables. With p-values of < 2e-16 both independent variables are of very high significance for explaining the dependent variable. The final adjusted R-squared value is 0.7872, which means that the calculated model is highly accurate.
+
+The scatter plot, which compares the predicted number of KEXI rides with the actual number of rides per day, indicates that a linear regression approach is the right tool to describe the dependency of the number of KEXI rides on weather parameters when including a date variable, too. The predicted values have a linear form. The scatter plot as well as the residuals plot show a time span at the end  of June 2021 / beginning of July 2021, where the actual number of KEXI rides values drop to almost 0 and therefore, the linear regression model cannot predict adequate values. This is explained by a change of operators, which resulted in some days of service down time. Due to this explanation the gap will be ignored.
+
+As the resulting linear regression model has been determined, in a final step the residual distribution has to be checked.
 
 ```{r residual destributions 3}
 
 barplot <- ggplot(test_data, aes(x = resid ))+
   geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=9)+
-  ggtitle("Final model residuals")
+  ggtitle("Final residuals distributions with independent variables tavg + date")
 
 ggplotly(barplot)
 
 ```
 
-We see normal distributed variable with skewness to the legt with 3 outliers at the left (analysis of individual days shows, that extremely low number of rides were when operator collecting data has changed so this is data specific problem that could be ignored or excluded from model)
+As before, the residual distribution shows a bell-shape, which assures the model's quality. (@Sidney once again, why is that?) The 2 outliers to the left can again be explained by the operator change in June / July 2021.
+
 ```{r}
-test_data = test_data %>% filter(resid>=-50)
+# test_data <- test_data %>% filter(resid>=-50)
 ```
 
 
@@ -662,34 +451,12 @@ anno = list(
 subplot(plot1,plot2) %>% layout(annotations = anno)
 ```
 
-So our residuals are normally distributed, that is also verified by shapiro wilk normality test because value of test `r shapiro.test(test_data$resid)$p.value` is much greater than 0.05.
+<!-- So our residuals are normally distributed, that is also verified by shapiro wilk normality test because value of test `r shapiro.test(test_data$resid)$p.value` is much greater than 0.05. -->
 
-Excluding more variables from a model doesn't impove model as well increases residual error enormous, so we can make conclusion, that represented model is minimal fitting possible with variables that have most impact to number of rides by the weather. Remains only to check residuals of fitted model.  
-
-
-# Critical discussion
-
-Predicting potential in our model mostly based on growing trend of number of rides related to service start(linear regression model using only date have r squared of >0.7). In future when population get to know service and user quantity will be stabilized our model will provide other results.
-
-```{r model using only a date,out.width="100%"}
-#data = data %>% filter(season == "summer")
-reduced_3_model = lm(noRides ~ date,data = data)
-
-summary(reduced_3_model)
-
-colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
-model = reduced_3_model
-test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
-
-
-ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(aes(x = date,y = noRides,color = "actual"))+
-  geom_point(aes(x = date,y = pred,color = "predicted"))+
-  scale_color_manual(values = colors)+
-  ggtitle("Final model fit"))
-```
+TODO: do we even need the qq and pp plot as we already have proof for the normal distribution of our residuals? 
 
 # Conclusion
 
-Performed LINEAR regression analysis shows, that there no strong correlations between number of rides and weather characteristics except of temperature, and temperature is also quite dependent from season, one difference between using season instead of the temperature is that relative temp changes in same season isn't inspected, so it can be that relative fall of the temperature in summer also strongly impacts mobility. Also data was collected during covid-19 pandemie, so stringency-strictness is also significant by building an model. In the end date is used in the model, because there are positive growing trend with using KeXi ride service.
+The performed linear regression analysis aimed to better understand the relation of daily number of KEXI rides and multiple weather variables. The real demand data, which is the base for this analysis, showed some significant demand differences depending on whether the date is on a weekend or not as well as whether it is a holiday or not. Hence all holidays and weekends were excluded from the analysis. A general correlation analysis (Pearson correlation coefficients) was performed to get a first idea of the parameter's influence on the daily number of KEXI rides. Only wind and temperature related variables seem to have a meaningful impact on the number of daily rides. As the real demand data is from a time span in which there were many pandemic related restrictions upon the society a strictness of covid policies was taken into account, too. The aforementioned had the strongest correlation on the daily number of KEXI rides.
+A first linear regression model showed a continuous growing trend of daily rides, which led to the conclusion to also integrate a date variable. The inclusion of date improved the model's quality dramatically. In a next step all the non-significant independent weather related variables were excluded. The model's accuracy stayed the same after that step. In a last step covid policy stringency also was excluded from the model because it was non-significant, too. The final linear regression model explains the daily number of KEXI rides (dependent variable) by using variables for average temperature (tavg) and date. Most importantly, the F-statistic for the calculated regression has a p-value of < 2.2e-16. In general, if the p-value is lower than 0.05, the null hypothesis can be revoked, which means that the performed linear regression provides a significant contribution to the change of the daily number of KEXI rides. The model's accuracy is 0.7872 with a residual standard error of 16.03. A scatter plot of actual number of rides vs. predicted number of rides depicts a linear form for the predicted values, which means that a linear regression is the adequate form of analysis. The residuals are distributed normally.
 
