@@ -5,7 +5,8 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math.stat.StatUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.geotools.data.shapefile.files.BasicShpFileWriter;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.postAnalysis.traffic.TrafficAnalysis;
@@ -57,7 +58,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
     @CommandLine.Option(names = "--directory", description = "path to matsim output directory", required = true)
     private Path directory;
 
-    private static final Logger log = Logger.getLogger(DrtServiceQualityAnalysis.class);
+    private static final Logger log = LogManager.getLogger(DrtServiceQualityAnalysis.class);
 
     @CommandLine.Option(names = "--only-shape", defaultValue = "false", description = "only read drt legs file and write shp file")
     private boolean onlyShape;
