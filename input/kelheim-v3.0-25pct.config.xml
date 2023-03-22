@@ -28,7 +28,7 @@
     </module>
 
     <module name="plans">
-        <param name="inputPlansFile" value="kelheim-v3.0-25pct.plans.xml.gz"/>
+        <param name="inputPlansFile" value="kelheim-v3.0-25pct.plans-initial.xml.gz"/>
         <param name="removingUnnecessaryPlanAttributes" value="true"/>
     </module>
 
