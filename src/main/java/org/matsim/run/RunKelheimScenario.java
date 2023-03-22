@@ -3,8 +3,6 @@ package org.matsim.run;
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import com.google.inject.multibindings.Multibinder;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
@@ -30,10 +28,6 @@ import org.matsim.application.prepare.freight.tripExtraction.ExtractRelevantFrei
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
-import org.matsim.contrib.drt.estimator.MultiModalDrtLegEstimator;
-import org.matsim.contrib.drt.estimator.run.DrtEstimatorConfigGroup;
-import org.matsim.contrib.drt.estimator.run.DrtEstimatorModule;
-import org.matsim.contrib.drt.estimator.run.MultiModeDrtEstimatorConfigGroup;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
@@ -44,6 +38,7 @@ import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
+import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -52,45 +47,37 @@ import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
-import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
-import org.matsim.modechoice.ModeOptions;
-import org.matsim.modechoice.commands.GenerateChoiceSet;
-import org.matsim.modechoice.commands.StrategyOptions;
-import org.matsim.modechoice.estimators.DefaultActivityEstimator;
-import org.matsim.modechoice.estimators.DefaultLegScoreEstimator;
-import org.matsim.modechoice.estimators.FixedCostsEstimator;
-import org.matsim.modechoice.pruning.DistanceBasedPruner;
-import org.matsim.modechoice.pruning.ModeDistanceBasedPruner;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
-import org.matsim.run.utils.StrategyWeightFadeout;
 import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.pt.fare.DistanceBasedPtFareParams;
 import playground.vsp.pt.fare.PtFareConfigGroup;
-import playground.vsp.pt.fare.PtTripFareEstimator;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
 		CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
 		MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
-		CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, GenerateChoiceSet.class
+		CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class,
 })
 @MATSimApplication.Analysis({
 		TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-	static final String VERSION = "3.x";
+	static final String VERSION = "3.0";
 
 	@CommandLine.Mixin
 	private final SampleOptions sample = new SampleOptions(25, 10, 1);
@@ -119,18 +106,15 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--plans", defaultValue = "", description = "Use different input plans")
 	private String planOrigin;
 
-	@CommandLine.Option(names = "--anneal-replanning", defaultValue = "false", description = "Anneal strategy weights")
-	private boolean anneal;
-
-	@CommandLine.Mixin
-	private StrategyOptions strategy = new StrategyOptions(StrategyOptions.ModeChoice.subTourModeChoice, "person");
+	//@CommandLine.Mixin
+	//private StrategyOptions strategy = new StrategyOptions(StrategyOptions.ModeChoice.subTourModeChoice, "person");
 
 	public RunKelheimScenario(@Nullable Config config) {
 		super(config);
 	}
 
 	public RunKelheimScenario() {
-		super(String.format("scenarios/input/kelheim-v%s-25pct.config.xml", VERSION));
+		super(String.format("input/kelheim-v%s-25pct.config.xml", VERSION));
 	}
 
 	public static void main(String[] args) {
@@ -141,32 +125,7 @@ public class RunKelheimScenario extends MATSimApplication {
 	@Override
 	protected Config prepareConfig(Config config) {
 
-		for (long ii = 600; ii <= 97200; ii += 600) {
-
-			for (String act : List.of("home", "restaurant", "other", "visit", "errands", "accomp_other", "accomp_children",
-					"educ_higher", "educ_secondary", "educ_primary", "educ_tertiary", "educ_kiga", "educ_other")) {
-				config.planCalcScore()
-						.addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams(act + "_" + ii).setTypicalDuration(ii));
-			}
-
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("work_" + ii).setTypicalDuration(ii)
-					.setOpeningTime(6. * 3600.).setClosingTime(20. * 3600.));
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("business_" + ii).setTypicalDuration(ii)
-					.setOpeningTime(6. * 3600.).setClosingTime(20. * 3600.));
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("leisure_" + ii).setTypicalDuration(ii)
-					.setOpeningTime(9. * 3600.).setClosingTime(27. * 3600.));
-
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_daily_" + ii).setTypicalDuration(ii)
-					.setOpeningTime(8. * 3600.).setClosingTime(20. * 3600.));
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("shop_other_" + ii).setTypicalDuration(ii)
-					.setOpeningTime(8. * 3600.).setClosingTime(20. * 3600.));
-		}
-
-		config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("car interaction").setTypicalDuration(60));
-		config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("other").setTypicalDuration(600 * 3));
-
-		config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("freight_start").setTypicalDuration(60 * 15));
-		config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("freight_end").setTypicalDuration(60 * 15));
+		SnzActivities.addScoringParams(config);
 
 		config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
 		config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
@@ -191,9 +150,11 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		// Config is always needed
+		/* Informed-Mode-Choice
 		MultiModeDrtEstimatorConfigGroup estimatorConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtEstimatorConfigGroup.class);
 		// Use estimators with default values
 		estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("drt"));
+		 */
 
 		PtFareConfigGroup ptFareConfigGroup = ConfigUtils.addOrGetModule(config, PtFareConfigGroup.class);
 		DistanceBasedPtFareParams distanceBasedPtFareParams = ConfigUtils.addOrGetModule(config, DistanceBasedPtFareParams.class);
@@ -209,7 +170,7 @@ public class RunKelheimScenario extends MATSimApplication {
 		distanceBasedPtFareParams.setLongDistanceTripSlope(0.00025); // y = ax + b --> a value, for long trips
 		distanceBasedPtFareParams.setLongDistanceTripIntercept(30); // y = ax + b --> b value, for long trips
 
-		strategy.applyConfig(config, this::addRunOption);
+		//strategy.applyConfig(config, this::addRunOption);
 
 		if (iterations != -1)
 			addRunOption(config, "iter", iterations);
@@ -222,10 +183,8 @@ public class RunKelheimScenario extends MATSimApplication {
 			addRunOption(config, planOrigin);
 		}
 
-		if (anneal)
-			addRunOption(config, "anneal-replanning");
-
-		config.planCalcScore().setExplainScores(true);
+		// TODO:
+		//config.planCalcScore().setExplainScores(true);
 
 		return config;
 	}
@@ -278,13 +237,8 @@ public class RunKelheimScenario extends MATSimApplication {
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
-				if (anneal) {
-					addControlerListenerBinding().to(StrategyWeightFadeout.class).in(Singleton.class);
-					Multibinder<StrategyWeightFadeout.Schedule> schedules = Multibinder.newSetBinder(binder(), StrategyWeightFadeout.Schedule.class);
-					schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(strategy.getModeChoice().getName(), "person", 0));
-					schedules.addBinding().toInstance(new StrategyWeightFadeout.Schedule(DefaultPlanStrategiesModule.DefaultStrategy.ReRoute, "person", 0.7));
-				}
-
+				/*
+				TODO: Informed mode choice when merged in core
 				// Configure mode-choice strategy
 				install(strategy.applyModule(binder(), config, builder ->
 								builder.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
@@ -293,28 +247,13 @@ public class RunKelheimScenario extends MATSimApplication {
 										.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, "drt", "av")
 										.withTripEstimator(PtTripFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
 										.withActivityEstimator(DefaultActivityEstimator.class)
-										.withPruner("d99", new DistanceBasedPruner(3.28179737, 0.16710464))
-										.withPruner("d95", new DistanceBasedPruner(3.09737874, 0.03390164))
-										.withPruner("m99", new ModeDistanceBasedPruner(2.54076057, Map.of(
-												"bike", 0.32642463,
-												"walk", 0.13978577,
-												"car", 0.0448102,
-												"ride", 0.07041452,
-												"pt", 0.13576849
-										)))
 										// These are with activity estimation enabled
 										.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
 										.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
 										.withPruner("ad95", new DistanceBasedPruner(1.72092386, 0.03189323))
-										.withPruner("am99", new ModeDistanceBasedPruner(2.68083795, Map.of(
-												"bike", 0.22681661,
-												"walk", 0d,
-												"car", 0.052746,
-												"ride", 0.11132056,
-												"pt", 0.07964946
-										)))
 						)
 				);
+				 */
 
 
 				if (incomeDependent) {
@@ -363,7 +302,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				}
 			}
 
-			controler.addOverridingModule(new DrtEstimatorModule());
+			//controler.addOverridingModule(new DrtEstimatorModule());
 
 			// TODO: when to include AV?
 			//estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));

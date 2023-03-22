@@ -17,7 +17,7 @@ $(JAR):
 	mvn package
 
 # Required files
-scenarios/input/network.osm.pbf:
+input/network.osm.pbf:
 	curl https://download.geofabrik.de/europe/germany-210701.osm.pbf\
 	  -o scenarios/input/network.osm.pbf
 
@@ -29,7 +29,7 @@ ${SHP_FILES} :
 #	curl https://opendata.kelheim.de/dataset/8803f612-2ce1-4643-82d1-213434889200/resource/b38955c4-431c-4e8b-a4ef-9964a3a2c95d/download/gtfsmdvlvb.zip\
 #	  -o $@
 
-scenarios/input/network.osm: scenarios/input/network.osm.pbf
+input/network.osm: input/network.osm.pbf
 
 	$(osmosis) --rb file=$<\
 	 --tf accept-ways highway=motorway,motorway_link,trunk,trunk_link,primary,primary_link,secondary_link,secondary,tertiary,motorway_junction,residential,unclassified,living_street,service\
@@ -59,7 +59,7 @@ scenarios/input/network.osm: scenarios/input/network.osm.pbf
 	rm network-germany.osm.pbf
 
 
-scenarios/input/sumo.net.xml: scenarios/input/network.osm
+input/sumo.net.xml: input/network.osm
 
 	$(SUMO_HOME)/bin/netconvert --geometry.remove --ramps.guess --ramps.no-split\
 	 --type-files $(SUMO_HOME)/data/typemap/osmNetconvert.typ.xml,$(SUMO_HOME)/data/typemap/osmNetconvertUrbanDe.typ.xml\
@@ -73,7 +73,7 @@ scenarios/input/sumo.net.xml: scenarios/input/network.osm
 	 --osm-files $< -o=$@
 
 
-scenarios/input/kelheim-$V-network.xml.gz: scenarios/input/sumo.net.xml
+input/kelheim-$V-network.xml.gz: input/sumo.net.xml
 	java -jar $(JAR) prepare network-from-sumo $<\
 	 --output $@
 
@@ -83,7 +83,7 @@ scenarios/input/kelheim-$V-network.xml.gz: scenarios/input/sumo.net.xml
 	 --output $@
 
 
-scenarios/input/kelheim-$V-network-with-pt.xml.gz: scenarios/input/kelheim-$V-network.xml.gz
+input/kelheim-$V-network-with-pt.xml.gz: input/kelheim-$V-network.xml.gz
 	java -Xmx20G -jar $(JAR) prepare transit-from-gtfs --network $<\
 	 --name kelheim-$V --date "2021-08-18" --target-crs $(CRS) \
 	 ../shared-svn/projects/KelRide/data/20210816_regio.zip\
@@ -94,7 +94,7 @@ scenarios/input/kelheim-$V-network-with-pt.xml.gz: scenarios/input/kelheim-$V-ne
 	 --shp ../shared-svn/projects/KelRide/data/Bayern.zip\
 	 --shp ../shared-svn/projects/KelRide/data/germany-area/germany-area.shp\
 
-scenarios/input/freight-trips.xml.gz: scenarios/input/kelheim-$V-network.xml.gz
+input/freight-trips.xml.gz: input/kelheim-$V-network.xml.gz
 	java -jar $(JAR) prepare extract-freight-trips ../shared-svn/projects/german-wide-freight/v1.2/german-wide-freight-25pct.xml.gz\
 	 --network ../shared-svn/projects/german-wide-freight/original-data/german-primary-road.network.xml.gz\
 	 --input-crs EPSG:5677\
@@ -108,7 +108,7 @@ scenarios/input/landuse/landuse.shp: ${SHP_FILES}
 	 --target-crs ${CRS}\
 	 --output $@
 
-scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml.gz scenarios/input/kelheim-$V-network.xml.gz
+input/kelheim-$V-25pct.plans-initial.xml.gz: input/freight-trips.xml.gz input/kelheim-$V-network.xml.gz
 	java -jar $(JAR) prepare trajectory-to-plans\
 	 --name prepare --sample-size 0.25\
 	 --population ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim//population.xml.gz\
@@ -143,11 +143,11 @@ scenarios/input/kelheim-$V-25pct.plans.xml.gz: scenarios/input/freight-trips.xml
     	 --samples 0.1 0.01\
 
 
-check: scenarios/input/kelheim-$V-25pct.plans.xml.gz
+check: input/kelheim-$V-25pct.plans-initial.xml.gz
 	java -jar $(JAR) analysis check-population $<\
  	 --input-crs $(CRS)\
  	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)
 
 # Aggregated target
-prepare: scenarios/input/kelheim-$V-25pct.plans.xml.gz scenarios/input/kelheim-$V-network-with-pt.xml.gz
+prepare: input/kelheim-$V-25pct.plans-initial.xml.gz input/kelheim-$V-network-with-pt.xml.gz
 	echo "Done"
