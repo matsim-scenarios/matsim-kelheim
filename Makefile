@@ -14,11 +14,6 @@ osmosis := osmosis/bin/osmosis
 # Scenario creation tool
 sc := java -Xmx$(MEMORY) -jar $(JAR)
 
-REGIONS := baden-wuerttemberg bayern brandenburg bremen hamburg hessen mecklenburg-vorpommern niedersachsen nordrhein-westfalen\
-	rheinland-pfalz saarland sachsen sachsen-anhalt schleswig-holstein thueringen
-
-SHP_FILES=$(patsubst %, input/shp/%-latest-free.shp.zip, $(REGIONS))
-
 .PHONY: prepare
 
 $(JAR):
@@ -29,9 +24,6 @@ input/network.osm.pbf:
 	curl https://download.geofabrik.de/europe/germany-220101.osm.pbf\
 	  -o input/network.osm.pbf
 
-${SHP_FILES} :
-	mkdir -p input/shp
-	curl https://download.geofabrik.de/europe/germany/$(@:input/shp/%=%) -o $@
 
 #input/gtfs-lvb.zip:
 #	curl https://opendata.kelheim.de/dataset/8803f612-2ce1-4643-82d1-213434889200/resource/b38955c4-431c-4e8b-a4ef-9964a3a2c95d/download/gtfsmdvlvb.zip\
@@ -81,7 +73,7 @@ input/sumo.net.xml: input/network.osm
 	 --osm-files $< -o=$@
 
 
-input/kelheim-$V-network.xml.gz: input/sumo.net.xml
+input/$V/kelheim-$V-network.xml.gz: input/sumo.net.xml
 	$(sc) prepare network-from-sumo $<\
 	 --output $@
 
@@ -90,10 +82,10 @@ input/kelheim-$V-network.xml.gz: input/sumo.net.xml
 	 --network $@\
 	 --output $@
 
-
-input/kelheim-$V-network-with-pt.xml.gz: input/kelheim-$V-network.xml.gz
-	java -Xmx20G -jar $(JAR) prepare transit-from-gtfs --network $<\
+input/$V/kelheim-$V-network-with-pt.xml.gz: input/$V/kelheim-$V-network.xml.gz
+	$(sc) prepare transit-from-gtfs --network $<\
 	 --name kelheim-$V --date "2021-08-18" --target-crs $(CRS) \
+	 --output input/$V\
 	 ../shared-svn/projects/KelRide/data/20210816_regio.zip\
 	 ../shared-svn/projects/KelRide/data/20210816_train_short.zip\
 	 ../shared-svn/projects/KelRide/data/20210816_train_long.zip\
@@ -102,31 +94,27 @@ input/kelheim-$V-network-with-pt.xml.gz: input/kelheim-$V-network.xml.gz
 	 --shp ../shared-svn/projects/KelRide/data/Bayern.zip\
 	 --shp ../shared-svn/projects/KelRide/data/germany-area/germany-area.shp\
 
-input/freight-trips.xml.gz: input/kelheim-$V-network.xml.gz
-	$(sc) prepare extract-freight-trips ../shared-svn/projects/german-wide-freight/v1.2/german-wide-freight-25pct.xml.gz\
-	 --network ../shared-svn/projects/german-wide-freight/original-data/german-primary-road.network.xml.gz\
-	 --input-crs EPSG:5677\
+input/freight-trips.xml.gz: input/$V/kelheim-$V-network.xml.gz
+	$(sc) prepare extract-freight-trips ../public-svn/matsim/scenarios/countries/de/german-wide-freight/v2/german_freight.25pct.plans.xml.gz\
+	 --network ../public-svn/matsim/scenarios/countries/de/german-wide-freight/v2/germany-europe-network.xml.gz\
+	 --input-crs $(CRS)\
 	 --target-crs $(CRS)\
 	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)\
 	 --output $@
 
-input/landuse/landuse.shp: ${SHP_FILES}
-	mkdir -p input/landuse
-	java -Xmx20G -jar $(JAR) prepare create-landuse-shp $^\
-	 --target-crs ${CRS}\
-	 --output $@
-
-input/kelheim-$V-25pct.plans-initial.xml.gz: input/freight-trips.xml.gz input/kelheim-$V-network.xml.gz
+input/$V/kelheim-$V-25pct.plans-initial.xml.gz: input/freight-trips.xml.gz input/$V/kelheim-$V-network.xml.gz
 	$(sc) prepare trajectory-to-plans\
 	 --name prepare --sample-size 0.25\
-	 --population ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim//population.xml.gz\
-	 --attributes  ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim//personAttributes.xml.gz
+	 --max-typical-duration 0\
+	 --output input/\
+	 --population ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/population.xml.gz\
+	 --attributes  ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/personAttributes.xml.gz
 
 	$(sc) prepare resolve-grid-coords\
 	 input/prepare-25pct.plans.xml.gz\
 	 --input-crs $(CRS)\
 	 --grid-resolution 300\
-	 --landuse ../matsim-leipzig/scenarios/input/landuse/landuse.shp\
+	 --landuse ../shared-svn/projects/matsim-germany/landuse/landuse.shp\
 	 --output input/prepare-25pct.plans.xml.gz
 
 	$(sc) prepare population input/prepare-25pct.plans.xml.gz\
@@ -138,22 +126,26 @@ input/kelheim-$V-25pct.plans-initial.xml.gz: input/freight-trips.xml.gz input/ke
  	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)\
  	 --num-trips 15216
 
-	$(sc) prepare fix-subtour-modes --input input/prepare-25pct.plans-with-trips.xml.gz --output $@
+	$(sc) prepare split-activity-types-duration\
+		--input input/prepare-25pct.plans-with-trips.xml.gz\
+		--output input/prepare-25pct.plans-with-trips.xml.gz
+
+	$(sc) prepare fix-subtour-modes --input input/prepare-25pct.plans-with-trips.xml.gz --coord-dist 100 --output $@
 
 	$(sc) prepare merge-populations $@ $< --output $@
 
-	$(sc) prepare extract-home-coordinates $@ --csv input/kelheim-$V-homes.csv
+	$(sc) prepare extract-home-coordinates $@ --csv input/$V/kelheim-$V-homes.csv
 
 	$(sc) prepare downsample-population $@\
     	 --sample-size 0.25\
     	 --samples 0.1 0.01\
 
 
-check: input/kelheim-$V-25pct.plans-initial.xml.gz
+check: input/$V/kelheim-$V-25pct.plans-initial.xml.gz
 	$(sc) analysis check-population $<\
  	 --input-crs $(CRS)\
  	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)
 
 # Aggregated target
-prepare: input/kelheim-$V-25pct.plans-initial.xml.gz input/kelheim-$V-network-with-pt.xml.gz
+prepare: input/$V/kelheim-$V-25pct.plans-initial.xml.gz input/$V/kelheim-$V-network-with-pt.xml.gz
 	echo "Done"
