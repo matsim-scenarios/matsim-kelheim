@@ -10,23 +10,18 @@ public class KelheimCaseStudyTool {
     public static void setConfigFile(Config config, DrtConfigGroup drtConfig, AV_SERVICE_AREAS avServiceAreas) {
         // Set drt related things (vehicle file, stops file)
         if (avServiceAreas == AV_SERVICE_AREAS.CORE) {
-            //drtConfig.setTransitStopFile("av-stops-DP-AS.xml");
             drtConfig.transitStopFile = "av-stops-DP-AS.xml";
-
         }
 
         if (avServiceAreas == AV_SERVICE_AREAS.CORE_WITH_SHOP) {
-            //drtConfig.setTransitStopFile("av-stops-DP-AS-shops.xml");
             drtConfig.transitStopFile = "av-stops-DP-AS-shops.xml";
         }
 
         if (avServiceAreas == AV_SERVICE_AREAS.HOHENPFAHL) {
-            //drtConfig.setTransitStopFile("av-stops-Hohenpfahl-DP-AS.xml");
-            drtConfig.transitStopFile ="av-stops-Hohenpfahl-DP-AS.xml";
+            drtConfig.transitStopFile = "av-stops-Hohenpfahl-DP-AS.xml";
         }
 
         if (avServiceAreas == AV_SERVICE_AREAS.BAUERNSIEDLUNG) {
-            //drtConfig.setTransitStopFile("av-stops-Bauernsiedlung-DP-AS.xml");
             drtConfig.transitStopFile = "av-stops-Bauernsiedlung-DP-AS.xml";
         }
 

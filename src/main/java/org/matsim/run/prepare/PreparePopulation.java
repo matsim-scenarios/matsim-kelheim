@@ -12,6 +12,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
+import org.matsim.core.scenario.ProjectionUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import picocli.CommandLine;
 
@@ -83,7 +84,7 @@ public class PreparePopulation implements MATSimAppCommand {
 
             // Set car availability to "never" for agents below 18 years old
             // Standardize the attribute "age"
-            String avail = (String) person.getAttributes().getAttribute("sim_carAvailability");
+            String avail = "always";
             Object age = person.getAttributes().getAttribute("microm:modeled:age");
             if (age != null) {
                 PersonUtils.setAge(person, (int) age);
@@ -170,6 +171,8 @@ public class PreparePopulation implements MATSimAppCommand {
             }
             PersonUtils.setIncome(person, income);
         }
+
+        ProjectionUtils.putCRS(population, "EPSG:25832");
         PopulationUtils.writePopulation(population, output.toString());
 
         return 0;
