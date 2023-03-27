@@ -179,7 +179,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
         if (drt) {
             MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
-			DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup  = (DrtWithExtensionsConfigGroup) multiModeDrtConfigGroup.getModalElements().iterator().next();
+			DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup  = (DrtWithExtensionsConfigGroup) multiModeDrtConfig.getModalElements().iterator().next();
 			DrtCompanionParams drtCompanionParams  = new DrtCompanionParams();
 			drtCompanionParams.setDrtCompanionSamplingWeights(List.of(
 					WEIGHT_1_PASSENGER,
