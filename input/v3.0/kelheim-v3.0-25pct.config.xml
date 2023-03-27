@@ -73,11 +73,20 @@
         <param name="insertingWaitingVehiclesBeforeDrivingVehicles" value="true"/>
     </module>
 
-    <module name="ReplanningAnnealer">
-        <param name="activateAnnealingModule" value="true"/>
-<!--        <param name="shapeFactor" value="0.05"/>-->
-    </module>
-
+	<module name="ReplanningAnnealer" >
+		<param name="activateAnnealingModule" value="true" />
+		<parameterset type="AnnealingVariable" >
+			<param name="annealParameter" value="globalInnovationRate" />
+			<param name="annealType" value="sigmoid" />
+			<param name="defaultSubpopulation" value="person" />
+			<!-- this parameter enters the exponential and sigmoid formulas. May be an iteration or a share, i.e. 0.5 for halfLife at 50% of iterations. Exponential: startValue / exp(it/halfLife) -->
+			<param name="halfLife" value="0.5" />
+			<!-- sigmoid: 1/(1+e^(shapeFactor*(it - halfLife))); geometric: startValue * shapeFactor^it; msa: startValue / it^shapeFactor -->
+			<param name="shapeFactor" value="0.05" />
+			<param name="startValue" value="0.6" />
+			<param name="endValue" value="0.01" />
+		</parameterset>
+	</module>
     <module name="strategy">
         <param name="fractionOfIterationsToDisableInnovation" value="0.9"/>
         <parameterset type="strategysettings">
@@ -119,7 +128,7 @@
         <param name="considerCarAvailability" value="true"/>
         <param name="behavior" value="betweenAllAndFewerConstraints"/>
         <param name="probaForRandomSingleTripMode" value="0.5"/>
-		<param name="coordDist" value="100"/>
+		<param name="coordDistance" value="100"/>
     </module>
 
 	<!--
@@ -128,11 +137,6 @@
         <param name="topK" value="5"/>
     </module>
 	-->
-
-    <module name="changeMode">
-        <param name="modes" value="car,ride,pt,bike,walk"/>
-        <param name="ignoreCarAvailability" value="false"/>
-    </module>
 
     <module name="transitRouter">
         <param name="extensionRadius" value="500.0"/>
