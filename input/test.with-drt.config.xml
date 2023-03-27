@@ -279,7 +279,7 @@
                 </parameterset>
             </parameterset>
         </parameterset>
-        
+
         <parameterset type="drt">
             <param name="mode" value="av"/>
             <parameterset type="ExtensiveInsertionSearch"/>
@@ -330,5 +330,5 @@
             <param name="cellSize" value="200"/>
         </parameterset>
     </module>
-    
+
 </config>

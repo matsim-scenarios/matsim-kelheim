@@ -1,0 +1,79 @@
+---
+title: "Preparation data on drtDemand"
+author: "Oleksandr Soboliev"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    theme: cosmo
+    highlight: monochrome
+    code_folding: show
+runtime: shiny
+editor_options:
+  chunk_output_type: inline
+---
+
+folder structure is:
+
+* data/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv
+* data/IOKI_TABLEAU_Request_List_2020.csv
+* data/IOKI_TABLEAU_Request_List_2021.csv
+
+#Libraries
+```{r libraries, echo = FALSE, include=FALSE,message=FALSE}
+library(tidyverse)
+library(lubridate)
+
+
+```
+
+###IOKI
+```{r , echo = FALSE,warning=FALSE,comment=FALSE,message=FALSE}
+ioki2020 = read_csv2("data/IOKI_TABLEAU_Request_List_2020.csv")
+ioki2021 = read_csv2("data/IOKI_TABLEAU_Request_List_2021.csv")
+```
+
+```{r change columns order}
+ioki2020 = ioki2020 %>% select(1:20,Passagieranzahl,`Nutzer ID`,`Fahrzeug ID`,`Eindeutige Anfrage`,Ersteller)
+```
+
+Intersect of these 2 tables by Fahrt ID isn't NULL `r length(intersect(ioki2020$`Fahrt ID`,ioki2021$`Fahrt ID`))` so we need to filter out doubled rows
+```{r}
+ioki2021 = ioki2021 %>% anti_join(ioki2020, by = "Fahrt ID")
+allData_ioki = rbind(ioki2020,ioki2021)
+```
+
+###VIA
+
+```{r via import, message=FALSE}
+via = read_csv2("data/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv")
+print(via)
+```
+
+```{r date}
+allData_ioki = allData_ioki %>% mutate(`Fahrtwunsch erstellt` = as.Date(dmy_hms(`Fahrtwunsch erstellt`))) %>% filter(!is.na(`Fahrtwunsch erstellt`))
+via = via %>% mutate(`Ride request time` = as.Date(ymd_hms(`Ride request time`)))
+
+
+```
+
+```{r build grouped date table}
+allData_ioki = allData_ioki %>% mutate(ncompl = ifelse(Stornierungsgrund == "ride_completed",1,0))
+
+demandData_ioki = allData_ioki %>% group_by(`Fahrtwunsch erstellt`) %>% summarize(noRides = sum(ncompl),noRequests = n())
+
+
+via = via %>% mutate(ncompl = ifelse(Status == "Completed",1,0))
+
+demandData_via = via %>% group_by(`Ride request time`) %>% summarize(noRides = sum(ncompl,na.rm = TRUE),noRequests = n())
+
+#Join 2 tables
+#rename
+demandData_ioki = demandData_ioki %>% rename(date = `Fahrtwunsch erstellt`)
+demandData_via = demandData_via %>% rename(date = `Ride request time`)
+
+demandData_all = rbind(demandData_ioki,demandData_via)
+
+write.csv2(demandData_all,"data/allDemandByDate.csv")
+
+```

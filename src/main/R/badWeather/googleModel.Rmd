@@ -1,0 +1,520 @@
+---
+title: "Bad weather Kelheim Demo"
+author: "Oleksandr Soboliev"
+output: 
+  html_document:
+    code_folding: hide
+runtime: shiny
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r, include= FALSE}
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(leaflet)
+library(rmarkdown)
+library(modelr)
+library(splines)
+library(forecast)
+library(fitdistrplus)
+library(rjson)
+rendername = "googleModel.Rmd"
+```
+
+
+# Data
+
+Data is taken from these resources:
+
+* Ingolstadt Weather from Meteostat [Meteostat](https://bulk.meteostat.net/v2/) 
+* Weather Description from weatherstack [Weatherstck](https://svn.vsp.tu-berlin.de/repos/shared-svn/projects/KelRide/data/badWeather/weatherstack/)
+* Mobility data is represented by google mobility report [Google mobility report](https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv)
+* Stringency (strictness of covid policies) number is from [Oxford COVID-19 Government Response Tracker](https://covidtracker.bsg.ox.ac.uk/)
+* Holiday days are from [Feiertage](https://feiertage-api.de/)
+
+# Regression analysis resources
+
+Analysis was proceeded using this statistical sources:
+
+* Linear Models with R (Julian J. Faraway)
+
+# Importing and preparing data
+
+Main target is to get result table containing all "expected" relevant data/variables that can be connected with changes of demand in Kelheim region, thus mobility data is collected on daily basis, remaining data has to be daily based.
+
+After obtaining such table it would be useful(in sense of building a model and understanding the data) to check correlations between individual independent variable to dependent mobility variable. So the next chapter has a focus on filtering out unrelevant data to pass it to the model.
+
+```{r importing all the data, message=FALSE,echo=FALSE,warning=FALSE}
+# Ingolstadt weather
+ingolstadt_weather = read_delim("https://bulk.meteostat.net/v2/daily/10860.csv.gz",",",col_names = FALSE)
+colnames(ingolstadt_weather) = c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
+
+# Weatherstack data
+weatherstack_kelheim = read_delim("data/Kelheim_weather_since_july_2008.csv",delim = ",")
+
+# Stringency
+json = fromJSON(file = "data/2022-11-10.json")
+json = unlist(json)
+
+#Mobility
+demand = read_delim("data/googleMobility.csv")
+bavaria_demand = demand %>% filter(sub_region_1 == "Bavaria")
+bavaria_demand = bavaria_demand %>% dplyr::select(country_region,sub_region_1,date,residential_percent_change_from_baseline) %>%
+  rename(notAtHomeChange = residential_percent_change_from_baseline)
+
+demand = bavaria_demand %>% mutate(notAtHomeChange = -notAtHomeChange)
+
+#Expanding the data
+demand2022 = read_delim("data/VIA_Rides_202201_202210.csv")
+
+#Holidays
+holidays2020 = read_csv2("data/Holidays2020.csv") %>% dplyr::select(1,2,3)
+holidays2021 = read_csv2("data/Holidays2021.csv") %>% dplyr::select(1,2,3)
+holidays2022 = read_csv2("data/Holidays2022.csv") %>% dplyr::select(1,2,3)
+holidays = rbind(holidays2020,holidays2021,holidays2022)
+holidays = holidays %>% mutate(EndDateTime1 = as.Date(as.POSIXct(EndDateTime1, format = "%m.%d.%Y %H:%M")),
+                               StartDateTime1 = as.Date(as.POSIXct(StartDateTime1, format = "%m.%d.%Y %H:%M")))
+
+holiday_days = unique(c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days")))
+
+for(i in 1:nrow(holidays)){
+  if(i!=1){
+      holiday_days = append(holiday_days,seq(holidays$StartDateTime1[i],holidays$EndDateTime1[i],by = "days"))
+  }
+}
+
+df_holidays = data.frame(date = holiday_days,isHoliday = TRUE)
+
+```
+##Modify and join data
+
+```{r modify, message=FALSE, warning=FALSE}
+# Weatherstack
+weatherstack_kelheim_daily = weatherstack_kelheim %>%
+  group_by(date) %>%
+  count(description)
+
+# Stringency 
+deu_stringency = json[grep("DEU.stringency_actual",names(json))]
+date_stringency = sapply(strsplit(names(deu_stringency),split = ".",fixed = TRUE),"[[",2)
+df_stringency = data.frame(date = date_stringency,stringency = deu_stringency)
+df_stringency = df_stringency %>% mutate(stringency = as.numeric(stringency), date = as.Date(date))
+
+
+
+# Ingolstadt
+type_of_weather = unique(weatherstack_kelheim$description)
+map_vector <- c("Clear","Sunny","Cloudy","Light","Light","Light","Light","Light","Light","Light","Light","Medium","Cloudy","Light","Light","Heavy","Heavy","Heavy","Light","Medium","Heavy","Heavy","Light","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Light","Medium","Medium","Light","Heavy","Light","Light","Light","Light","Light","Heavy","Light","Medium","Heavy","Heavy","Heavy")
+names(map_vector)<- type_of_weather
+
+
+
+
+ingolstadt_weather = ingolstadt_weather %>% 
+  mutate(season = ifelse(month(date) %in% c(12,1,2),"winter",NA)) %>%
+  mutate(season = ifelse(month(date) %in% c(3,4,5),"spring",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(6,7,8),"summer",season)) %>%
+  mutate(season = ifelse(month(date) %in% c(9,10,11),"autumn",season))# %>% dplyr::select(-tsun)
+
+
+
+
+day_description_impact = weatherstack_kelheim_daily %>% pivot_wider(names_from = description,values_from = n)
+
+#remove NAs
+day_description_impact[is.na(day_description_impact)] = 0
+
+day_description_impact = day_description_impact %>% pivot_longer(cols = all_of(type_of_weather),names_to = "description",values_to = "value")
+
+day_description_impact = day_description_impact
+day_description_impact$description = map_vector[(day_description_impact$description)]
+
+day_description_impact= day_description_impact %>% group_by(date)%>%
+  top_n(n = 1,value) %>% group_by(date) %>% top_n(n = 1,description) %>% rename(weather_impact = value)
+
+#####Join the data#####
+
+result_data = demand %>% left_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
+#Also need to be added weekday
+result_data = result_data %>% mutate(wday = as.character(wday(date,week_start = 1)))
+
+#Append holidays
+result_data = result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0)) #%>% filter(notAtHomeChange != 0) #%>% filter(date <"2021-07-01")
+
+head(result_data)
+```
+
+```{r adding tmean for season}
+
+summer = mean(result_data$tavg[result_data$season == "summer"])
+
+spring = mean(result_data$tavg[result_data$season == "spring"])
+
+autumn = mean(result_data$tavg[result_data$season == "autumn"])
+
+winter = mean(result_data$tavg[result_data$season == "winter"])
+
+result_data = result_data %>% 
+  mutate(tdiff = ifelse(season == "winter",tavg-winter,NA)) %>%
+  mutate(tdiff = ifelse(season == "spring",tavg-spring,tdiff)) %>%
+  mutate(tdiff = ifelse(season == "autumn",tavg-autumn,tdiff)) %>%
+  mutate(tdiff = ifelse(season == "summer",tavg-summer,tdiff))
+
+```
+
+
+From following plots we can see strong correlation between day of the week and notAtHomeChange, because we want to simulate common day using MatSim it was decided to filter weekends out of resulting dataset for the model. Also because day doesn't represent weather impact, like holidays that have strong impact on mobility so they are also excluded.
+
+```{r plotting wday and holidays}
+wday_plot = ggplotly(ggplot(result_data)+
+  geom_boxplot(aes(x = wday,y = notAtHomeChange)))
+
+holiday_plot = ggplotly(ggplot(result_data)+
+  geom_boxplot(aes(x = isHoliday,y = notAtHomeChange )))
+
+annotations = list( 
+  list( 
+     x = 0.2,  
+    y = 1.0,  
+    text = "Weekday",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ),  
+  list( 
+     x = 0.75,  
+    y = 1.0,  
+    text = "Is Holiday",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ))
+
+subplot(wday_plot,holiday_plot) %>% layout(annotations = annotations)
+```
+
+
+After first data processing it would be helpful to find some dependencies in the data using scatter plots mapped to number of rides.
+Here is summary of end dataset 
+```{r table}
+result_data$description = factor(result_data$description)
+result_data$season = factor(result_data$season)
+result_sum  = data.frame(c("notAtHomeChange","description","tavg","tmin","tmax","prcp","snow","wspd","wpgt","pres","tsun"),c("Relative percentage change of hours spent out of home related to a base date (before covid)","Weather description","The average air temperature in °C","The minimum air temperature in °C	","The maximum air temperature in °C","The daily precipitation total in mm","The maximum snow depth in mm","The average wind speed in km/h","The peak wind gust in km/h","The average sea-level air pressure in hPa","The daily sunshine total in minutes (m)"))
+colnames(result_sum) = c("Variable","Description")
+knitr::kable(result_sum)
+```
+
+# Finding patterns using graphic approach
+
+
+
+```{r notAtHomeChange~., out.width="100%"}
+
+tavg_plot = ggplotly(
+  ggplot(result_data)+
+    geom_point(aes(y= notAtHomeChange,x = tavg,colour = season))
+  )%>%layout(xaxis = list(title = 'tavg'), yaxis = list(title = 'notAtHomeChange'))
+
+
+pres_plot= ggplotly(
+  ggplot(result_data)+
+    geom_point(aes(y= notAtHomeChange,x = pres,colour = season))
+  
+  )%>%
+  layout(xaxis = list(title = 'pres'), yaxis = list(title = 'notAtHomeChange'))
+prcp_plot = ggplotly(
+  ggplot(result_data %>% filter(prcp!=0))+
+    geom_point(aes(y= notAtHomeChange,x = prcp,colour = season))
+  )%>%
+  layout(xaxis = list(title = 'prcp'), yaxis = list(title = 'notAtHomeChange'))
+snow_plot = ggplotly(
+  ggplot(result_data %>% filter(snow!=0))+
+    geom_point(aes(y= notAtHomeChange,x = snow,colour = season))
+  )%>% layout(xaxis = list(title = 'snow'), yaxis = list(title = 'notAtHomeChange'))
+
+anno = list( 
+  list( 
+     x = 0.2,  
+    y = 1.0,  
+    text = "notAtHomeChange from avg temp",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ),  
+  list( 
+     x = 0.75,  
+    y = 1.0,  
+    text = "notAtHomeChange from avg pressure",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ),
+  list( 
+     x = 0.2,  
+    y = 0.4,  
+    text = "notAtHomeChange from avg precipitation",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ),
+  list( 
+     x = 0.75,  
+    y = 0.4,  
+    text = "notAtHomeChange from avg snow depth",  
+    xref = "paper",  
+    yref = "paper",  
+    xanchor = "center",  
+    yanchor = "bottom",  
+    showarrow = FALSE 
+  ))
+
+subplot(tavg_plot,pres_plot,prcp_plot,snow_plot,nrows = 2,titleY = TRUE,titleX = TRUE,margin = 0.1) %>% layout(annotations =anno)
+
+```
+
+# Finding correlations
+
+Correlation coefficients between two variables we calculate using cor() function, later anova oneway test will be used for testing to check categorical variable dependency. 
+
+```{r correlations, warning = FALSE}
+result_data = result_data %>% filter(wday !=6 & wday !=7 & isHoliday==FALSE)
+best_pred <- result_data %>% ungroup() %>%
+  dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
+  map_dbl(cor,y = result_data$notAtHomeChange) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print(best_pred)
+
+```
+
+As a result highest absolute score in correlation have temperature(max during a day), snow(depth in mm), pressure(air pressure in hPa), stringency(strictness of covid19 policy), weather impact(highest hours of same description a day) and windspeed. Let's examine data subset filtered by season. 
+
+```{r, warning = FALSE}
+summer_pred = result_data %>% filter(season == "summer")
+best_pred <- summer_pred  %>% ungroup() %>%
+  dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
+  map_dbl(cor,y = summer_pred$notAtHomeChange) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print("summer predictors")
+print(best_pred)
+```
+By comparison with whole dataset we can see that in summer windspeed has less correlation coefficient, and wind directions have different signs. Main sifnificant variable during summer is temperature, pressure and precipitation.
+```{r, warning = FALSE}
+autumn_pred = result_data %>% filter(season == "autumn")
+best_pred <- autumn_pred  %>% ungroup() %>%
+  dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
+  map_dbl(cor,y = autumn_pred$notAtHomeChange) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+
+print("autumn predictors")
+print(best_pred)
+```
+In autumn pressure, snow and temperature have the highest correlation to number of rides.
+```{r, warning = FALSE}
+spring_pred = result_data %>% filter(season == "spring")
+best_pred <- spring_pred  %>% ungroup() %>%
+  dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
+  map_dbl(cor,y = spring_pred$notAtHomeChange) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print("spring predictors")
+print(best_pred)
+```
+Compared to other seasons in spring precipitation have more impact on home duration, during snow and temperature correlation values decreased. 
+```{r, warning = FALSE}
+winter_pred = result_data %>% filter(season == "winter")
+best_pred <- winter_pred  %>% ungroup() %>%
+  dplyr::select(-notAtHomeChange,-description ,-date,-season,-wday,-country_region,-sub_region_1,-isHoliday) %>%
+  map_dbl(cor,y = winter_pred$notAtHomeChange) %>%
+  #map_dbl(abs) %>%
+  sort(decreasing = TRUE) 
+print("winter predictors")
+print(best_pred)
+
+```
+In winter correlation between windspeed, pressure, temperature and home duration is week, while correlation with pressure is stronger.
+
+
+Testing of null hypothesis is made for dependent notAtHomeChange and independent season, description and wday
+```{r categorical variables}
+
+season_test = oneway.test(result_data$notAtHomeChange~result_data$season)$p.value
+description_test = oneway.test(result_data$notAtHomeChange~result_data$description)$p.value
+wday_test = oneway.test(result_data$notAtHomeChange~result_data$wday)$p.value
+print(c("season" =season_test,"description" =description_test,"wday" =wday_test))
+
+```
+
+From the p-value we can see that null hypothesis can only be rejected for description (p.value higher than 0.05), forseason we can't make such conclusion. But one thing that should be also tested is dependency between seasons and temperature - `r oneway.test(result_data$tavg~result_data$season)$p.value`. As we can see temperature dependent from season, so in our future model one of the variable should be dropped.
+
+# Building a model
+
+After determination of significant variables we can build different models using different set of variables, one thing remains same - first approach is to build linear model to make predictions, also to check which predictors impact not at home duration most. In our approach we will firstly larger model using all relevant variables from previous chapter, then we reduce number of variables taking smaller subset and synchronous to check how model quality changes. 
+
+```{r omega model}
+data = result_data
+
+omega_model = lm(notAtHomeChange ~ tavg+pres+snow+wspd+stringency+prcp+season,data = data)
+
+summary(omega_model)
+
+```
+
+Low adjusted R^2 doesn't tells that our model doesn't fit the data well. Let's take a look on predicted values and residuals.
+
+```{r omega residuals,out.width="100%"}
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = omega_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal")) 
+
+
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_point(aes(x = date,y = notAtHomeChange,color = "actual"))+
+  geom_point(aes(x = date,y = pred,color = "predicted"))+
+  scale_color_manual(values = colors)+
+  ggtitle("Model fit without date"))
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
+            geom_line(aes(x = date,y = resid,color = "residuals"))+
+            geom_ref_line(h = 0)+
+            scale_color_manual(values = colors)+
+            ggtitle("Residuals"))
+
+```
+
+Residuals histogram
+```{r residual destributions 1}
+
+barplot <- ggplot(test_data, aes(x = resid ))+
+  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=1)+
+  ggtitle("Omega model residuals")
+
+ggplotly(barplot)
+
+```
+
+```{r, out.width="100%",warning=FALSE}
+normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
+plot(normal_dist)
+```
+
+Also compared to regression analysis provided for number of rides, there are no strong correlation between notAtHomeChange and the date. 
+
+# Reducing a model
+
+Let's take some variables out and see how model performs on the data and F Statistics. Low correlating variables from "Finding correlations" chapter are snow, stringency. Also there is strong correlation between average temperature and a season so our new model should contain only 1 of the predictors, because temperature have most impact on mobility and more large-scaled (season contains only 4 factors) we will take snow out from new reduced_model.
+
+```{r reduced model 1 residuals}
+
+reduced_1_model = lm(notAtHomeChange ~ tavg+pres+stringency+wspd+season,data = data)
+
+summary(reduced_1_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = reduced_1_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+
+```
+
+As we can see excluding variables from model doesn't make it worse residual st. error remains near 2.9, we can also use anova test function from stats package to check model variable significance. But firstly we would like to get best best model with possible minimum variables. For this purpose we can inspect p-value from model summary, it says how significant separate variable in model predictions, less p-value - more significant. So we would like to exclude snow, and combined term ow weather_impact and description out of model.
+
+```{r reduced model 2 residuals,message=FALSE,echo=FALSE,include=FALSE}
+
+reduced_2_model = lm(notAtHomeChange ~ tavg+pres+stringency+season,data = data)
+
+summary(reduced_2_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = reduced_2_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+
+
+
+```
+
+As we can see removing snow and separation of weather_impact and description, increased model quality with reducing residual standard error. Anova test between these two models also doesn't show significant difference `r anova(reduced_2_model,reduced_1_model)[["Pr(>F)"]][2]` because p-value is 0.85>>0.05.
+
+After few iterations we get to a model that contains only strictness of the policy restrictions, temperature and data. Represented model explains also explains most of the observations with relatively low residual standard error, but it is minimal for excluding, because anova significance difference between models without any of remaining predictors has p-value<0.05. So we get to our final model, that explains number of KeXi Rides using temperature, covid strictness level and date(positive growing trend). 
+
+```{r reduced model 3 residuals,out.width="100%"}
+
+reduced_3_model = lm(notAtHomeChange ~ season+stringency+tavg,data = data)
+
+summary(reduced_3_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = reduced_3_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+
+
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_point(aes(x = date,y = notAtHomeChange,color = "actual"))+
+  geom_point(aes(x = date,y = pred,color = "predicted"))+
+  scale_color_manual(values = colors)+
+  ggtitle("Final model fit"))
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
+            geom_line(aes(x = date,y = resid,color = "residuals"))+
+            geom_ref_line(h = 0)+
+            scale_color_manual(values = colors)+
+            ggtitle("Residuals"))
+
+```
+
+
+```{r residual destributions 3}
+
+barplot <- ggplot(test_data, aes(x = resid ))+
+  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=1)+
+  ggtitle("Final model residuals")
+
+ggplotly(barplot)
+
+```
+
+
+
+```{r, out.width="100%",warning=FALSE}
+normal_dist = fitdistrplus::fitdist(test_data$resid,"norm")
+plot(normal_dist)
+```
+
+# Critical discussion
+
+Predicting potential in our model mostly based on stringency(strictness of covid-19 policies). R - squared value of model based only on stringency has value of 0.47, but this value is lower than model that using temperature.
+
+```{r model using only a date,out.width="100%"}
+#data = data %>% filter(season == "summer")
+reduced_3_model = lm(notAtHomeChange ~ stringency,data = data)
+
+summary(reduced_3_model)
+
+colors = c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+model = reduced_3_model
+test_data = data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+
+
+ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_point(aes(x = date,y = notAtHomeChange,color = "actual"))+
+  geom_point(aes(x = date,y = pred,color = "predicted"))+
+  scale_color_manual(values = colors)+
+  ggtitle("Final model fit"))
+```
+
+# Conclusion
+
+Compared to KeXi number of Rides analysis we see stronger correlation between dependent variable (not at home change) and weather characteristics. Built model is more stable, because not at home change in this approach depends additionally on stringency, but not on growing trend of the service use. Also low residual st. error as well R-squared value shows that our model fits the data with high predicting "score".
+

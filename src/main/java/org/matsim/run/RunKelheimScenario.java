@@ -16,8 +16,7 @@ import org.matsim.api.core.v01.events.PersonScoreEvent;
 import org.matsim.api.core.v01.events.handler.PersonDepartureEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.traffic.LinkStats;
@@ -28,6 +27,10 @@ import org.matsim.application.prepare.freight.tripExtraction.ExtractRelevantFrei
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
+import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
+import org.matsim.contrib.drt.extension.companions.DrtCompanionControlerCreator;
+import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
+import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
@@ -41,11 +44,14 @@ import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTi
 import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.OutputDirectoryHierarchy;
+import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
@@ -59,10 +65,10 @@ import playground.vsp.pt.fare.DistanceBasedPtFareParams;
 import playground.vsp.pt.fare.PtFareConfigGroup;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
+
 import javax.annotation.Nullable;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.lang.reflect.Array;
+import java.util.*;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
@@ -74,6 +80,15 @@ import java.util.Set;
 		TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
 })
 public class RunKelheimScenario extends MATSimApplication {
+
+	private final static double WEIGHT_1_PASSENGER = 26387.;
+	private final static double WEIGHT_2_PASSENGER = 3843.;
+	private final static double WEIGHT_3_PASSENGER = 879.;
+	private final static double WEIGHT_4_PASSENGER = 409.;
+	private final static double WEIGHT_5_PASSENGER = 68.;
+	private final static double WEIGHT_6_PASSENGER = 18.;
+	private final static double WEIGHT_7_PASSENGER = 4.;
+	private final static double WEIGHT_8_PASSENGER = 1.;
 
 	static final String VERSION = "3.0";
 
@@ -123,6 +138,27 @@ public class RunKelheimScenario extends MATSimApplication {
 	@Override
 	protected Config prepareConfig(Config config) {
 
+		ConfigGroup[] customModulesToAdd = new ConfigGroup[0];
+		//customModulesToAdd = new ConfigGroup[]{new DrtWithExtensionsConfigGroup()};
+
+		ConfigGroup[] customModules = new ConfigGroup[]{new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new)};
+		ConfigGroup[] customModulesAll = new ConfigGroup[customModules.length + customModulesToAdd.length];
+
+
+
+		int counter = 0;
+		for (ConfigGroup customModule : customModules) {
+			customModulesAll[counter] = customModule;
+			counter++;
+		}
+
+		for (ConfigGroup customModule : customModulesToAdd) {
+			customModulesAll[counter] = customModule;
+			counter++;
+		}
+
+		config.addModule(customModulesAll[0]);
+
 		SnzActivities.addScoringParams(config);
 
 		config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
@@ -141,11 +177,24 @@ public class RunKelheimScenario extends MATSimApplication {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
 		}
 
-		if (drt) {
-			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
-			ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
-			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
-		}
+        if (drt) {
+            MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
+			DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup  = (DrtWithExtensionsConfigGroup) multiModeDrtConfig.getModalElements().iterator().next();
+			DrtCompanionParams drtCompanionParams  = new DrtCompanionParams();
+			drtCompanionParams.setDrtCompanionSamplingWeights(List.of(
+					WEIGHT_1_PASSENGER,
+					WEIGHT_2_PASSENGER,
+					WEIGHT_3_PASSENGER,
+					WEIGHT_4_PASSENGER,
+					WEIGHT_5_PASSENGER,
+					WEIGHT_6_PASSENGER,
+					WEIGHT_7_PASSENGER,
+					WEIGHT_8_PASSENGER
+			));
+			drtWithExtensionsConfigGroup.addParameterSet(drtCompanionParams);
+            ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
+            DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
+        }
 
 		// Config is always needed
 		/* Informed-Mode-Choice
@@ -254,6 +303,11 @@ public class RunKelheimScenario extends MATSimApplication {
 				 */
 
 
+
+
+                if (incomeDependent) {
+                    bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
+                }
 				if (incomeDependent) {
 					bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
 				}
@@ -281,7 +335,8 @@ public class RunKelheimScenario extends MATSimApplication {
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
 			controler.addOverridingModule(new DvrpModule());
 			controler.addOverridingModule(new MultiModeDrtModule());
-			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
+			controler.addOverridingModule(new MultiModeDrtCompanionModule());
+            controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
 
 			// Add speed limit to av vehicle
 			double maxSpeed = controler.getScenario()

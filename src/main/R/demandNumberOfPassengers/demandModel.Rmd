@@ -1,0 +1,61 @@
+---
+title: "Preparation data on drtDemand"
+author: "Oleksandr Soboliev"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    theme: cosmo
+    highlight: monochrome
+    code_folding: show
+runtime: shiny
+editor_options:
+  chunk_output_type: inline
+---
+
+folder structure is:
+
+* data/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv
+* data/IOKI_TABLEAU_Request_List_2020.csv
+* data/IOKI_TABLEAU_Request_List_2021.csv
+
+#Libraries
+```{r libraries, echo = FALSE, include=FALSE,message=FALSE}
+library(tidyverse)
+library(lubridate)
+library(geosphere)
+
+
+options(digits = 18)
+```
+
+
+###IOKI
+```{r , echo = FALSE,warning=FALSE,comment=FALSE,message=FALSE}
+options(digits = 18)
+ioki = read_csv2("data/IOKI_Rides_202006_202105.csv")%>% select(2,`Fahrt.ID`,Stornierungsgrund,Passagieranzahl) %>%
+  mutate(Fahrtwunsch.erstellt = as.Date(as.POSIXct(Fahrtwunsch.erstellt, format = "%d.%m.%Y %H:%M:%S")))
+```
+
+###VIA
+
+```{r via import, message=FALSE}
+
+via = read_csv2("data/VIA_Rides_202106_202210.csv")  %>% select(2,3,4,`Number.of.passengers`) %>%
+  mutate(Ride.request.time = as.Date(Ride.request.time))
+
+```
+
+
+```{r}
+
+colnames(ioki) = colnames(via)
+allData = rbind(ioki,via) %>% filter(!is.na(Ride.request.time))
+
+demand = allData %>% group_by(Number.of.passengers) %>% count()
+
+write.csv(demand, "numberOfPassengersDemand.csv",row.names = FALSE)
+
+print(demand)
+
+```

@@ -303,6 +303,8 @@ public class PotentialServiceAreaAnalysis {
 		CarrierVehicle.Builder vBuilder = CarrierVehicle.Builder.newInstance(Id.create((areaName + "_shuttle"), Vehicle.class), depotLink, vehicleType);
 		vBuilder.setEarliestStart(0 * 60 * 60);
 		vBuilder.setLatestEnd(24 * 60 * 60);
+		vBuilder.setType(vehicleType);
+		vBuilder.setTypeId(vehicleType.getId());
 		CarrierVehicle vehicle = vBuilder.build();
 		carrier.getCarrierCapabilities().getCarrierVehicles().put(vehicle.getId(), vehicle);
 
