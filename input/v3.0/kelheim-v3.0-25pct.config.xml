@@ -178,7 +178,7 @@
                 <param name="dailyMonetaryConstant" value="-0.0"/>
                 <param name="dailyUtilityConstant" value="0.0"/>
                 <param name="marginalUtilityOfDistance_util_m" value="0.0"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="-0.5"/>
+                <param name="marginalUtilityOfTraveling_util_hr" value="-1.0"/>
                 <param name="mode" value="ride"/>
                 <param name="monetaryDistanceRate" value="-2.0E-4"/>
             </parameterset>
@@ -188,7 +188,7 @@
                 <param name="dailyMonetaryConstant" value="0.0"/>
                 <param name="dailyUtilityConstant" value="0.0"/>
                 <param name="marginalUtilityOfDistance_util_m" value="0.0"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="-3.5"/>
+                <param name="marginalUtilityOfTraveling_util_hr" value="-2.0"/>
                 <param name="mode" value="pt"/>
                 <param name="monetaryDistanceRate" value="0.0"/>
             </parameterset>
@@ -208,7 +208,7 @@
                 <param name="dailyMonetaryConstant" value="0.0"/>
                 <param name="dailyUtilityConstant" value="0.0"/>
                 <param name="marginalUtilityOfDistance_util_m" value="0.0"/>
-                <param name="marginalUtilityOfTraveling_util_hr" value="-5.0"/>
+                <param name="marginalUtilityOfTraveling_util_hr" value="-3.0"/>
                 <param name="mode" value="walk"/>
                 <param name="monetaryDistanceRate" value="0.0"/>
             </parameterset>
