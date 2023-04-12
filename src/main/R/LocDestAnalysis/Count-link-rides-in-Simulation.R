@@ -12,10 +12,10 @@ option_list <- list(
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
-if (is.null(opt$stops) | is.null(opt$runDir) | is.null(opt$mode)){
-  print_help(opt_parser)
-  stop("At least 3 arguments must be supplied. Use -h for help.", call.=FALSE)
-}
+# if (is.null(opt$stops) | is.null(opt$runDir) | is.null(opt$mode)){
+#   print_help(opt_parser)
+#   stop("At least 3 arguments must be supplied. Use -h for help.", call.=FALSE)
+# }
 
 ######################
 ##INPUT##
@@ -47,8 +47,10 @@ stops <- read.csv(stopsPath,
 
 fileEnding <- paste("*.drt_legs_", mode, ".csv", sep ="")
 
+maxIteration <- max(list.dirs(path=paste0(runDirectory, "ITERS/"),full.names=FALSE, recursive = TRUE), na.rm=TRUE)
+
 # Simulierte drt Daten einlesen
-movements <- read.csv(list.files(paste(runDirectory, "ITERS/it.999/", sep=""), pattern = fileEnding, full.names = T, include.dirs = F),
+movements <- read.csv(list.files(paste0(runDirectory, "ITERS/",maxIteration,"/"), pattern = fileEnding, full.names = T, include.dirs = F),
                       stringsAsFactors = FALSE,
                       header = TRUE,
                       encoding = "UTF-8",
