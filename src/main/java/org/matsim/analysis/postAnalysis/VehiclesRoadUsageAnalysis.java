@@ -51,25 +51,30 @@ public class VehiclesRoadUsageAnalysis implements MATSimAppCommand {
 
         @Override
         public void handleEvent(LinkEnterEvent event) {
-            if(blockedLinkCount.containsKey(event.getLinkId().toString())) {
-                blockedLinkCount.replace(event.getLinkId().toString(), blockedLinkCount.get(event.getLinkId().toString()) + 1);
-            }
-            if(!vehicleCount.containsKey(event.getLinkId())) {
-                vehicleCount.put(event.getLinkId(), 1);
-            } else {
-                vehicleCount.replace(event.getLinkId(), vehicleCount.get(event.getLinkId()) + 1);
+            if(!event.getLinkId().toString().contains("pt_")) {
+
+                if(blockedLinkCount.containsKey(event.getLinkId().toString())) {
+                    blockedLinkCount.replace(event.getLinkId().toString(), blockedLinkCount.get(event.getLinkId().toString()) + 1);
+                }
+                if(!vehicleCount.containsKey(event.getLinkId())) {
+                    vehicleCount.put(event.getLinkId(), 1);
+                } else {
+                    vehicleCount.replace(event.getLinkId(), vehicleCount.get(event.getLinkId()) + 1);
+                }
             }
         }
 
         @Override
         public void handleEvent(VehicleEntersTrafficEvent event) {
-            if(blockedLinkCount.containsKey(event.getLinkId().toString())) {
-                blockedLinkCount.replace(event.getLinkId().toString(), blockedLinkCount.get(event.getLinkId().toString()) + 1);
-            }
-            if(!vehicleCount.containsKey(event.getLinkId())) {
-                vehicleCount.put(event.getLinkId(), 1);
-            } else {
-                vehicleCount.replace(event.getLinkId(), vehicleCount.get(event.getLinkId()) + 1);
+            if(!event.getLinkId().toString().contains("pt_")) {
+                if (blockedLinkCount.containsKey(event.getLinkId().toString())) {
+                    blockedLinkCount.replace(event.getLinkId().toString(), blockedLinkCount.get(event.getLinkId().toString()) + 1);
+                }
+                if (!vehicleCount.containsKey(event.getLinkId())) {
+                    vehicleCount.put(event.getLinkId(), 1);
+                } else {
+                    vehicleCount.replace(event.getLinkId(), vehicleCount.get(event.getLinkId()) + 1);
+                }
             }
         }
 
@@ -95,10 +100,16 @@ public class VehiclesRoadUsageAnalysis implements MATSimAppCommand {
 
         Map<Id<Link>, Integer> vehicleCount = new HashMap<>();
         Map<String, Integer> blockedLinkCount = new HashMap<>();
-        List<String> blockedLinks = Arrays.asList("-487456219#3", "487456219#3", "-487456219#2", "487456219#2", "-487456219#1", "487456219#1", "-920868265", "920868265", "-487456219#0", "487456219#0", "-376292750", "376292750");
-        for(String linkId : blockedLinks) {
-            blockedLinkCount.put(linkId, 0);
-            System.out.println(linkId);
+//        List<String> blockedLinks = Arrays.asList("-487456219#3", "487456219#3", "-487456219#2", "487456219#2", "-487456219#1", "487456219#1", "-920868265", "920868265", "-487456219#0", "487456219#0", "-376292750", "376292750");
+
+        for(Link link : network.getLinks().values()) {
+            if(link.getId().toString().contains("pt_")) {
+                continue;
+            }
+
+            if(link.getCapacity() == 10 && link.getFreespeed() == 0.1) {
+                blockedLinkCount.put(link.getId().toString(), 0);
+            }
         }
 
         VehicleLinkUsageCounter vehicleLinkUsageCounter = new VehicleLinkUsageCounter(network, vehicleCount, blockedLinkCount);
@@ -106,11 +117,6 @@ public class VehiclesRoadUsageAnalysis implements MATSimAppCommand {
 
         MatsimEventsReader reader = new MatsimEventsReader(eventsManager);
         reader.readFile(eventsFilePath.toString());
-
-        for(String s : blockedLinkCount.keySet()) {
-            System.out.println(s + " : " + blockedLinkCount.get(s));
-        }
-
 
         //writeResults
         String vehicleRoadUsageFile = outputFolder + "/" + "allModes_vehicle_road_usage.tsv";
