@@ -20,150 +20,151 @@ import java.util.List;
 import java.util.Set;
 
 @CommandLine.Command(
-        name = "network",
-        description = "Add network allowed mode for DRT and AV or apply measures for a blocked road scenario"
+		name = "network",
+		description = "Add network allowed mode for DRT and AV or apply measures for a blocked road scenario"
 )
 public class PrepareNetwork implements MATSimAppCommand {
-    @CommandLine.Option(names = "--network", description = "Path to network file", required = true)
-    private String networkFile;
 
-    @CommandLine.Mixin
-    private ShpOptions shp = new ShpOptions();
+	private static final Logger log = LogManager.getLogger(PrepareNetwork.class);
 
-    @CommandLine.Option(names = "--blocked-road", defaultValue = "false", description = "create blocked road scenario network")
-    private boolean blockedRoad;
+	@CommandLine.Option(names = "--network", description = "Path to network file", required = true)
+	private String networkFile;
 
-    @CommandLine.Option(names = "--output", description = "Output path of the prepared network", required = true)
-    private String outputPath;
+	@CommandLine.Mixin
+	private ShpOptions shp = new ShpOptions();
 
-    private static final Logger log = LogManager.getLogger(PrepareNetwork.class);
+	@CommandLine.Option(names = "--blocked-road", defaultValue = "false", description = "create blocked road scenario network")
+	private boolean blockedRoad;
 
-    public static void main(String[] args) {
-        new PrepareNetwork().execute(args);
-    }
+	@CommandLine.Option(names = "--output", description = "Output path of the prepared network", required = true)
+	private String outputPath;
 
-    @Override
-    public Integer call() throws Exception {
+	public static void main(String[] args) {
+		new PrepareNetwork().execute(args);
+	}
 
-        Network network = NetworkUtils.readNetwork(networkFile);
+	@Override
+	public Integer call() throws Exception {
 
-        if(blockedRoad) {
-            prepareNetworkBlockedRoad(network);
+		Network network = NetworkUtils.readNetwork(networkFile);
 
-        } else {
-            prepareNetworkDrt(network);
-        }
+		if (blockedRoad) {
+			prepareNetworkBlockedRoad(network);
 
-        return 0;
-    }
+		} else {
+			prepareNetworkDrt(network);
+		}
 
-    private void prepareNetworkBlockedRoad(Network network) {
-        Geometry blockedRoadArea = shp.getGeometry();
+		return 0;
+	}
 
-        GeometryFactory gf = new GeometryFactory();
+	private void prepareNetworkBlockedRoad(Network network) {
+		Geometry blockedRoadArea = shp.getGeometry();
 
-        boolean isInsideArea;
-        int linkCount = 0;
+		GeometryFactory gf = new GeometryFactory();
 
-        for(Link link : network.getLinks().values()) {
-            if(link.getId().toString().contains("pt_")) {
-                continue;
-            }
+		boolean isInsideArea;
+		int linkCount = 0;
 
-            LineString line = gf.createLineString(new Coordinate[]{
-                    MGC.coord2Coordinate(link.getFromNode().getCoord()),
-                    MGC.coord2Coordinate(link.getToNode().getCoord())
-            });
+		for (Link link : network.getLinks().values()) {
+			if (link.getId().toString().contains("pt_")) {
+				continue;
+			}
 
-            isInsideArea = line.intersects(blockedRoadArea);
+			LineString line = gf.createLineString(new Coordinate[]{
+					MGC.coord2Coordinate(link.getFromNode().getCoord()),
+					MGC.coord2Coordinate(link.getToNode().getCoord())
+			});
 
-            //if inside shp decrease capacity + freespeed by a lot
-            if(isInsideArea) {
-                link.setCapacity(10);
-                link.setFreespeed(0.1);
-                linkCount++;
-            }
+			isInsideArea = line.intersects(blockedRoadArea);
 
-            //if we block the bridge between AS and DP we need to have 2 separate AV modes
-            if(shp.getShapeFile().toString().contains("Maximiliansbruecke")) {
-                if(link.getAllowedModes().contains("av")) {
-                    Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
-                    allowedModes.remove("av");
-                    allowedModes.add("avDP");
-                    allowedModes.add("avAS");
-                    link.setAllowedModes(allowedModes);
-                }
-            }
-        }
+			//if inside shp decrease capacity + freespeed by a lot
+			if (isInsideArea) {
+				link.setCapacity(10);
+				link.setFreespeed(0.1);
+				linkCount++;
+			}
 
-        NetworkUtils.writeNetwork(network, outputPath);
-        log.info("For " + linkCount + " links capacity and freeSpeed have been decreased.");
-    }
+			//if we block the bridge between AS and DP we need to have 2 separate AV modes
+			if (shp.getShapeFile().toString().contains("Maximiliansbruecke")) {
+				if (link.getAllowedModes().contains("av")) {
+					Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
+					allowedModes.remove("av");
+					allowedModes.add("avDP");
+					allowedModes.add("avAS");
+					link.setAllowedModes(allowedModes);
+				}
+			}
+		}
 
-    private void prepareNetworkDrt(Network network) {
-        Geometry drtOperationArea = null;
-        Geometry avOperationArea = null;
-        List<SimpleFeature> features = shp.readFeatures();
-        for (SimpleFeature feature : features) {
-            if (feature.getAttribute("mode").equals("drt")) {
-                if (drtOperationArea == null) {
-                    drtOperationArea = (Geometry) feature.getDefaultGeometry();
-                } else {
-                    drtOperationArea = drtOperationArea.union((Geometry) feature.getDefaultGeometry());
-                }
-            }
+		NetworkUtils.writeNetwork(network, outputPath);
+		log.info("For " + linkCount + " links capacity and freeSpeed have been decreased.");
+	}
 
-            System.out.println(feature.getAttributes());
+	private void prepareNetworkDrt(Network network) {
+		Geometry drtOperationArea = null;
+		Geometry avOperationArea = null;
+		List<SimpleFeature> features = shp.readFeatures();
+		for (SimpleFeature feature : features) {
+			if (feature.getAttribute("mode").equals("drt")) {
+				if (drtOperationArea == null) {
+					drtOperationArea = (Geometry) feature.getDefaultGeometry();
+				} else {
+					drtOperationArea = drtOperationArea.union((Geometry) feature.getDefaultGeometry());
+				}
+			}
 
-            if (feature.getAttribute("mode").equals("av")) {
-                if (avOperationArea == null) {
-                    avOperationArea = (Geometry) feature.getDefaultGeometry();
-                } else {
-                    avOperationArea = avOperationArea.union((Geometry) feature.getDefaultGeometry());
-                }
-            }
-        }
+			log.info(feature.getAttributes());
 
-        boolean isDrtAllowed;
-        boolean isAvAllowed;
-        int linkCount[] = new int[2];
+			if (feature.getAttribute("mode").equals("av")) {
+				if (avOperationArea == null) {
+					avOperationArea = (Geometry) feature.getDefaultGeometry();
+				} else {
+					avOperationArea = avOperationArea.union((Geometry) feature.getDefaultGeometry());
+				}
+			}
+		}
 
-        for (Link link : network.getLinks().values()) {
-            if (!link.getAllowedModes().contains("car")){
-                continue;
-            }
+		boolean isDrtAllowed;
+		boolean isAvAllowed;
+		int[] linkCount = new int[2];
 
-            if(drtOperationArea != null) {
-                isDrtAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(drtOperationArea) ||
-                        MGC.coord2Point(link.getToNode().getCoord()).within(drtOperationArea);
-            } else {
-                isDrtAllowed = false;
-            }
+		for (Link link : network.getLinks().values()) {
+			if (!link.getAllowedModes().contains("car")) {
+				continue;
+			}
 
-            if(avOperationArea != null) {
-                isAvAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(avOperationArea) ||
-                        MGC.coord2Point(link.getToNode().getCoord()).within(avOperationArea);
-            } else {
-                isAvAllowed = false;
-            }
+			if (drtOperationArea != null) {
+				isDrtAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(drtOperationArea) ||
+						MGC.coord2Point(link.getToNode().getCoord()).within(drtOperationArea);
+			} else {
+				isDrtAllowed = false;
+			}
 
-            if (isDrtAllowed) {
-                Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
-                allowedModes.add("drt");
-                link.setAllowedModes(allowedModes);
-                linkCount[0] = linkCount[0] + 1;
-            }
+			if (avOperationArea != null) {
+				isAvAllowed = MGC.coord2Point(link.getFromNode().getCoord()).within(avOperationArea) ||
+						MGC.coord2Point(link.getToNode().getCoord()).within(avOperationArea);
+			} else {
+				isAvAllowed = false;
+			}
 
-            if (isAvAllowed) {
-                Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
-                allowedModes.add("av");
-                link.setAllowedModes(allowedModes);
-                linkCount[1] = linkCount[1] + 1;
-            }
-        }
+			if (isDrtAllowed) {
+				Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
+				allowedModes.add("drt");
+				link.setAllowedModes(allowedModes);
+				linkCount[0] = linkCount[0] + 1;
+			}
 
-        NetworkUtils.writeNetwork(network, outputPath);
-        log.info("For " + linkCount[0] + " links drt has been added as an allowed mode.");
-        log.info("For " + linkCount[1] + " links av has been added as an allowed mode.");
-    }
+			if (isAvAllowed) {
+				Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
+				allowedModes.add("av");
+				link.setAllowedModes(allowedModes);
+				linkCount[1] = linkCount[1] + 1;
+			}
+		}
+
+		NetworkUtils.writeNetwork(network, outputPath);
+		log.info("For " + linkCount[0] + " links drt has been added as an allowed mode.");
+		log.info("For " + linkCount[1] + " links av has been added as an allowed mode.");
+	}
 }

@@ -2,6 +2,8 @@ package org.matsim.analysis.preAnalysis;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.population.Activity;
@@ -25,141 +27,152 @@ import java.util.List;
 
 
 @CommandLine.Command(
-        name = "analyze-population",
-        description = "Extract the home location of the persons in the population file"
+		name = "analyze-population",
+		description = "Extract the home location of the persons in the population file"
 )
 public class PopulationAnalysis implements MATSimAppCommand {
-    @CommandLine.Option(names = "--population", description = "Path to input population", required = true)
-    private String populationPath;
 
-    @CommandLine.Option(names = "--output-folder", description = "Path to analysis output folder", required = true)
-    private Path outputFolder;
+	private static final Logger log = LogManager.getLogger(PopulationAnalysis.class);
 
-    @CommandLine.Mixin
-    private ShpOptions shp = new ShpOptions();
+	@CommandLine.Option(names = "--population", description = "Path to input population", required = true)
+	private String populationPath;
 
-    public static String HOME_LOCATION = "home_location";
+	@CommandLine.Option(names = "--output-folder", description = "Path to analysis output folder", required = true)
+	private Path outputFolder;
 
-    public enum HomeLocationCategory {inside, outside, unknown}
+	@CommandLine.Mixin
+	private ShpOptions shp = new ShpOptions();
 
-    private final List<Person> personsLivesInAnalyzedArea = new ArrayList<>();
+	public static final String HOME_LOCATION = "home_location";
 
-    public static void main(String[] args) throws IOException {
-        new PopulationAnalysis().execute(args);
-    }
+	/**
+	 * Home location relative given shape file.
+	 */
+	public enum HomeLocationCategory {inside, outside, unknown}
 
-    @Override
-    public Integer call() throws Exception {
-        Population population = PopulationUtils.readPopulation(populationPath);
-        System.out.println("There are in total " + population.getPersons().size() + " persons in the population file");
+	private final List<Person> personsLivesInAnalyzedArea = new ArrayList<>();
 
-        Geometry analyzedArea = null;
-        if (shp.getShapeFile() != null) {
-            analyzedArea = shp.getGeometry();
-        }
+	public static void main(String[] args) throws IOException {
+		new PopulationAnalysis().execute(args);
+	}
 
-        analyzeHomeLocation(population, analyzedArea);
-        summarizePersonAttribute(population, analyzedArea);
+	@Override
+	public Integer call() throws Exception {
+		Population population = PopulationUtils.readPopulation(populationPath);
+		log.info("There are in total {} persons in the population file", population.getPersons().size());
 
-        return 0;
-    }
+		Geometry analyzedArea = null;
+		if (shp.getShapeFile() != null) {
+			analyzedArea = shp.getGeometry();
+		}
 
-    private void analyzeHomeLocation(Population population, Geometry analyzedArea) throws IOException {
-        if (!Files.exists(outputFolder)){
-            Files.createDirectory(outputFolder);
-        }
-        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-home-locations.csv"), CSVFormat.TDF);
-        csvWriter.printRecord("person", "home_x", "home_y", "home_location");
+		analyzeHomeLocation(population, analyzedArea);
+		summarizePersonAttribute(population, analyzedArea);
 
-        System.out.println("Start person home location analysis...");
-        int counter = 0;
-        int numPersonsLiveInKelheim = 0;
-        for (Person person : population.getPersons().values()) {
-            for (PlanElement planElement : person.getSelectedPlan().getPlanElements()) {
-                if (planElement instanceof Activity) {
-                    String actType = ((Activity) planElement).getType();
-                    if (actType.startsWith("home")) {
-                        Coord homeCoord = ((Activity) planElement).getCoord();
-                        counter++;
-                        if (analyzedArea == null) {
-                            csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), HomeLocationCategory.unknown);
-                        } else if (analyzedArea.contains(MGC.coord2Point(homeCoord))) {
-                            csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), HomeLocationCategory.inside);
-                            personsLivesInAnalyzedArea.add(person);
-                            numPersonsLiveInKelheim++;
-                        } else {
-                            csvWriter.printRecord(person.getId().toString(),
-                                    Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), HomeLocationCategory.outside);
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-        csvWriter.close();
+		return 0;
+	}
 
-        System.out.println("There are " + counter + " persons with home activity");
-        if (analyzedArea != null) {
-            System.out.println("There are " + numPersonsLiveInKelheim +
-                    " persons living in the analyzed area (with home location inside the provided shape file");
-            // Write the list of persons live in the area
-            CSVPrinter csvWriter2 = new CSVPrinter(new FileWriter(outputFolder + "/relevant-persons.csv"), CSVFormat.TDF);
-            csvWriter2.printRecord("person-id");
-            for (Person person : personsLivesInAnalyzedArea) {
-                csvWriter2.printRecord(person.getId().toString());
-            }
-            csvWriter2.close();
-        }
-    }
+	private void analyzeHomeLocation(Population population, Geometry analyzedArea) throws IOException {
+		if (!Files.exists(outputFolder)) {
+			Files.createDirectory(outputFolder);
+		}
+		CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-home-locations.csv"), CSVFormat.TDF);
+		csvWriter.printRecord("person", "home_x", "home_y", "home_location");
 
-    private void summarizePersonAttribute(Population population, Geometry kelheim) throws IOException {
-        List<Person> personsToAnalyze = new ArrayList<>();
-        if (kelheim != null) {
-            personsToAnalyze.addAll(personsLivesInAnalyzedArea);
-        } else {
-            personsToAnalyze.addAll(population.getPersons().values());
-        }
+		log.info("Start person home location analysis...");
+		int counter = 0;
+		int numPersonsLiveInKelheim = 0;
+		for (Person person : population.getPersons().values()) {
+			for (PlanElement planElement : person.getSelectedPlan().getPlanElements()) {
+				if (planElement instanceof Activity) {
+					String actType = ((Activity) planElement).getType();
+					if (actType.startsWith("home")) {
+						Coord homeCoord = ((Activity) planElement).getCoord();
+						counter++;
+						if (analyzedArea == null) {
+							csvWriter.printRecord(person.getId().toString(),
+									Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), HomeLocationCategory.unknown);
+						} else if (analyzedArea.contains(MGC.coord2Point(homeCoord))) {
+							csvWriter.printRecord(person.getId().toString(),
+									Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), HomeLocationCategory.inside);
+							personsLivesInAnalyzedArea.add(person);
+							numPersonsLiveInKelheim++;
+						} else {
+							csvWriter.printRecord(person.getId().toString(),
+									Double.toString(homeCoord.getX()), Double.toString(homeCoord.getY()), HomeLocationCategory.outside);
+						}
+						break;
+					}
+				}
+			}
+		}
+		csvWriter.close();
 
-        CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-attributes.csv"), CSVFormat.TDF);
-        csvWriter.printRecord("person", "age", "sex", "household_size", "household_income_group", "estimated_personal_allowance", "number_of_trips_per_day");
+		log.info("There are {} persons with home activity", counter);
+		if (analyzedArea != null) {
+			log.info("There are {} persons living in the analyzed area (with home location inside the provided shape file", numPersonsLiveInKelheim);
+			// Write the list of persons live in the area
+			CSVPrinter csvWriter2 = new CSVPrinter(new FileWriter(outputFolder + "/relevant-persons.csv"), CSVFormat.TDF);
+			csvWriter2.printRecord("person-id");
+			for (Person person : personsLivesInAnalyzedArea) {
+				csvWriter2.printRecord(person.getId().toString());
+			}
+			csvWriter2.close();
+		}
+	}
 
-        for (Person person : personsToAnalyze) {
-            Double income = PersonUtils.getIncome(person); // This value may be null;
-            Integer age = PersonUtils.getAge(person); // THis value may be null;
-            String sex = PersonUtils.getSex(person);
-            String incomeGroup = (String) person.getAttributes().getAttribute("MiD:hheink_gr2");
-            String householdSize = (String) person.getAttributes().getAttribute("MiD:hhgr_gr");
+	private void summarizePersonAttribute(Population population, Geometry kelheim) throws IOException {
+		List<Person> personsToAnalyze = new ArrayList<>();
+		if (kelheim != null) {
+			personsToAnalyze.addAll(personsLivesInAnalyzedArea);
+		} else {
+			personsToAnalyze.addAll(population.getPersons().values());
+		}
 
-            if (income == null) {
-                income = -1.0;
-            }
+		CSVPrinter csvWriter = new CSVPrinter(new FileWriter(outputFolder + "/persons-attributes.csv"), CSVFormat.TDF);
+		csvWriter.printRecord("person", "age", "sex", "household_size", "household_income_group", "estimated_personal_allowance", "number_of_trips_per_day");
 
-            if (age == null) {
-                age = -1;
-            }
+		for (Person person : personsToAnalyze) {
+			// This value may be null;
+			Double income = PersonUtils.getIncome(person);
+			// THis value may be null;
+			Integer age = PersonUtils.getAge(person);
+			String sex = PersonUtils.getSex(person);
+			String incomeGroup = (String) person.getAttributes().getAttribute("MiD:hheink_gr2");
+			String householdSize = (String) person.getAttributes().getAttribute("MiD:hhgr_gr");
 
-            List<TripStructureUtils.Trip> trips = TripStructureUtils.getTrips(person.getSelectedPlan());
-            int numOfTripsPerDay = trips.size();
+			if (income == null) {
+				income = -1.0;
+			}
 
-            csvWriter.printRecord(person.getId().toString(), age.toString(), sex,
-                    householdSize, incomeGroup, income.toString(), Integer.toString(numOfTripsPerDay));
-        }
-    }
+			if (age == null) {
+				age = -1;
+			}
 
-    public static boolean checkIfPersonLivesInArea(Person person, Geometry analyzedArea) {
-        for (PlanElement planElement : person.getSelectedPlan().getPlanElements()) {
-            if (planElement instanceof Activity) {
-                String actType = ((Activity) planElement).getType();
-                if (actType.startsWith("home")) {
-                    Coord homeCoord = ((Activity) planElement).getCoord();
-                    if (analyzedArea == null) {
-                        throw new RuntimeException("The analyzed area is null! ");
-                    } else return analyzedArea.contains(MGC.coord2Point(homeCoord));
-                }
-            }
-        }
-        return false; // Person with no home activity --> false
-    }
+			List<TripStructureUtils.Trip> trips = TripStructureUtils.getTrips(person.getSelectedPlan());
+			int numOfTripsPerDay = trips.size();
+
+			csvWriter.printRecord(person.getId().toString(), age.toString(), sex,
+					householdSize, incomeGroup, income.toString(), Integer.toString(numOfTripsPerDay));
+		}
+	}
+
+	/**
+	 * Check if person home location is in geometry.
+	 */
+	public static boolean checkIfPersonLivesInArea(Person person, Geometry analyzedArea) {
+		for (PlanElement planElement : person.getSelectedPlan().getPlanElements()) {
+			if (planElement instanceof Activity) {
+				String actType = ((Activity) planElement).getType();
+				if (actType.startsWith("home")) {
+					Coord homeCoord = ((Activity) planElement).getCoord();
+					if (analyzedArea == null) {
+						throw new RuntimeException("The analyzed area is null! ");
+					} else return analyzedArea.contains(MGC.coord2Point(homeCoord));
+				}
+			}
+		}
+		// Person with no home activity --> false
+		return false;
+	}
 }

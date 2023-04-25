@@ -240,7 +240,8 @@
 		</module>
 
 		<module name="Regexp">
-			<property name="format" value="[ \t]+$"/>
+			<!-- Trailing whitespaces in comments are allowed -->
+			<property name="format" value="^(?!(?:[ \t]*?(?:\/?\*\*?|\/\/)[\S \t]+?|[ \t]+$))[\S \t]+[ \t]+$"/>
 			<property name="illegalPattern" value="true"/>
 			<property name="message" value="Trailing whitespace"/>
 		</module>

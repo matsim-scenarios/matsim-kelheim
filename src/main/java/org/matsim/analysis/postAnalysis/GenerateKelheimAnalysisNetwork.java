@@ -29,13 +29,15 @@ import org.matsim.core.config.groups.NetworkConfigGroup;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.filter.NetworkFilterManager;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.utils.gis.shp2matsim.ShpGeometryUtils;
 import picocli.CommandLine;
 
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Write network used for analysis purposes.
+ */
 public class GenerateKelheimAnalysisNetwork implements MATSimAppCommand {
 
 	@CommandLine.Option(names = "--network", description = "Path to network file", required = true)
@@ -66,7 +68,7 @@ public class GenerateKelheimAnalysisNetwork implements MATSimAppCommand {
 		networkFilterManager.addLinkFilter(
 				l -> nodesWithinArea.contains(l.getFromNode()) || nodesWithinArea.contains(l.getToNode()));
 
-		if(!Boolean.parseBoolean(includePT)){
+		if (!Boolean.parseBoolean(includePT)) {
 			networkFilterManager.addLinkFilter(
 					l -> !l.getAllowedModes().contains(TransportMode.pt));
 		}
