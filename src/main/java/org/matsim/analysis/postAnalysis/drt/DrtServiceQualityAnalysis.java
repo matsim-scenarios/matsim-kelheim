@@ -5,6 +5,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math.stat.StatUtils;
+import org.apache.commons.math3.util.Precision;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
@@ -40,7 +41,6 @@ import java.io.FileWriter;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.DecimalFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -127,6 +127,8 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
             List<Double> detourDistanceRatios = new ArrayList<>();
             List<Double> euclideanDistances = new ArrayList<>();
             List<Double> directDistances = new ArrayList<>();
+            List<Double> inVehicleTravelTimes = new ArrayList<>();
+            List<Double> totalTravelTimes = new ArrayList<>();
 
             CSVPrinter tsvWriter = null;
             if(!onlyShape) {
@@ -169,6 +171,8 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
                        detourDistanceRatios.add(detourRatioDistance);
                        euclideanDistances.add(euclideanDistance);
                        directDistances.add(estimatedDirectTravelDistance);
+                       inVehicleTravelTimes.add(actualInVehicleTime);
+                       totalTravelTimes.add(totalTravelTime);
 
                        List<String> outputRow = new ArrayList<>();
                        outputRow.add(Double.toString(departureTime));
@@ -219,7 +223,8 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
                 CSVPrinter tsvWriterKPI = new CSVPrinter(new FileWriter(outputStatsPath.toString()), CSVFormat.TDF);
                 List<String> titleRowKPI = Arrays.asList
                         ("number_of_requests", "waiting_time_mean", "waiting_time_median", "waiting_time_95_percentile",
-                                "onboard_delay_ratio_mean", "detour_distance_ratio_mean", "trips_euclidean_distance_mean", "trips_direct_network_distance_mean");
+                                "onboard_delay_ratio_mean", "detour_distance_ratio_mean", "trips_euclidean_distance_mean", "trips_direct_network_distance_mean",
+                                "in_vehicle_travel_time_mean", "total_travel_time_mean");
                 tsvWriterKPI.printRecord(titleRowKPI);
 
 //            List<Double> allWaitingTimes = waitingTimes.values().stream().flatMap(List::stream).collect(Collectors.toList());
@@ -227,22 +232,25 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
                 int medianWaitingTime = (int) StatUtils.percentile(allWaitingTimes.stream().mapToDouble(t -> t).toArray(), 50);
                 int waitingTime95Percentile = (int) StatUtils.percentile(allWaitingTimes.stream().mapToDouble(t -> t).toArray(), 95);
 
-                DecimalFormat formatter = new DecimalFormat("0.00");
-                String meanDelayRatio = formatter.format(onboardDelayRatios.stream().mapToDouble(r -> r).average().orElse(-1));
-                String meanDetourDistanceRatio = formatter.format(detourDistanceRatios.stream().mapToDouble(d -> d).average().orElse(-1));
+                double meanDelayRatio = Precision.round(onboardDelayRatios.stream().mapToDouble(r -> r).average().orElse(-1),2);
+                double meanDetourDistanceRatio = Precision.round(detourDistanceRatios.stream().mapToDouble(d -> d).average().orElse(-1), 2);
 
-                String meanEuclideanDistance = formatter.format(euclideanDistances.stream().mapToDouble(r -> r).average().orElse(-1));
-                String meanDirectNetworkDistance = formatter.format(directDistances.stream().mapToDouble(r -> r).average().orElse(-1));
+                double meanEuclideanDistance = Precision.round(euclideanDistances.stream().mapToDouble(r -> r).average().orElse(-1), 2);
+                double meanDirectNetworkDistance = Precision.round(directDistances.stream().mapToDouble(r -> r).average().orElse(-1), 2);
+                double meanInVehicleTravelTime = Precision.round(inVehicleTravelTimes.stream().mapToDouble(r -> r).average().orElse(-1), 2);
+                double meanTotalTravelTime = Precision.round(totalTravelTimes.stream().mapToDouble(r -> r).average().orElse(-1), 2);
 
                 List<String> outputKPIRow = new ArrayList<>();
                 outputKPIRow.add(Integer.toString(numOfTrips));
                 outputKPIRow.add(Integer.toString(meanWaitingTime));
                 outputKPIRow.add(Integer.toString(medianWaitingTime));
                 outputKPIRow.add(Integer.toString(waitingTime95Percentile));
-                outputKPIRow.add(meanDelayRatio);
-                outputKPIRow.add(meanDetourDistanceRatio);
-                outputKPIRow.add(meanEuclideanDistance);
-                outputKPIRow.add(meanDirectNetworkDistance);
+                outputKPIRow.add(Double.toString(meanDelayRatio));
+                outputKPIRow.add(Double.toString(meanDetourDistanceRatio));
+                outputKPIRow.add(Double.toString(meanEuclideanDistance));
+                outputKPIRow.add(Double.toString(meanDirectNetworkDistance));
+                outputKPIRow.add(Double.toString(meanInVehicleTravelTime));
+                outputKPIRow.add(Double.toString(meanTotalTravelTime));
 
                 tsvWriterKPI.printRecord(outputKPIRow);
 
