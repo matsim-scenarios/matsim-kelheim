@@ -14,10 +14,10 @@ import calibration
 modes = ["walk", "car", "ride", "pt", "bike"]
 fixed_mode = "walk"
 initial = {
-    "bike": -2.135,
-    "pt": 2.6879,
-    "car": -0.2666,
-    "ride": -3.233
+    "bike": -2,
+    "pt": -0,
+    "car": 0.2,
+    "ride": -4
 }
 
 # Original modal split
@@ -38,22 +38,30 @@ target = {
     "ride":  0.169581
 }
 
-city = gpd.read_file("../scenarios/shape-file/dilutionArea.shp").set_crs("EPSG:25832")
+city = gpd.read_file("../input/shp/dilutionArea.shp").set_crs("EPSG:25832")
+homes = pd.read_csv("../input/v3.0/kelheim-v3.0-homes.csv", dtype={"person": "str"})
 
-def f(persons):    
-    df = gpd.sjoin(persons.set_crs("EPSG:25832"), city, how="inner", op="intersects")    
+def f(persons):
+    persons = pd.merge(persons, homes, how="inner", left_on="person", right_on="person")
+    persons = gpd.GeoDataFrame(persons, geometry=gpd.points_from_xy(persons.home_x, persons.home_y))
+
+    df = gpd.sjoin(persons.set_crs("EPSG:25832"), city, how="inner", op="intersects")
+
+    print("Filtered %s persons" % len(df))
+
     return df
 
-def filter_freight(df):
-    return df[df.main_mode != "freight"]
+def filter_modes(df):
+    return df[df.main_mode.isin(modes)]
 
-study, obj = calibration.create_mode_share_study("calib", "matsim-kelheim-1.0-SNAPSHOT.jar", 
-                                        "../scenarios/input/kelheim-v1.0-25pct.calib.xml", 
+study, obj = calibration.create_mode_share_study("calib", "matsim-kelheim-3.x-SNAPSHOT-00602ea.jar",
+                                        "../input/v3.0/kelheim-v3.0-25pct.config.xml",
                                         modes, target, 
                                         initial_asc=initial,
-                                        args="--25pct",
-                                        jvm_args="-Xmx46G -Xms46G -XX:+AlwaysPreTouch",
-                                        person_filter=f, map_trips=filter_freight, chain_runs=True)
+                                        args="--25pct --config:TimeAllocationMutator.mutationRange=900",
+                                        jvm_args="-Xmx46G -Xms46G -XX:+AlwaysPreTouch -XX:+UseParallelGC",
+                                        lr=calibration.auto_lr_scheduler(),
+                                        person_filter=f, map_trips=filter_modes, chain_runs=calibration.default_chain_scheduler)
 
 
 #%%

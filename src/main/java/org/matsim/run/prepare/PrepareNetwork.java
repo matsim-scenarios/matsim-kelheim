@@ -1,11 +1,11 @@
 package org.matsim.run.prepare;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
-import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
@@ -36,7 +36,7 @@ public class PrepareNetwork implements MATSimAppCommand {
     @CommandLine.Option(names = "--output", description = "Output path of the prepared network", required = true)
     private String outputPath;
 
-    private static final Logger log = Logger.getLogger(PrepareNetwork.class);
+    private static final Logger log = LogManager.getLogger(PrepareNetwork.class);
 
     public static void main(String[] args) {
         new PrepareNetwork().execute(args);

@@ -34,7 +34,7 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.freight.carrier.*;
-import org.matsim.contrib.freight.utils.FreightUtils;
+import org.matsim.contrib.freight.controler.FreightUtils;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
@@ -300,7 +300,7 @@ public class PotentialServiceAreaAnalysis {
 			depotLink = Id.createLinkId("485579462#0");
 		}
 		Link l = network.getLinks().get(depotLink);
-		CarrierVehicle.Builder vBuilder = CarrierVehicle.Builder.newInstance(Id.create((areaName + "_shuttle"), Vehicle.class), depotLink);
+		CarrierVehicle.Builder vBuilder = CarrierVehicle.Builder.newInstance(Id.create((areaName + "_shuttle"), Vehicle.class), depotLink, vehicleType);
 		vBuilder.setEarliestStart(0 * 60 * 60);
 		vBuilder.setLatestEnd(24 * 60 * 60);
 		vBuilder.setType(vehicleType);

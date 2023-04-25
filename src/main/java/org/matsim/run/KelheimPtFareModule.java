@@ -19,17 +19,6 @@ public class KelheimPtFareModule extends AbstractModule {
         PtFareConfigGroup ptFareConfigGroup = ConfigUtils.addOrGetModule(this.getConfig(), PtFareConfigGroup.class);
         DistanceBasedPtFareParams distanceBasedPtFareParams = ConfigUtils.addOrGetModule(this.getConfig(), DistanceBasedPtFareParams.class);
 
-        // Set parameters
-        ptFareConfigGroup.setApplyUpperBound(true);
-        ptFareConfigGroup.setUpperBoundFactor(1.5);
-
-        distanceBasedPtFareParams.setMinFare(2.0);  // Minimum fare (e.g. short trip or 1 zone ticket)
-        distanceBasedPtFareParams.setLongDistanceTripThreshold(50000); // Division between long trip and short trip (unit: m)
-        distanceBasedPtFareParams.setNormalTripSlope(0.00017); // y = ax + b --> a value, for short trips
-        distanceBasedPtFareParams.setNormalTripIntercept(1.6); // y = ax + b --> b value, for short trips
-        distanceBasedPtFareParams.setLongDistanceTripSlope(0.00025); // y = ax + b --> a value, for long trips
-        distanceBasedPtFareParams.setLongDistanceTripIntercept(30); // y = ax + b --> b value, for long trips
-
 
         // Add bindings
         addEventHandlerBinding().toInstance(new DistanceBasedPtFareHandler(distanceBasedPtFareParams));
