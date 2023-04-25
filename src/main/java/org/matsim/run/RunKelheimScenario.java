@@ -54,12 +54,19 @@ import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
+import org.matsim.modechoice.ModeOptions;
+import org.matsim.modechoice.commands.StrategyOptions;
+import org.matsim.modechoice.estimators.DefaultActivityEstimator;
+import org.matsim.modechoice.estimators.DefaultLegScoreEstimator;
+import org.matsim.modechoice.estimators.FixedCostsEstimator;
+import org.matsim.modechoice.pruning.DistanceBasedPruner;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
 import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.pt.fare.DistanceBasedPtFareParams;
+import playground.vsp.pt.fare.PtTripWithDistanceBasedFareEstimator;
 import playground.vsp.pt.fare.PtFareConfigGroup;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
@@ -118,8 +125,8 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--plans", defaultValue = "", description = "Use different input plans")
 	private String planOrigin;
 
-	//@CommandLine.Mixin
-	//private StrategyOptions strategy = new StrategyOptions(StrategyOptions.ModeChoice.subTourModeChoice, "person");
+	@CommandLine.Mixin
+	private StrategyOptions strategy = new StrategyOptions(StrategyOptions.ModeChoice.subTourModeChoice, "person");
 
 	public RunKelheimScenario(@Nullable Config config) {
 		super(config);
@@ -202,7 +209,8 @@ public class RunKelheimScenario extends MATSimApplication {
 		distanceBasedPtFareParams.setLongDistanceTripSlope(0.00025); // y = ax + b --> a value, for long trips
 		distanceBasedPtFareParams.setLongDistanceTripIntercept(30); // y = ax + b --> b value, for long trips
 
-		//strategy.applyConfig(config, this::addRunOption);
+		if (strategy.getModeChoice() != StrategyOptions.ModeChoice.randomSubtourMode)
+			strategy.applyConfig(config, this::addRunOption);
 
 		if (iterations != -1)
 			addRunOption(config, "iter", iterations);
@@ -266,25 +274,22 @@ public class RunKelheimScenario extends MATSimApplication {
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
-				/*
-				TODO: Informed mode choice when merged in core
-				// Configure mode-choice strategy
-				install(strategy.applyModule(binder(), config, builder ->
-								builder.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
-										.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
-										.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
-										.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, "drt", "av")
-										.withTripEstimator(PtTripFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
-										.withActivityEstimator(DefaultActivityEstimator.class)
-										// These are with activity estimation enabled
-										.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
-										.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
-										.withPruner("ad95", new DistanceBasedPruner(1.72092386, 0.03189323))
-						)
-				);
-				 */
-
-
+				if (strategy.getModeChoice() == StrategyOptions.ModeChoice.randomSubtourMode) {
+					// Configure mode-choice strategy
+					install(strategy.applyModule(binder(), config, builder ->
+									builder.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
+											.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
+											.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
+//											.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, "drt", "av")
+											.withTripEstimator(PtTripWithDistanceBasedFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
+											.withActivityEstimator(DefaultActivityEstimator.class)
+											// These are with activity estimation enabled
+											.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
+											.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
+											.withPruner("ad95", new DistanceBasedPruner(1.72092386, 0.03189323))
+							)
+					);
+				}
 
 
                 if (incomeDependent) {
