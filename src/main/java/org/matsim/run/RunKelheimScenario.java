@@ -215,9 +215,6 @@ public class RunKelheimScenario extends MATSimApplication {
 			addRunOption(config, planOrigin);
 		}
 
-		// TODO:
-		//config.planCalcScore().setExplainScores(true);
-
 		return config;
 	}
 
