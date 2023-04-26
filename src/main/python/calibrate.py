@@ -26,7 +26,7 @@ target = {
     "bike": 0.08,
     "pt": 0.03,
     "car": 0.59,
-    "ride": 0.17
+    "ride": 0.17    
 }
 
 # Use adjusted modal split for our distance distribution
@@ -54,14 +54,14 @@ def f(persons):
 def filter_modes(df):
     return df[df.main_mode.isin(modes)]
 
-study, obj = calibration.create_mode_share_study("calib", "matsim-kelheim-3.x-SNAPSHOT.jar",
-                                                 "../input/v3.0/kelheim-v3.0-25pct.config.xml",
-                                                 modes, target,
-                                                 initial_asc=initial,
-                                                 args="--25pct --config:TimeAllocationMutator.mutationRange=900",
-                                                 jvm_args="-Xmx46G -Xms46G -XX:+AlwaysPreTouch -XX:+UseParallelGC",
-                                                 lr=calibration.auto_lr_scheduler(),
-                                                 person_filter=f, map_trips=filter_modes, chain_runs=calibration.default_chain_scheduler)
+study, obj = calibration.create_mode_share_study("calib", "matsim-kelheim-3.x-SNAPSHOT-00602ea.jar",
+                                        "../input/v3.0/kelheim-v3.0-25pct.config.xml",
+                                        modes, target, 
+                                        initial_asc=initial,
+                                        args="--25pct --config:TimeAllocationMutator.mutationRange=900",
+                                        jvm_args="-Xmx46G -Xms46G -XX:+AlwaysPreTouch -XX:+UseParallelGC",
+                                        lr=calibration.auto_lr_scheduler(),
+                                        person_filter=f, map_trips=filter_modes, chain_runs=calibration.default_chain_scheduler)
 
 
 #%%

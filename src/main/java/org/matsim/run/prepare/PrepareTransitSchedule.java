@@ -18,55 +18,56 @@ import picocli.CommandLine;
 import java.util.List;
 
 @CommandLine.Command(
-        name = "prepare-transit-schedule",
-        description = "Tag transit stops for Intermodal trips"
+		name = "prepare-transit-schedule",
+		description = "Tag transit stops for Intermodal trips"
 )
 public class PrepareTransitSchedule implements MATSimAppCommand {
-    @CommandLine.Mixin
-    private ShpOptions shp = new ShpOptions();
+	@CommandLine.Mixin
+	private ShpOptions shp = new ShpOptions();
 
-    @CommandLine.Option(names = "--input", description = "input transit schedule", required = true)
-    private String input;
+	@CommandLine.Option(names = "--input", description = "input transit schedule", required = true)
+	private String input;
 
-    @CommandLine.Option(names = "--output", description = "output path of the transit schedule", required = true)
-    private String output;
+	@CommandLine.Option(names = "--output", description = "output path of the transit schedule", required = true)
+	private String output;
 
-    public static void main(String[] args) {
-        new PrepareTransitSchedule().execute(args);
-    }
+	public static void main(String[] args) {
+		new PrepareTransitSchedule().execute(args);
+	}
 
-    @Override
-    public Integer call() throws Exception {
-        Geometry intermodalArea = null;
-        List<SimpleFeature> features = shp.readFeatures();
-        for(SimpleFeature feature : features) {
-            if(intermodalArea == null) {
-                intermodalArea = (Geometry) feature.getDefaultGeometry();
-            } else {
-                intermodalArea =intermodalArea.union((Geometry) feature.getDefaultGeometry());
-            }
-        }
+	@Override
+	public Integer call() throws Exception {
+		Geometry intermodalArea = null;
+		List<SimpleFeature> features = shp.readFeatures();
+		for (SimpleFeature feature : features) {
+			if (intermodalArea == null) {
+				intermodalArea = (Geometry) feature.getDefaultGeometry();
+			} else {
+				intermodalArea = intermodalArea.union((Geometry) feature.getDefaultGeometry());
+			}
+		}
 
 //        Geometry intermodalArea = shp.getGeometry();
 
-        Config config = ConfigUtils.createConfig();
-        config.transit().setTransitScheduleFile(input);
-        config.global().setCoordinateSystem("EPSG:25832");
-        Scenario scenario = ScenarioUtils.loadScenario(config);
-        TransitSchedule transitSchedule = scenario.getTransitSchedule();
+		Config config = ConfigUtils.createConfig();
+		config.transit().setTransitScheduleFile(input);
+		config.global().setCoordinateSystem("EPSG:25832");
+		Scenario scenario = ScenarioUtils.loadScenario(config);
+		TransitSchedule transitSchedule = scenario.getTransitSchedule();
 
-        for (TransitStopFacility stop : transitSchedule.getFacilities().values()) {
-            if (MGC.coord2Point(stop.getCoord()).within(intermodalArea)) {
-                // TODO maybe add another filter (e.g. only train station, long distance bus stop...)
-                stop.getAttributes().putAttribute("allowDrtAccessEgress", "true");  //TODO maybe there is a standardized attribute?
-            }
-        }
+		for (TransitStopFacility stop : transitSchedule.getFacilities().values()) {
+			if (MGC.coord2Point(stop.getCoord()).within(intermodalArea)) {
+				// TODO maybe add another filter (e.g. only train station, long distance bus stop...)
+				//TODO maybe there is a standardized attribute?
+				stop.getAttributes().putAttribute("allowDrtAccessEgress", "true");
+			}
+		}
 
-        ProjectionUtils.putCRS(transitSchedule, "EPSG:25832");
+		ProjectionUtils.putCRS(transitSchedule, "EPSG:25832");
 
-        TransitScheduleWriter writer = new TransitScheduleWriter(transitSchedule);
-        writer.writeFile(output);
+		TransitScheduleWriter writer = new TransitScheduleWriter(transitSchedule);
+		writer.writeFile(output);
 
-        return 0;
-    }
+		return 0;
+	}
 }

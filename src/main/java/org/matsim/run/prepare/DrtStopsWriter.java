@@ -1,5 +1,7 @@
 package org.matsim.run.prepare;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.network.Link;
@@ -22,125 +24,134 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class DrtStopsWriter extends MatsimXmlWriter {
-    private final String mode;
-    private Geometry serviceArea = null;
-    private final String outputFolder;
-    private final Network network;
+/**
+ * Write DRT stops xml.
+ */
+public final class DrtStopsWriter extends MatsimXmlWriter {
 
-    DrtStopsWriter(Network network, String mode, ShpOptions shp, String outputFolder) {
-        this.network = network;
-        this.mode = mode;
-        this.outputFolder = outputFolder;
-        //If you just say serviceArea = shp.getGeometry() instead of looping through features
-        //somehow the first feature only is taken -sm0222
-        List<SimpleFeature> features = shp.readFeatures();
-        for(SimpleFeature feature : features) {
-            if (shp.getShapeFile() != null) {
-                if (serviceArea == null) {
-                    serviceArea = (Geometry) feature.getDefaultGeometry();
-                } else {
-                    serviceArea = serviceArea.union((Geometry) feature.getDefaultGeometry());
-                }
-            }
-        }
-    }
+	private static final Logger log = LogManager.getLogger(DrtStopsWriter.class);
 
-    public void write() throws UncheckedIOException, IOException {
-        this.openFile(outputFolder + "/" + mode + "-stops.xml");
-        this.writeXmlHead();
-        this.writeDoctype("transitSchedule", "http://www.matsim.org/files/dtd/transitSchedule_v1.dtd");
-        this.writeStartTag("transitSchedule", null);
-        this.writeStartTag("transitStops", null);
-        this.writeTransitStops(network);
-        this.writeEndTag("transitStops");
-        this.writeEndTag("transitSchedule");
-        this.close();
-    }
+	private final String mode;
+	private Geometry serviceArea = null;
+	private final String outputFolder;
+	private final Network network;
 
-    private void writeTransitStops(Network network) throws IOException {
-        // Write csv file for adjusted stop location
-        FileWriter csvWriter = new FileWriter(outputFolder + "/"
-                + mode + "-stops-locations.csv");
-        csvWriter.append("Stop ID");
-        csvWriter.append(",");
-        csvWriter.append("Link ID");
-        csvWriter.append(",");
-        csvWriter.append("X");
-        csvWriter.append(",");
-        csvWriter.append("Y");
-        csvWriter.append("\n");
+	DrtStopsWriter(Network network, String mode, ShpOptions shp, String outputFolder) {
+		this.network = network;
+		this.mode = mode;
+		this.outputFolder = outputFolder;
+		//If you just say serviceArea = shp.getGeometry() instead of looping through features
+		//somehow the first feature only is taken -sm0222
+		List<SimpleFeature> features = shp.readFeatures();
+		for (SimpleFeature feature : features) {
+			if (shp.getShapeFile() != null) {
+				if (serviceArea == null) {
+					serviceArea = (Geometry) feature.getDefaultGeometry();
+				} else {
+					serviceArea = serviceArea.union((Geometry) feature.getDefaultGeometry());
+				}
+			}
+		}
+	}
 
-        // Read original data csv
-        System.out.println("Start processing the network. This may take some time...");
-        URL data = new URL("https://svn.vsp.tu-berlin.de/" +
-                "repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
-                "KEXI_Haltestellen_Liste_Kelheim_utm32n.csv");
+	/**
+	 * Write content to specified folder.
+	 */
+	public void write() throws UncheckedIOException, IOException {
+		this.openFile(outputFolder + "/" + mode + "-stops.xml");
+		this.writeXmlHead();
+		this.writeDoctype("transitSchedule", "http://www.matsim.org/files/dtd/transitSchedule_v1.dtd");
+		this.writeStartTag("transitSchedule", null);
+		this.writeStartTag("transitStops", null);
+		this.writeTransitStops(network);
+		this.writeEndTag("transitStops");
+		this.writeEndTag("transitSchedule");
+		this.close();
+	}
 
-        BufferedReader csvReader = new BufferedReader(new InputStreamReader(data.openStream()));
-        csvReader.readLine();
-        String stopEntry = csvReader.readLine();
-        while (stopEntry != null) {
+	private void writeTransitStops(Network network) throws IOException {
+		// Write csv file for adjusted stop location
+		FileWriter csvWriter = new FileWriter(outputFolder + "/"
+				+ mode + "-stops-locations.csv");
+		csvWriter.append("Stop ID");
+		csvWriter.append(",");
+		csvWriter.append("Link ID");
+		csvWriter.append(",");
+		csvWriter.append("X");
+		csvWriter.append(",");
+		csvWriter.append("Y");
+		csvWriter.append("\n");
 
-            String[] stopData = stopEntry.split(";");
-            // write stop
-            Coord coord = new Coord(Double.parseDouble(stopData[2]), Double.parseDouble(stopData[3]));
+		// Read original data csv
+		log.info("Start processing the network. This may take some time...");
+		URL data = new URL("https://svn.vsp.tu-berlin.de/" +
+				"repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
+				"KEXI_Haltestellen_Liste_Kelheim_utm32n.csv");
 
-            if (serviceArea == null || MGC.coord2Point(coord).within(serviceArea)) {
-                List<Tuple<String, String>> attributes = new ArrayList<Tuple<String, String>>(5);
-                attributes.add(createTuple("id", stopData[0]));
-                attributes.add(createTuple("x", stopData[2]));
-                attributes.add(createTuple("y", stopData[3]));
-                Link link = getStopLink(coord, network);
-                attributes.add(createTuple("linkRefId", link.getId().toString()));
-                this.writeStartTag("stopFacility", attributes, true);
+		BufferedReader csvReader = new BufferedReader(new InputStreamReader(data.openStream()));
+		csvReader.readLine();
+		String stopEntry = csvReader.readLine();
+		while (stopEntry != null) {
 
-                csvWriter.append(stopData[0]);
-                csvWriter.append(",");
-                csvWriter.append(link.getId().toString());
-                csvWriter.append(",");
-                csvWriter.append(Double.toString(link.getToNode().getCoord().getX()));
-                csvWriter.append(",");
-                csvWriter.append(Double.toString(link.getToNode().getCoord().getY()));
-                csvWriter.append("\n");
-            }
+			String[] stopData = stopEntry.split(";");
+			// write stop
+			Coord coord = new Coord(Double.parseDouble(stopData[2]), Double.parseDouble(stopData[3]));
 
-            stopEntry = csvReader.readLine();
-        }
-        csvWriter.close();
-    }
+			if (serviceArea == null || MGC.coord2Point(coord).within(serviceArea)) {
+				List<Tuple<String, String>> attributes = new ArrayList<Tuple<String, String>>(5);
+				attributes.add(createTuple("id", stopData[0]));
+				attributes.add(createTuple("x", stopData[2]));
+				attributes.add(createTuple("y", stopData[3]));
+				Link link = getStopLink(coord, network);
+				attributes.add(createTuple("linkRefId", link.getId().toString()));
+				this.writeStartTag("stopFacility", attributes, true);
 
-    private Link getStopLink(Coord coord, Network network) {
-        double shortestDistance = Double.MAX_VALUE;
-        Link nearestLink = null;
-        for (Link link : network.getLinks().values()) {
-            if (!link.getAllowedModes().contains(mode)) {
-                continue;
-            }
-            double dist = CoordUtils.distancePointLinesegment(link.getFromNode().getCoord(), link.getToNode().getCoord(), coord);
-            if (dist < shortestDistance) {
-                shortestDistance = dist;
-                nearestLink = link;
-            }
-        }
+				csvWriter.append(stopData[0]);
+				csvWriter.append(",");
+				csvWriter.append(link.getId().toString());
+				csvWriter.append(",");
+				csvWriter.append(Double.toString(link.getToNode().getCoord().getX()));
+				csvWriter.append(",");
+				csvWriter.append(Double.toString(link.getToNode().getCoord().getY()));
+				csvWriter.append("\n");
+			}
+
+			stopEntry = csvReader.readLine();
+		}
+		csvWriter.close();
+	}
+
+	private Link getStopLink(Coord coord, Network network) {
+		double shortestDistance = Double.MAX_VALUE;
+		Link nearestLink = null;
+		for (Link link : network.getLinks().values()) {
+			if (!link.getAllowedModes().contains(mode)) {
+				continue;
+			}
+			double dist = CoordUtils.distancePointLinesegment(link.getFromNode().getCoord(), link.getToNode().getCoord(), coord);
+			if (dist < shortestDistance) {
+				shortestDistance = dist;
+				nearestLink = link;
+			}
+		}
 
 
-        double distanceToFromNode = CoordUtils.calcEuclideanDistance(nearestLink.getFromNode().getCoord(), coord);
-        double distanceToToNode = CoordUtils.calcEuclideanDistance(nearestLink.getToNode().getCoord(), coord);
+		double distanceToFromNode = CoordUtils.calcEuclideanDistance(nearestLink.getFromNode().getCoord(), coord);
+		double distanceToToNode = CoordUtils.calcEuclideanDistance(nearestLink.getToNode().getCoord(), coord);
 
-        // If to node is closer to the stop coordinate, we will use this link as the stop location
-        if (distanceToToNode < distanceToFromNode) {
-            return nearestLink;
-        }
+		// If to node is closer to the stop coordinate, we will use this link as the stop location
+		if (distanceToToNode < distanceToFromNode) {
+			return nearestLink;
+		}
 
-        // Otherwise, we will use the opposite link as the stop location
-        Set<Link> linksConnectToToNode = new HashSet<>(nearestLink.getToNode().getOutLinks().values());
-        linksConnectToToNode.retainAll(nearestLink.getFromNode().getInLinks().values());
-        if (!linksConnectToToNode.isEmpty()) {
-            return linksConnectToToNode.iterator().next();
-        }
+		// Otherwise, we will use the opposite link as the stop location
+		Set<Link> linksConnectToToNode = new HashSet<>(nearestLink.getToNode().getOutLinks().values());
+		linksConnectToToNode.retainAll(nearestLink.getFromNode().getInLinks().values());
+		if (!linksConnectToToNode.isEmpty()) {
+			return linksConnectToToNode.iterator().next();
+		}
 
-        // However, if this link does not have an opposite direction counterpart, we will use it anyway.
-        return nearestLink;
-    }
+		// However, if this link does not have an opposite direction counterpart, we will use it anyway.
+		return nearestLink;
+	}
 }

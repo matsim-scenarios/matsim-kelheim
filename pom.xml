@@ -4,7 +4,12 @@
 	<parent>
 		<groupId>org.matsim</groupId>
 		<artifactId>matsim-all</artifactId>
-		<version>15.0-PR2467</version>
+
+		<!-- PR-labelled release -->
+		<version>16.0-PR2530</version>
+
+		<!-- snapshot == not recommended: rather use PR-labelled release!-->
+		<!--		<version>16.0-SNAPSHOT</matsim.version>-->
 	</parent>
 
 	<modelVersion>4.0.0</modelVersion>
@@ -16,14 +21,6 @@
 	<description>A transport model of the district of Kelheim and it's surroundings</description>
 
 	<properties>
-		<!-- release -->
-		<!-- <matsim.version>13.0</matsim.version> -->
-
-		<!-- PR-labelled release -->
-		<!--<matsim.version>14.0-PR1452</matsim.version>-->
-
-		<!-- snapshot == not recommended: rather use PR-labelled release!-->
-<!--		<matsim.version>14.0-SNAPSHOT</matsim.version>-->
 		<matsim.version>${project.parent.version}</matsim.version>
 
 		<main.class>org.matsim.run.RunKelheimScenario</main.class>
@@ -169,13 +166,11 @@
 			</exclusions>
 		</dependency>
 
-		<!-- TODO: May be added later
 		<dependency>
 			<groupId>org.matsim.contrib</groupId>
 			<artifactId>informed-mode-choice</artifactId>
 			<version>${matsim.version}</version>
 		</dependency>
-		-->
 
 		<dependency>
 			<groupId>one.util</groupId>
