@@ -36,6 +36,7 @@ import org.matsim.core.controler.Injector;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.events.algorithms.EventWriterXML;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.vehicles.*;
 
@@ -47,15 +48,21 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
-public class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
+/**
+ * processes MATSim output leveraging the emission contrib.<br>
+ * needs input tables from/according to HBEFA.<br>
+ * produces output tables (csv files) that contain emission values per link (per meter) as well as emission events.
+ *
+ */
+class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 
 	private static final Logger log = LogManager.getLogger(RunKelheimOfflineAirPollutionAnalysisByEngineInformation.class);
 
 	private static final String HBEFA_2020_PATH = "https://svn.vsp.tu-berlin.de/repos/public-svn/3507bb3997e5657ab9da76dbedbb13c9b5991d3e/0e73947443d68f95202b71a156b337f7f71604ae/";
 	private static final String HBEFA_FILE_COLD_DETAILED = "../../svn/shared-svn/projects/matsim-germany/hbefa/hbefa-files/v4.1/EFA_ColdStart_Concept_2020_detailed_perTechAverage_withHGVetc.csv";
 	private static final String HBEFA_FILE_WARM_DETAILED = HBEFA_2020_PATH + "944637571c833ddcf1d0dfcccb59838509f397e6.enc";
-	private static final String HBEFA_FILE_COLD_AVERAGE = HBEFA_2020_PATH + "22823adc0ee6a0e231f35ae897f7b224a86f3a7a.enc";
+//	private static final String HBEFA_FILE_COLD_AVERAGE = HBEFA_2020_PATH + "22823adc0ee6a0e231f35ae897f7b224a86f3a7a.enc";
+	private static final String HBEFA_FILE_COLD_AVERAGE = "../../svn/shared-svn/projects/matsim-germany/hbefa/hbefa-files/v4.1/EFA_ColdStart_Vehcat_2020_Average_withHGVetc.csv";
 	private static final String HBEFA_FILE_WARM_AVERAGE = HBEFA_2020_PATH + "7eff8f308633df1b8ac4d06d05180dd0c5fdf577.enc";
 
 	private final String runDirectory;
@@ -86,13 +93,19 @@ public class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 //		final String hbefaFileColdDetailed = hbefa2020Path + "0e73947443d68f95202b71a156b337f7f71604ae/5a297db51545335b2f7899002a1ea6c45d4511a3.enc";
 
 
+//		final String runId = "008" ;
+//		final String runDirectory = "//sshfs.r/schlenther@cluster.math.tu-berlin.de/net/ils/matsim-kelheim/calibration-v3/runs/008";
+//		final String outputDirectory = runDirectory + "emission-analysis-hbefa-v4.1-2020";
 
-		final String runId = "008" ;
-		String runDirectory = "//sshfs.r/schlenther@cluster.math.tu-berlin.de/net/ils/matsim-kelheim/calibration-v3/runs/008";
+
+		final String runDirectory = "D:/svn/runs-svn/KelRide/matsim-kelheim-v2.0/2-AV-Service-Area-And-Fleet-Size/runs/output-ASC-0.15-dist-0.00006-2_av-seed1111-CORE";
+		final String outputDirectory = "D:/KelRide/2023-04-26-testEmissionAnalyis-OSMHbefaMapping"; //TODO
+		final String runId = "kelheim-v2.0-25pct-av";
+
 		RunKelheimOfflineAirPollutionAnalysisByEngineInformation analysis = new RunKelheimOfflineAirPollutionAnalysisByEngineInformation(
 				runDirectory,
 				runId,
-				runDirectory + "emission-analysis-hbefa-v4.1-2020");
+				outputDirectory);
 		try {
 			analysis.run();
 		} catch (IOException e) {
@@ -100,16 +113,15 @@ public class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 		}
 	}
 
+	/**
+	 * read in config, prepare the scenario (data container) and then process
+	 * @throws IOException
+	 */
 	void run() throws IOException {
 
 		Config config = prepareConfig();
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 		prepareNetwork(scenario);
-
-//		NetworkUtils.writeNetwork(scenario.getNetwork(), "D:/KelRide/2023-04-26-testEmissionAnalyis/kelheim-v3-net-osmhbefamapping.xml.gz");
-//		NetworkUtils.writeNetwork(scenario.getNetwork(), "D:/KelRide/2023-04-26-testEmissionAnalyis/kelheim-v3-net-vsphbefamapping.xml.gz");
-
-
 
 		prepareVehicleTypes(scenario);
 
@@ -131,6 +143,12 @@ public class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 		process(config, scenario);
 	}
 
+	/**
+	 * process output events, compute emission events and dump output.
+	 * @param config
+	 * @param scenario
+	 * @throws IOException
+	 */
 	private void process(Config config, Scenario scenario) throws IOException {
 		//------------------------------------------------------------------------------
 		// the following is copied from the example and supplemented...
@@ -185,7 +203,7 @@ public class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 				.collect(Collectors.groupingBy(category -> category, Collectors.counting()))
 				.entrySet()
 				.forEach(entry -> log.info("nr of " + VehicleUtils.getHbefaVehicleCategory(entry.getKey().getEngineInformation()) + " vehicles running on " + VehicleUtils.getHbefaEmissionsConcept(entry.getKey().getEngineInformation())
-						+" = " + entry.getValue() + " (equals " + ((double)entry.getValue()/(double)totalVehicles) + "% overall)"));
+						+" = " + entry.getValue() + " (equals " + (100.0d*(double)entry.getValue()/(double)totalVehicles) + "% overall)"));
 
 //		scenario.getVehicles().getVehicles().values().stream()
 //				.map(vehicle -> {
@@ -196,8 +214,11 @@ public class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 //				.forEach(entry -> log.info("nr of " + entry.getKey() + " vehicles = " + entry.getValue() + " (equals " + ((double)entry.getValue()/(double)totalVehicles) + "%)"));
 	}
 
+	/**
+	 * set all input files in EmissionConfigGroup as well as input from the MATSim run.
+	 * @return
+	 */
 	private Config prepareConfig() {
-		//TODO: let's load the actual output config instead of filling a dummy one. Hopefully this does not size up the scenario too much. This way, we can get access to actually used values
 		Config config = ConfigUtils.createConfig();
 //		Config config = ConfigUtils.loadConfig(runDirectory + runId + ".output_config.xml");
 
@@ -220,22 +241,36 @@ public class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 //		eConfig.setHbefaRoadTypeSource(HbefaRoadTypeSource.fromLinkAttributes);
 		eConfig.setNonScenarioVehicles(EmissionsConfigGroup.NonScenarioVehicles.abort);
 		eConfig.setWritingEmissionsEvents(true);
-		eConfig.setHbefaTableConsistencyCheckingLevel(EmissionsConfigGroup.HbefaTableConsistencyCheckingLevel.consistent); //TODO ?????
+		eConfig.setHbefaTableConsistencyCheckingLevel(EmissionsConfigGroup.HbefaTableConsistencyCheckingLevel.consistent);
 		return config;
 	}
 
+	/**
+	 * changes/adds link attributes of the network in the given scenario
+	 * @param scenario
+	 */
 	private void prepareNetwork(Scenario scenario) {
 		//prepare the network
-//		HbefaRoadTypeMapping roadTypeMapping = new OsmHbefaMapping(); //alternatively, use new VspHbefaRoadTypeMapping() // TODO compare
-		//OsmHbefaMapping currently does not work because our link types
-		// 1) have the prefix "highway."
-		// 2) have suffixes "_link"
-		// 3) are not handled, specifically "highway.primary|railway.tram"
-		HbefaRoadTypeMapping roadTypeMapping = new VspHbefaRoadTypeMapping();
+
+		HbefaRoadTypeMapping roadTypeMapping = OsmHbefaMapping.build(); //alternatively, use new VspHbefaRoadTypeMapping() //
+//		the type attribute in our network has the prefix "highway" for all links but pt links. we need to delete that because OsmHbefaMapping does not handle that.
+		for (Link link : scenario.getNetwork().getLinks().values()) {
+			if(!link.getAllowedModes().contains("pt")) { //pt links can be disregarded
+				NetworkUtils.setType(link, NetworkUtils.getType(link).replaceFirst("highway.", ""));
+			}
+		}
+		//OsmHbefaMapping currently does not work because, because some resulting emission key factor can't be found the in the HBEFA lookup tables...
+
+//		HbefaRoadTypeMapping roadTypeMapping = new VspHbefaRoadTypeMapping();
 
 		roadTypeMapping.addHbefaMappings(scenario.getNetwork());
 	}
 
+	/**
+	 * we set all vehicles to average except for KEXI vehicles, i.e. drt. Drt vehicles are set to electric light commercial vehicles.
+	 *
+	 * @param scenario
+	 */
 	private void prepareVehicleTypes(Scenario scenario) {
 		for (VehicleType type : scenario.getVehicles().getVehicleTypes().values()) {
 			EngineInformation engineInformation = type.getEngineInformation();
@@ -246,7 +281,7 @@ public class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 				VehicleUtils.setHbefaVehicleCategory(engineInformation, HbefaVehicleCategory.PASSENGER_CAR.toString());
 				VehicleUtils.setHbefaTechnology(engineInformation, "average");
 				VehicleUtils.setHbefaSizeClass(engineInformation, "average");
-				VehicleUtils.setHbefaEmissionsConcept(engineInformation, "average"); //TODO?
+				VehicleUtils.setHbefaEmissionsConcept(engineInformation, "average");
 			} else if (type.getId().toString().equals("conventional_vehicle")){
 				VehicleUtils.setHbefaVehicleCategory(engineInformation, HbefaVehicleCategory.LIGHT_COMMERCIAL_VEHICLE.toString());
 				VehicleUtils.setHbefaTechnology(engineInformation, "average");
@@ -261,13 +296,22 @@ public class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 				VehicleUtils.setHbefaVehicleCategory(engineInformation, HbefaVehicleCategory.HEAVY_GOODS_VEHICLE.toString());
 				VehicleUtils.setHbefaTechnology(engineInformation, "average");
 				VehicleUtils.setHbefaSizeClass(engineInformation, "average");
-				VehicleUtils.setHbefaEmissionsConcept(engineInformation, "average"); //TODO ?
+				VehicleUtils.setHbefaEmissionsConcept(engineInformation, "average");
 			} else {
 				throw new IllegalArgumentException("does not know how to handle vehicleType " + type.getId().toString());
 			}
 		}
 	}
 
+	/**
+	 *
+	 * @param linkEmissionAnalysisFile
+	 * @param linkEmissionPerMAnalysisFile
+	 * @param vehicleTypeFileStr
+	 * @param scenario
+	 * @param emissionsEventHandler
+	 * @throws IOException
+	 */
 	private void writeOutput(String linkEmissionAnalysisFile, String linkEmissionPerMAnalysisFile, String vehicleTypeFileStr, Scenario scenario, EmissionsOnLinkEventHandler emissionsEventHandler) throws IOException {
 
 		log.info("Emission analysis completed.");
