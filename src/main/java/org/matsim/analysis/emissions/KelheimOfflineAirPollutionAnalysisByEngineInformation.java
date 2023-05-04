@@ -63,9 +63,9 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 
 	//Please set MATSIM_DECRYPTION_PASSWORD as environment variable to decrypt the files. ask VSP for access.
 	private static final String HBEFA_2020_PATH = "https://svn.vsp.tu-berlin.de/repos/public-svn/3507bb3997e5657ab9da76dbedbb13c9b5991d3e/0e73947443d68f95202b71a156b337f7f71604ae/";
-	private static final String HBEFA_FILE_COLD_DETAILED = "../../svn/shared-svn/projects/matsim-germany/hbefa/hbefa-files/v4.1/EFA_ColdStart_Concept_2020_detailed_perTechAverage_withHGVetc.csv.enc"; //TODO adjust to public svn encrypted version
+	private static final String HBEFA_FILE_COLD_DETAILED = HBEFA_2020_PATH + "82t7b02rc0rji2kmsahfwp933u2rfjlkhfpi2u9r20.enc";
 	private static final String HBEFA_FILE_WARM_DETAILED = HBEFA_2020_PATH + "944637571c833ddcf1d0dfcccb59838509f397e6.enc";
-	private static final String HBEFA_FILE_COLD_AVERAGE = "../../svn/shared-svn/projects/matsim-germany/hbefa/hbefa-files/v4.1/EFA_ColdStart_Vehcat_2020_Average_withHGVetc.csv.enc"; //TODO adjust to public svn encrypted version
+	private static final String HBEFA_FILE_COLD_AVERAGE = HBEFA_2020_PATH + "r9230ru2n209r30u2fn0c9rn20n2rujkhkjhoewt84202.enc" ;
 	private static final String HBEFA_FILE_WARM_AVERAGE = HBEFA_2020_PATH + "7eff8f308633df1b8ac4d06d05180dd0c5fdf577.enc";
 
 	@CommandLine.Option(names = "--runDir", description = "Path to MATSim output directory containing network, events, ....", required = true)
@@ -231,7 +231,6 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 			}
 		}
 		//do not use VspHbefaRoadTypeMapping() as it results in almost every road to mapped to "highway"!
-//		HbefaRoadTypeMapping roadTypeMapping = new VspHbefaRoadTypeMapping();
 
 		roadTypeMapping.addHbefaMappings(scenario.getNetwork());
 	}
@@ -244,28 +243,19 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	private void prepareVehicleTypes(Scenario scenario) {
 		for (VehicleType type : scenario.getVehicles().getVehicleTypes().values()) {
 			EngineInformation engineInformation = type.getEngineInformation();
+			VehicleUtils.setHbefaTechnology(engineInformation, "average");
+			VehicleUtils.setHbefaSizeClass(engineInformation, "average");
 			if (scenario.getTransitVehicles().getVehicleTypes().containsKey(type.getId())) {
 				// consider transit vehicles as non-hbefa vehicles, i.e. ignore them
 				VehicleUtils.setHbefaVehicleCategory( engineInformation, HbefaVehicleCategory.NON_HBEFA_VEHICLE.toString());
 			} else if(type.getId().toString().equals("car")){
 				VehicleUtils.setHbefaVehicleCategory(engineInformation, HbefaVehicleCategory.PASSENGER_CAR.toString());
-				VehicleUtils.setHbefaTechnology(engineInformation, "average");
-				VehicleUtils.setHbefaSizeClass(engineInformation, "average");
 				VehicleUtils.setHbefaEmissionsConcept(engineInformation, "average");
-			} else if (type.getId().toString().equals("conventional_vehicle")){
+			} else if (type.getId().toString().equals("conventional_vehicle") || type.getId().toString().equals("autonomous_vehicle")){
 				VehicleUtils.setHbefaVehicleCategory(engineInformation, HbefaVehicleCategory.LIGHT_COMMERCIAL_VEHICLE.toString());
-				VehicleUtils.setHbefaTechnology(engineInformation, "average");
-				VehicleUtils.setHbefaSizeClass(engineInformation, "average");
-				VehicleUtils.setHbefaEmissionsConcept(engineInformation, "electricity");
-			} else if (type.getId().toString().equals("autonomous_vehicle")){
-				VehicleUtils.setHbefaVehicleCategory(engineInformation, HbefaVehicleCategory.LIGHT_COMMERCIAL_VEHICLE.toString());
-				VehicleUtils.setHbefaTechnology(engineInformation, "average");
-				VehicleUtils.setHbefaSizeClass(engineInformation, "average");
 				VehicleUtils.setHbefaEmissionsConcept(engineInformation, "electricity");
 			} else if (type.getId().toString().equals("freight")){
 				VehicleUtils.setHbefaVehicleCategory(engineInformation, HbefaVehicleCategory.HEAVY_GOODS_VEHICLE.toString());
-				VehicleUtils.setHbefaTechnology(engineInformation, "average");
-				VehicleUtils.setHbefaSizeClass(engineInformation, "average");
 				VehicleUtils.setHbefaEmissionsConcept(engineInformation, "average");
 			} else {
 				throw new IllegalArgumentException("does not know how to handle vehicleType " + type.getId().toString());
