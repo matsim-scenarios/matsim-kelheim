@@ -22,9 +22,11 @@ package org.matsim.analysis.emissions;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.analysis.preAnalysis.ActivityLengthAnalysis;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.application.MATSimAppCommand;
 import org.matsim.contrib.emissions.*;
 import org.matsim.contrib.emissions.analysis.EmissionsOnLinkEventHandler;
 import org.matsim.contrib.emissions.utils.EmissionsConfigGroup;
@@ -39,6 +41,7 @@ import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.vehicles.*;
+import picocli.CommandLine;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -54,75 +57,35 @@ import java.util.stream.Collectors;
  * produces output tables (csv files) that contain emission values per link (per meter) as well as emission events.
  *
  */
-class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
+class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimAppCommand {
 
-	private static final Logger log = LogManager.getLogger(RunKelheimOfflineAirPollutionAnalysisByEngineInformation.class);
+	private static final Logger log = LogManager.getLogger(KelheimOfflineAirPollutionAnalysisByEngineInformation.class);
 
+	//Please set MATSIM_DECRYPTION_PASSWORD as environment variable to decrypt the files. ask VSP for access.
 	private static final String HBEFA_2020_PATH = "https://svn.vsp.tu-berlin.de/repos/public-svn/3507bb3997e5657ab9da76dbedbb13c9b5991d3e/0e73947443d68f95202b71a156b337f7f71604ae/";
-	private static final String HBEFA_FILE_COLD_DETAILED = "../../svn/shared-svn/projects/matsim-germany/hbefa/hbefa-files/v4.1/EFA_ColdStart_Concept_2020_detailed_perTechAverage_withHGVetc.csv";
+	private static final String HBEFA_FILE_COLD_DETAILED = "../../svn/shared-svn/projects/matsim-germany/hbefa/hbefa-files/v4.1/EFA_ColdStart_Concept_2020_detailed_perTechAverage_withHGVetc.csv.enc"; //TODO adjust to public svn encrypted version
 	private static final String HBEFA_FILE_WARM_DETAILED = HBEFA_2020_PATH + "944637571c833ddcf1d0dfcccb59838509f397e6.enc";
-//	private static final String HBEFA_FILE_COLD_AVERAGE = HBEFA_2020_PATH + "22823adc0ee6a0e231f35ae897f7b224a86f3a7a.enc";
-	private static final String HBEFA_FILE_COLD_AVERAGE = "../../svn/shared-svn/projects/matsim-germany/hbefa/hbefa-files/v4.1/EFA_ColdStart_Vehcat_2020_Average_withHGVetc.csv";
+	private static final String HBEFA_FILE_COLD_AVERAGE = "../../svn/shared-svn/projects/matsim-germany/hbefa/hbefa-files/v4.1/EFA_ColdStart_Vehcat_2020_Average_withHGVetc.csv.enc"; //TODO adjust to public svn encrypted version
 	private static final String HBEFA_FILE_WARM_AVERAGE = HBEFA_2020_PATH + "7eff8f308633df1b8ac4d06d05180dd0c5fdf577.enc";
 
-	private final String runDirectory;
-	private final String runId;
-	private final String analysisOutputDirectory;
+	@CommandLine.Option(names = "--runDir", description = "Path to MATSim output directory containing network, events, ....", required = true)
+	private String runDirectory;
+	@CommandLine.Option(names = "--runId", description = "runId of the corresponding MATSim run to analyzed", required = true)
+	private String runId;
+	@CommandLine.Option(names = "--output", description = "output directory (must not pre-exist)", required = true)
+	private String analysisOutputDirectory;
 
 //	static List<Pollutant> pollutants2Output = Arrays.asList(CO2_TOTAL, NOx, PM, PM_non_exhaust);
 	static List<Pollutant> pollutants2Output = Arrays.asList(Pollutant.values()); //dump out all pollutants
 
-	RunKelheimOfflineAirPollutionAnalysisByEngineInformation(String runDirectory,
-															 String runId,
-															 String analysisOutputDirectory) {
+	@Override
+	public Integer call() throws Exception {
 		if (!runDirectory.endsWith("/")) runDirectory = runDirectory + "/";
-		this.runDirectory = runDirectory;
-
-		this.runId = runId;
-
 		if (!analysisOutputDirectory.endsWith("/")) analysisOutputDirectory = analysisOutputDirectory + "/";
-		this.analysisOutputDirectory = analysisOutputDirectory;
-
-	}
-
-	public static void main(String[] args) throws IOException {
-
-		//TODO: Please set MATSIM_DECRYPTION_PASSWORD as environment variable to decrypt the files. ask VSP for access.
-
-		//actually the hbefa files need to be set relative to the config or by absolute path...
-//		final String hbefaFileColdDetailed = hbefa2020Path + "0e73947443d68f95202b71a156b337f7f71604ae/5a297db51545335b2f7899002a1ea6c45d4511a3.enc";
-
-
-//		final String runId = "008" ;
-//		final String runDirectory = "//sshfs.r/schlenther@cluster.math.tu-berlin.de/net/ils/matsim-kelheim/calibration-v3/runs/008";
-//		final String outputDirectory = runDirectory + "emission-analysis-hbefa-v4.1-2020";
-
-
-		final String runDirectory = "D:/svn/runs-svn/KelRide/matsim-kelheim-v2.0/2-AV-Service-Area-And-Fleet-Size/runs/output-ASC-0.15-dist-0.00006-2_av-seed1111-CORE";
-		final String outputDirectory = "D:/KelRide/2023-04-26-testEmissionAnalyis-OSMHbefaMapping"; //TODO
-		final String runId = "kelheim-v2.0-25pct-av";
-
-		RunKelheimOfflineAirPollutionAnalysisByEngineInformation analysis = new RunKelheimOfflineAirPollutionAnalysisByEngineInformation(
-				runDirectory,
-				runId,
-				outputDirectory);
-		try {
-			analysis.run();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * read in config, prepare the scenario (data container) and then process
-	 * @throws IOException
-	 */
-	void run() throws IOException {
 
 		Config config = prepareConfig();
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 		prepareNetwork(scenario);
-
 		prepareVehicleTypes(scenario);
 
 		{//analyze current distribution. TODO: could be integrated above in order to save lines?
@@ -141,6 +104,11 @@ class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 		}
 
 		process(config, scenario);
+		return 0;
+	}
+
+	public static void main(String[] args) throws IOException {
+		new KelheimOfflineAirPollutionAnalysisByEngineInformation().execute(args);
 	}
 
 	/**
@@ -156,6 +124,9 @@ class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 
 		File folder = new File(analysisOutputDirectory);
 		folder.mkdirs();
+
+		String outputNetworkFile = analysisOutputDirectory + runId + ".emissionNetwork.xml.gz";
+		NetworkUtils.writeNetwork(scenario.getNetwork(), outputNetworkFile);
 
 		final String eventsFile = runDirectory + runId + ".output_events.xml.gz";
 
@@ -259,8 +230,7 @@ class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 				NetworkUtils.setType(link, NetworkUtils.getType(link).replaceFirst("highway.", ""));
 			}
 		}
-		//OsmHbefaMapping currently does not work because, because some resulting emission key factor can't be found the in the HBEFA lookup tables...
-
+		//do not use VspHbefaRoadTypeMapping() as it results in almost every road to mapped to "highway"!
 //		HbefaRoadTypeMapping roadTypeMapping = new VspHbefaRoadTypeMapping();
 
 		roadTypeMapping.addHbefaMappings(scenario.getNetwork());
@@ -395,5 +365,6 @@ class RunKelheimOfflineAirPollutionAnalysisByEngineInformation {
 			log.info("Output written to " + vehicleTypeFileStr);
 		}
 	}
+
 
 }
