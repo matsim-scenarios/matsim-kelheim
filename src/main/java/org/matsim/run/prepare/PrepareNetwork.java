@@ -6,6 +6,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
@@ -150,16 +151,22 @@ public class PrepareNetwork implements MATSimAppCommand {
 
 			if (isDrtAllowed) {
 				Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
-				allowedModes.add("drt");
-				link.setAllowedModes(allowedModes);
-				linkCount[0] = linkCount[0] + 1;
+
+				if (!allowedModes.contains(TransportMode.drt)) {
+					allowedModes.add(TransportMode.drt);
+					link.setAllowedModes(allowedModes);
+					linkCount[0] = linkCount[0] + 1;
+				}
 			}
 
 			if (isAvAllowed) {
 				Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
-				allowedModes.add("av");
-				link.setAllowedModes(allowedModes);
-				linkCount[1] = linkCount[1] + 1;
+
+				if (!allowedModes.contains("av")) {
+					allowedModes.add("av");
+					link.setAllowedModes(allowedModes);
+					linkCount[1] = linkCount[1] + 1;
+				}
 			}
 		}
 
