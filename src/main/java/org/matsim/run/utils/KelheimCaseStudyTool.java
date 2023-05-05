@@ -14,7 +14,7 @@ public final class KelheimCaseStudyTool {
 	/**
 	 * Different possible services areas for the AV.
 	 */
-	public enum AvServiceArea {NULL, CORE, CORE_WITH_SHOP, HOHENPFAHL, BAUERNSIEDLUNG}
+	public enum AvServiceArea {NULL, CORE, CORE_WITH_SHOP, HOHENPFAHL, BAUERNSIEDLUNG, SAR}
 	// NULL: do not change anything; CORE: Donaupark + Altstadt; HOHENPFAHL: CORE + Hohenpfahl area; BAUERNSIEDLUNG: CORE + Bauernsiedlung area
 
 	public static void setConfigFile(Config config, DrtConfigGroup drtConfig, AvServiceArea avServiceAreas) {
@@ -33,6 +33,10 @@ public final class KelheimCaseStudyTool {
 
 		if (avServiceAreas == AvServiceArea.BAUERNSIEDLUNG) {
 			drtConfig.transitStopFile = "av-stops-Bauernsiedlung-DP-AS.xml";
+		}
+
+		if (avServiceAreas == AvServiceArea.SAR) {
+			drtConfig.transitStopFile = "av-stops-SAR.xml";
 		}
 
 		// Update output directory
