@@ -22,7 +22,6 @@ package org.matsim.analysis.emissions;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.matsim.analysis.preAnalysis.ActivityLengthAnalysis;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -100,7 +99,7 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	 * process output events, compute emission events and dump output.
 	 * @param config input config
 	 * @param scenario object to operate on (analyze)
-	 * @throws IOException
+	 * @throws IOException if output can't be written
 	 */
 	private void process(Config config, Scenario scenario) throws IOException {
 		//------------------------------------------------------------------------------
@@ -159,7 +158,7 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 				.collect(Collectors.groupingBy(category -> category, Collectors.counting()))
 				.entrySet()
 				.forEach(entry -> log.info("nr of " + VehicleUtils.getHbefaVehicleCategory(entry.getKey().getEngineInformation()) + " vehicles running on " + VehicleUtils.getHbefaEmissionsConcept(entry.getKey().getEngineInformation())
-						+" = " + entry.getValue() + " (equals " + (100.0d*(double)entry.getValue()/(double)totalVehicles) + "% overall)"));
+						+" = " + entry.getValue() + " (equals " + (100.0d * ((double) entry.getValue()) / ((double) totalVehicles)) + "% overall)"));
 	}
 
 	/**
@@ -192,7 +191,7 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	}
 
 	/**
-	 * changes/adds link attributes of the network in the given scenario
+	 * changes/adds link attributes of the network in the given scenario.
 	 * @param scenario for which to prepare the network
 	 */
 	private void prepareNetwork(Scenario scenario) {
@@ -238,12 +237,13 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	}
 
 	/**
+	 * dumps the output.
 	 * @param linkEmissionAnalysisFile path including file name and ending (csv) for the output file containing absolute emission values per link
 	 * @param linkEmissionPerMAnalysisFile path including file name and ending (csv) for the output file containing emission values per meter, per link
 	 * @param vehicleTypeFileStr  including file name and ending (xml) for the output vehicle file
 	 * @param scenario the analyzed scenario
 	 * @param emissionsEventHandler handler holding the emission data (from events-processing)
-	 * @throws IOException
+	 * @throws IOException if output can't be written
 	 */
 	private void writeOutput(String linkEmissionAnalysisFile, String linkEmissionPerMAnalysisFile, String vehicleTypeFileStr, Scenario scenario, EmissionsOnLinkEventHandler emissionsEventHandler) throws IOException {
 
