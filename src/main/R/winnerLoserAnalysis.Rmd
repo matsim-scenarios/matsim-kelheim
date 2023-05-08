@@ -1,0 +1,128 @@
+# Setup
+
+Reading in libraries + global options
+
+```{r, message = FALSE, warning = FALSE}
+library(sf)
+library(tmap)
+library(tidyverse)
+library(units)
+# make sure you use winnerLoserUtils branch of matsim-r until the changes are merged 
+# devtools::install_github("matsim-vsp/matsim-r", ref="winnerLoserUtils", force = TRUE)
+devtools::load_all("~/git/matsim-r")
+library(matsim)
+
+# global options
+tmap_mode("view")
+tmap_options(check.and.fix = TRUE)
+```
+
+Read in data for base and policy cases
+
+```{r, message = FALSE}
+# read in base and policy cases
+base_path <- "~/git/runs-svn/KelRide/matsim-kelheim-v2.0/1-Base-Case-With-Conventional-KEXI/output-ASC-0.15-dist-0.00006-intermodal-kexi-seed_1111/"
+policy_path <- "~/git/runs-svn/KelRide/matsim-kelheim-v2.0/2-AV-Service-Area-And-Fleet-Size/runs/output-ASC-0.15-dist-0.00006-2_av-seed1111-CORE/"
+
+persons_base <- readPersonsTable(base_path)
+persons_policy <- readPersonsTable(policy_path)
+
+trips_base <- readTripsTable(base_path)
+trips_policy <- readTripsTable(policy_path)
+
+shp <- st_read("~/git/matsim-kelheim/scenarios/input/shp/dilutionArea.shx") %>% 
+  st_set_crs(25832)
+```
+
+Create a list of personIds of those agents who have drt as their main mode in BOTH the base case and policy case
+
+```{r}
+drt_users_base <- trips_base %>% 
+  filter(main_mode == "drt") %>%
+  pull(person) %>%
+  unique()
+
+drt_users_policy = trips_policy %>%
+  filter(main_mode == "drt") %>% 
+  pull(person) %>% 
+  unique()
+
+drt_users_intersection <- intersect(drt_users_base,drt_users_policy)
+print(paste0("Number of Agents: ",drt_users_intersection %>% length()))
+```
+
+There were no AV users in base case. There were 40 AV users in policy case
+
+```{r}
+av_users_base <- trips_base %>% 
+  filter(main_mode == "av") %>%
+  pull(person) %>%
+  unique()
+
+av_users_policy = trips_policy %>%
+  filter(main_mode == "av") %>% 
+  pull(person) %>% 
+  unique()
+
+```
+
+Join base and policy people, calculate score difference.
+
+```{r}
+persons_joined <- join_base_and_policy_persons(persons_base, persons_policy)
+
+persons_joined_sf <- transform_persons_sf(persons_joined, filter_shp = shp, first_act_type_filter = "home")
+```
+
+# Results / Visualizations
+
+## All Users
+
+Includes users of all transportation modes. Excludes all agents who do not start their day at home.
+
+Each bubble corresponds to centroid of aggregation pixel. Size of bubble is population density of corresponding pixel (Corresponding legend for size only visible if tmap_mode("plot") ). Color is mean score difference of agents living in that pixel.
+
+```{r}
+all_centroids <- persons_attributes_on_hex_grid(persons_joined_sf, shp) %>% st_centroid()
+
+tm_shape(all_centroids)+
+  tm_bubbles(col = "score_diff", size = "pop_density")
+```
+
+## DRT Users (base + policy)
+
+Only includes the 44 agents who use DRT as main_mode in **both base case and policy case**. Excludes all agents who do not start their day at home.
+
+Each bubble corresponds to individual agent. The color corresponds to their score_diff (policy - base)
+
+```{r}
+drt_users <- persons_joined_sf %>% 
+  filter(person %in% drt_users_intersection)
+
+tm_shape(drt_users) + 
+  tm_bubbles(col = "score_diff", scale = 0.5)
+```
+
+## DRT Users (policy)
+
+Includes the 81 agents who use DRT as main_mode in **the policy case** (regardless of whether they used it in the base case)
+
+```{r}
+drt_users2 <- persons_joined_sf %>% 
+  filter(person %in% drt_users_policy)
+
+tm_shape(drt_users2) + 
+  tm_bubbles(col = "score_diff", scale = 0.5)
+```
+
+## AV Users (policy)
+
+Includes the 40 agents who use AV as main_mode in **the policy case** (regardless of whether they used it in the base case)
+
+```{r}
+av_users <- persons_joined_sf %>% 
+  filter(person %in% av_users_policy)
+
+tm_shape(av_users) + 
+  tm_bubbles(col = "score_diff", scale = 0.5)
+```
