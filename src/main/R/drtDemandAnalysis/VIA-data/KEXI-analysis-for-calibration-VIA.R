@@ -34,7 +34,7 @@ VIAridesSince2022 <- VIAridesAll %>%
   filter(year(Actual.Pickup.Time) >= year(ymd("2022-01-01")))
 
 datasets <- list(VIArides2021, VIArides2022_1, VIArides2022_2, VIArides2023_1, VIAridesSince2022, VIAridesAll)
-names <- c("VIA_Rides_202106_202201","VIA_Rides_202201_202210","VIA_Rides_202210_202212","VIA_Rides_202212_202303","VIAridesSince2022","VIAridesAll")
+names <- c("VIA_data_202106_202201","VIA_data_202201_202210","VIA_data_202210_202212","VIA_data_202212_202303","VIAdataSince2022","VIAdataAll")
 i <- 1
 
 avgValues <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("dataset", "avgRidesPerDay", "avgDistance_<5km[m]", "avgDistance_withoutFilter[m]", "avgTravelTime[s]"))
