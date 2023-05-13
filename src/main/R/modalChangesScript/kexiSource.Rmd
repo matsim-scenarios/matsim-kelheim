@@ -1,0 +1,226 @@
+---
+title: "Case Study Kexi Sources"
+author: "Oleksandr Soboliev"
+output: html_document
+---
+
+#Description
+
+First two plot are generated using concrete tables without function. Then function *getModalChangesFrom(baseFolder,folder2,modes,run.name = "policy run")* is implemented. It requires paths to two folders:
+
+* baseFolder - path to folder with initial modal distribution
+* folder2 - path to policy folder with modal distribution changed
+
+Ans also:
+
+* modes - vector of modes to inspect which initial main_mode changed in policy run
+* run.name - character vector, to specify run name in plot title
+
+# used folder stucture (looks bad in html representation)
+
+- 052
+-- 052.output_trips.csv.gz
+- av
+-- core
+---1111CORE_kelheim-v2.0-25pct-av.output_trips.csv.gz
+---1234CORE_kelheim-v2.0-25pct-av.output_trips.csv.gz
+...
+--hoh
+...
+-calibrun
+--1111_kexi.output_trips.csv.gz
+...
+--5678_kexi.output_trips.csv.gz
+
+```{r libraries, include=FALSE}
+library(matsim)
+library(plotly)
+library(tidyverse)
+
+library(RColorBrewer)
+```
+
+```{r global parameters}
+path_base = "052"
+path_av = "av"
+path_kexi_only = "calibrun"
+```
+
+## **Comparison of base052 case with kexi_only**
+
+```{r import data, warning=FALSE}
+base052 = readTripsTable("052")
+
+#Reading calibrun runs
+calibrun_1111 = readTripsTable(paste0(path_kexi_only,"/1111_kexi.output_trips.csv.gz"))
+trip_ids1111 = calibrun_1111[calibrun_1111$main_mode == "drt" | calibrun_1111$main_mode == "pt_w_drt_used",]$trip_id
+
+calibrun_1234 = readTripsTable(paste0(path_kexi_only,"/1234_kexi.output_trips.csv.gz"))
+trip_ids1234 = calibrun_1234[calibrun_1234$main_mode == "drt" | calibrun_1234$main_mode == "pt_w_drt_used",]$trip_id
+
+calibrun_2222 = readTripsTable(paste0(path_kexi_only,"/2222_kexi.output_trips.csv.gz"))
+trip_ids2222 = calibrun_2222[calibrun_2222$main_mode == "drt" | calibrun_2222$main_mode == "pt_w_drt_used",]$trip_id
+
+calibrun_4711 = readTripsTable(paste0(path_kexi_only,"/4711_kexi.output_trips.csv.gz"))
+trip_ids4711 = calibrun_4711[calibrun_4711$main_mode == "drt" | calibrun_4711$main_mode == "pt_w_drt_used",]$trip_id
+
+calibrun_5678 = readTripsTable(paste0(path_kexi_only,"/5678_kexi.output_trips.csv.gz"))
+trip_ids5678 = calibrun_5678[calibrun_5678$main_mode == "drt" | calibrun_5678$main_mode == "pt_w_drt_used",]$trip_id
+```
+
+```{r averaging}
+# Get main_mode from base case and take average on it
+comparison_1111 = base052 %>% filter(trip_id %in% trip_ids1111) %>% count(main_mode) %>% arrange(main_mode)
+comparison_1234 = base052 %>% filter(trip_id %in% trip_ids1234) %>% count(main_mode) %>% arrange(main_mode)
+comparison_2222 = base052 %>% filter(trip_id %in% trip_ids2222) %>% count(main_mode) %>% arrange(main_mode)
+comparison_4711 = base052 %>% filter(trip_id %in% trip_ids4711) %>% count(main_mode) %>% arrange(main_mode)
+comparison_5678 = base052 %>% filter(trip_id %in% trip_ids5678) %>% count(main_mode) %>% arrange(main_mode)
+
+comparison_calibrun_result = tibble(main_mode = comparison_1111$main_mode,
+                                n = (comparison_1111$n+comparison_1234$n+comparison_2222$n+comparison_4711$n+comparison_5678$n)/5) 
+
+bar = plot_ly(data = comparison_calibrun_result,x = ~main_mode,y = ~n, type = "bar") %>%
+  layout(title = "Number of main_modes switching to DRT in kexi_only run")
+
+pie = plot_ly(data = comparison_calibrun_result,labels = ~main_mode,values = ~n, type = "pie") %>%
+  layout(title = "Number of main_modes switching to DRT in kexi_only run")
+
+```
+Bar chart
+```{r bar chart}
+bar
+```
+
+Pie chart
+```{r initial pie chart}
+pie
+```
+
+
+
+```{r function approach}
+getModalChangesFrom <- function(baseFolder,folder2,modes,run.name = "policy run"){
+
+  base_trip = invisible(readTripsTable(baseFolder))
+  
+  folder2_trips = list(NULL)
+  for(file in list.files(folder2,full.names = TRUE))
+  {
+    temp = invisible(readTripsTable(file))
+    temp = temp[temp$main_mode %in% modes,]
+    if(!is.null(temp)){
+      attr(temp,"table_name") = strsplit(file,'/')[[1]][-1]
+      if(is.null(folder2_trips[[1]])){
+        folder2_trips[[1]] = temp$trip_id
+      }else{
+        folder2_trips = append(folder2_trips,list(temp$trip_id))
+      }
+    }
+  }
+
+  base_modes = unique(base_trip$main_mode)
+  
+  resulting_table = base_trip %>% filter(trip_id %in% folder2_trips[[1]]) %>% count(main_mode)
+  
+  #print(resulting_table)
+  
+  for(i in 1:length(base_modes)){
+    if(nrow(resulting_table[resulting_table$main_mode == base_modes[i],]) == 0){
+      resulting_table = rbind(resulting_table,c(base_modes[i],0))
+    }
+  }
+  #print("i am here")
+ #print(resulting_table)
+  resulting_table = resulting_table %>% arrange(main_mode) %>% mutate(n = as.numeric(n))
+  #print(resulting_table)
+  for(i in 1:length(folder2_trips)){
+    if(i!=1){
+      temp = base_trip%>% filter(trip_id %in% folder2_trips[[i]]) %>% count(main_mode)
+      
+      for(i in 1:length(base_modes)){
+        if(nrow(temp[temp$main_mode == base_modes[i],]) == 0){
+            temp = rbind(temp,c(base_modes[i],0))
+          }
+      }
+      
+      
+      temp = temp %>% arrange(main_mode) %>% mutate(n = as.numeric(n))
+      #print(temp)
+      
+      resulting_table$n = resulting_table$n + temp$n
+    }
+  }
+  resulting_table$n = resulting_table$n/length(folder2_trips)
+  #print(resulting_table)
+  resulting_table = resulting_table %>% filter(main_mode != "freight")
+  
+  pal = brewer.pal(n = 8, name = "Dark2")
+  pal[5] = "goldenrod"
+  pal <- setNames(pal,resulting_table$main_mode)
+  
+  customOrder <- c("bike","pt","walk","ride","car")
+  
+  
+  resulting_table = resulting_table %>% arrange(main_mode) %>% slice(match(customOrder, main_mode))
+  
+  resulting_table$main_mode <- factor(resulting_table$main_mode, levels = resulting_table[["main_mode"]])
+  
+  print(paste0("Number of main_modes switching to ",paste(modes,collapse = ", ")," in run ",run.name))
+  pie = plot_ly(data = resulting_table,labels = ~main_mode,values = ~n, type = "pie",marker = list (colors = pal ),sort = FALSE) %>%
+  layout(title = paste0("Number of main_modes switching to ",paste(modes,collapse = ", ")," in run ",run.name),
+         uniformtext=list(minsize=20, mode='hide'),
+         legend = list(font = list(size = 20)))
+  pie
+}
+```
+
+Pie Chart Kexi ONLY using function
+```{r pie chart}
+modes = c("drt","pt_w_drt_used")
+## AV_BASE from AV##
+getModalChangesFrom("052","calibrun",modes = modes,run.name = "kexi_only")
+```
+
+## **Comparison of base052 case with kexi_with_av**
+
+# Where **drt** trips come from
+```{r drt trips,message=FALSE}
+modes = c("drt","pt_w_drt_used")
+## AV_BASE from AV##
+getModalChangesFrom("052","av/av_base",modes = modes,run.name = "AV_BASE(2 vehicle)")
+
+getModalChangesFrom("052","av/hoh",modes = modes,run.name = "HOHENPFAHL")
+```
+```{r}
+## BAUERNSIEDLUNG from AV##
+getModalChangesFrom("052","av/bauernsiedlung",modes = modes,run.name = "BAUERNSIEDLUNG")
+```
+```{r}
+## CORE from AV##
+getModalChangesFrom("052","av/core",modes = modes,run.name = "CORE")
+## CORE WITH SHOPS from AV##
+getModalChangesFrom("052","av/cws",modes = modes,run.name = "CORE WITH SHOPS")
+## HOHENPFAHL from AV##
+getModalChangesFrom("052","av/hoh",modes = modes,run.name = "HOHENPFAHL")
+
+
+```
+
+# Where **av** trips come from
+```{r av trips,message=FALSE}
+mode = c("av")
+## AV_BASE from AV##
+getModalChangesFrom("052","av/av_base",modes = mode,run.name = "AV_BASE(2 vehicle)")
+```
+```{r}
+## BAUERNSIEDLUNG from AV##
+getModalChangesFrom("052","av/bauernsiedlung",modes = mode,run.name = "BAUERNSIEDLUNG")
+## CORE from AV##
+getModalChangesFrom("052","av/core",modes = mode,run.name = "CORE")
+## CORE WITH SHOPS from AV##
+getModalChangesFrom("052","av/cws",modes = mode,run.name = "CORE WITH SHOPS")
+## HOHENPFAHL from AV##
+getModalChangesFrom("052","av/hoh",modes = mode,run.name = "HOHENPFAHL")
+
+
+```
