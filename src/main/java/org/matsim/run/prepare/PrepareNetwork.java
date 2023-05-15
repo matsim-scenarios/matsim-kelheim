@@ -159,13 +159,17 @@ public class PrepareNetwork implements MATSimAppCommand {
 				}
 			}
 
+			Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
 			if (isAvAllowed) {
-				Set<String> allowedModes = new HashSet<>(link.getAllowedModes());
-
 				if (!allowedModes.contains("av")) {
 					allowedModes.add("av");
 					link.setAllowedModes(allowedModes);
 					linkCount[1] = linkCount[1] + 1;
+				}
+			} else {
+				if (allowedModes.contains("av")) {
+					allowedModes.remove("av");
+					link.setAllowedModes(allowedModes);
 				}
 			}
 		}
