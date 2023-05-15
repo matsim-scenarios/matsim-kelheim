@@ -98,22 +98,6 @@ for(dataset in datasets) {
   p
 
 
-  #####################
-  #plot day time line of all requests
-  #rm <- requests %>%
-  #  mutate (minutes = minute(Fahrtwunsch.erstellt) + hour(Fahrtwunsch.erstellt) * 60) %>%
-  #  group_by(minutes) %>%
-  #  tally()
-
-  #p <- rm %>%
-  #  ggplot( aes(x=minutes/60, y=n)) +
-  #  ggtitle("Requests pro Minute") +
-  #  geom_area(fill="#69b3a2", alpha=0.5) +
-  #  geom_line(color="#69b3a2") +
-  #  ylab("nr of requests per minute") +
-  #  theme_ipsum()
-  #ggplotly(p)
-
   # 5min intervals
   requestsPerInterval <- requests %>%
     mutate (interval = floor( (minute(Request.Creation.Time) + hour(Request.Creation.Time) * 60 ) /5) )  %>%
