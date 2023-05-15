@@ -22,7 +22,6 @@ package org.matsim.analysis.emissions;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.matsim.analysis.preAnalysis.ActivityLengthAnalysis;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -75,8 +74,8 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	@CommandLine.Option(names = "--output", description = "output directory (must not pre-exist)", required = true)
 	private String analysisOutputDirectory;
 
-//	static List<Pollutant> pollutants2Output = Arrays.asList(CO2_TOTAL, NOx, PM, PM_non_exhaust);
-	static List<Pollutant> pollutants2Output = Arrays.asList(Pollutant.values()); //dump out all pollutants
+	//dump out all pollutants. to include only a subset of pollutants, adjust!
+	static List<Pollutant> pollutants2Output = Arrays.asList(Pollutant.values());
 
 	@Override
 	public Integer call() throws Exception {
@@ -87,23 +86,8 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 		prepareNetwork(scenario);
 		prepareVehicleTypes(scenario);
-
-		{//analyze current distribution. TODO: could be integrated above in order to save lines?
-			scenario.getVehicles().getVehicles().values().stream()
-					.map(vehicle -> { //map vehicle to category
-						if(scenario.getTransitVehicles().getVehicles().get(vehicle.getId()) != null) return "transit";
-						else if(vehicle.getId().toString().contains("freight") || vehicle.getId().toString().contains("commercial")) return "freight";
-						else if(vehicle.getId().toString().contains("conventional_vehicle"))  return "KEXI conv.";
-						else if(vehicle.getId().toString().contains("autonomous_vehicle"))  return "KEXI auton.";
-						else if(vehicle.getType().getId().toString().equals("car")) return "standard (private)";
-						else return "unknown";
-					})
-					.collect(Collectors.groupingBy(category -> category, Collectors.counting()))
-					.entrySet()
-					.forEach(entry -> log.info("nr of " + entry.getKey() + " vehicles = " + entry.getValue()));
-		}
-
 		process(config, scenario);
+
 		return 0;
 	}
 
@@ -113,9 +97,9 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 
 	/**
 	 * process output events, compute emission events and dump output.
-	 * @param config
-	 * @param scenario
-	 * @throws IOException
+	 * @param config input config
+	 * @param scenario object to operate on (analyze)
+	 * @throws IOException if output can't be written
 	 */
 	private void process(Config config, Scenario scenario) throws IOException {
 		//------------------------------------------------------------------------------
@@ -174,25 +158,15 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 				.collect(Collectors.groupingBy(category -> category, Collectors.counting()))
 				.entrySet()
 				.forEach(entry -> log.info("nr of " + VehicleUtils.getHbefaVehicleCategory(entry.getKey().getEngineInformation()) + " vehicles running on " + VehicleUtils.getHbefaEmissionsConcept(entry.getKey().getEngineInformation())
-						+" = " + entry.getValue() + " (equals " + (100.0d*(double)entry.getValue()/(double)totalVehicles) + "% overall)"));
-
-//		scenario.getVehicles().getVehicles().values().stream()
-//				.map(vehicle -> {
-//					return VehicleUtils.getHbefaEmissionsConcept(vehicle.getType().getEngineInformation()) == null ? "NONE" : VehicleUtils.getHbefaEmissionsConcept(vehicle.getType().getEngineInformation());
-//				})
-//				.collect(Collectors.groupingBy(category -> category, Collectors.counting()))
-//				.entrySet()
-//				.forEach(entry -> log.info("nr of " + entry.getKey() + " vehicles = " + entry.getValue() + " (equals " + ((double)entry.getValue()/(double)totalVehicles) + "%)"));
+						+" = " + entry.getValue() + " (equals " + (100.0d * ((double) entry.getValue()) / ((double) totalVehicles)) + "% overall)"));
 	}
 
 	/**
 	 * set all input files in EmissionConfigGroup as well as input from the MATSim run.
-	 * @return
+	 * @return the adjusted config
 	 */
 	private Config prepareConfig() {
 		Config config = ConfigUtils.createConfig();
-//		Config config = ConfigUtils.loadConfig(runDirectory + runId + ".output_config.xml");
-
 		config.vehicles().setVehiclesFile( runDirectory + runId + ".output_allVehicles.xml.gz");
 		config.network().setInputFile( runDirectory +runId + ".output_network.xml.gz");
 		config.transit().setTransitScheduleFile( runDirectory +runId + ".output_transitSchedule.xml.gz");
@@ -217,28 +191,27 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	}
 
 	/**
-	 * changes/adds link attributes of the network in the given scenario
-	 * @param scenario
+	 * changes/adds link attributes of the network in the given scenario.
+	 * @param scenario for which to prepare the network
 	 */
 	private void prepareNetwork(Scenario scenario) {
 		//prepare the network
 
-		HbefaRoadTypeMapping roadTypeMapping = OsmHbefaMapping.build(); //alternatively, use new VspHbefaRoadTypeMapping() //
+		//do not use VspHbefaRoadTypeMapping() as it results in almost every road to mapped to "highway"!
+		HbefaRoadTypeMapping roadTypeMapping = OsmHbefaMapping.build();
 //		the type attribute in our network has the prefix "highway" for all links but pt links. we need to delete that because OsmHbefaMapping does not handle that.
 		for (Link link : scenario.getNetwork().getLinks().values()) {
-			if(!link.getAllowedModes().contains("pt")) { //pt links can be disregarded
+			//pt links can be disregarded
+			if (!link.getAllowedModes().contains("pt")) {
 				NetworkUtils.setType(link, NetworkUtils.getType(link).replaceFirst("highway.", ""));
 			}
 		}
-		//do not use VspHbefaRoadTypeMapping() as it results in almost every road to mapped to "highway"!
-
 		roadTypeMapping.addHbefaMappings(scenario.getNetwork());
 	}
 
 	/**
 	 * we set all vehicles to average except for KEXI vehicles, i.e. drt. Drt vehicles are set to electric light commercial vehicles.
-	 *
-	 * @param scenario
+	 * @param scenario scenario object for which to prepare vehicle types
 	 */
 	private void prepareVehicleTypes(Scenario scenario) {
 		for (VehicleType type : scenario.getVehicles().getVehicleTypes().values()) {
@@ -248,7 +221,7 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 			if (scenario.getTransitVehicles().getVehicleTypes().containsKey(type.getId())) {
 				// consider transit vehicles as non-hbefa vehicles, i.e. ignore them
 				VehicleUtils.setHbefaVehicleCategory( engineInformation, HbefaVehicleCategory.NON_HBEFA_VEHICLE.toString());
-			} else if(type.getId().toString().equals("car")){
+			} else if (type.getId().toString().equals("car")){
 				VehicleUtils.setHbefaVehicleCategory(engineInformation, HbefaVehicleCategory.PASSENGER_CAR.toString());
 				VehicleUtils.setHbefaEmissionsConcept(engineInformation, "average");
 			} else if (type.getId().toString().equals("conventional_vehicle") || type.getId().toString().equals("autonomous_vehicle")){
@@ -264,13 +237,13 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	}
 
 	/**
-	 *
-	 * @param linkEmissionAnalysisFile
-	 * @param linkEmissionPerMAnalysisFile
-	 * @param vehicleTypeFileStr
-	 * @param scenario
-	 * @param emissionsEventHandler
-	 * @throws IOException
+	 * dumps the output.
+	 * @param linkEmissionAnalysisFile path including file name and ending (csv) for the output file containing absolute emission values per link
+	 * @param linkEmissionPerMAnalysisFile path including file name and ending (csv) for the output file containing emission values per meter, per link
+	 * @param vehicleTypeFileStr  including file name and ending (xml) for the output vehicle file
+	 * @param scenario the analyzed scenario
+	 * @param emissionsEventHandler handler holding the emission data (from events-processing)
+	 * @throws IOException if output can't be written
 	 */
 	private void writeOutput(String linkEmissionAnalysisFile, String linkEmissionPerMAnalysisFile, String vehicleTypeFileStr, Scenario scenario, EmissionsOnLinkEventHandler emissionsEventHandler) throws IOException {
 
@@ -282,7 +255,8 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 		nf.setMaximumFractionDigits(4);
 		nf.setGroupingUsed(false);
 
-		{ //dump link-based output files
+		{
+			//dump link-based output files
 			File absolutFile = new File(linkEmissionAnalysisFile);
 			File perMeterFile = new File(linkEmissionPerMAnalysisFile);
 
@@ -299,7 +273,6 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 			}
 			absolutWriter.newLine();
 			perMeterWriter.newLine();
-
 
 			Map<Id<Link>, Map<Pollutant, Double>> link2pollutants = emissionsEventHandler.getLink2pollutants();
 
@@ -333,7 +306,8 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 			log.info("Output written to " + linkEmissionPerMAnalysisFile);
 		}
 
-		{ //dump used vehicle types. in our (Kelheim) case not really needed as we did not change anything. But generally useful.
+		{
+			//dump used vehicle types. in our (Kelheim) case not really needed as we did not change anything. But generally useful.
 			File vehicleTypeFile = new File(vehicleTypeFileStr);
 
 			BufferedWriter vehicleTypeWriter = new BufferedWriter(new FileWriter(vehicleTypeFile));
