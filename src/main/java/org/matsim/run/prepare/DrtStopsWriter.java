@@ -42,16 +42,19 @@ public final class DrtStopsWriter extends MatsimXmlWriter {
 		this.outputFolder = outputFolder;
 		//If you just say serviceArea = shp.getGeometry() instead of looping through features
 		//somehow the first feature only is taken -sm0222
-		List<SimpleFeature> features = shp.readFeatures();
-		for (SimpleFeature feature : features) {
-			if (shp.getShapeFile() != null) {
-				if (serviceArea == null) {
-					serviceArea = (Geometry) feature.getDefaultGeometry();
-				} else {
-					serviceArea = serviceArea.union((Geometry) feature.getDefaultGeometry());
+		if (shp.isDefined()){
+			List<SimpleFeature> features = shp.readFeatures();
+			for (SimpleFeature feature : features) {
+				if (shp.getShapeFile() != null) {
+					if (serviceArea == null) {
+						serviceArea = (Geometry) feature.getDefaultGeometry();
+					} else {
+						serviceArea = serviceArea.union((Geometry) feature.getDefaultGeometry());
+					}
 				}
 			}
 		}
+
 	}
 
 	/**
