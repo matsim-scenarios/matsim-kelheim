@@ -3,32 +3,42 @@ package org.matsim.run.utils;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.core.config.Config;
 
-public class KelheimCaseStudyTool {
-    public enum AV_SERVICE_AREAS {NULL, CORE, CORE_WITH_SHOP, HOHENPFAHL, BAUERNSIEDLUNG}
-    // NULL: do not change anything; CORE: Donaupark + Altstadt; HOHENPFAHL: CORE + Hohenpfahl area; BAUERNSIEDLUNG: CORE + Bauernsiedlung area
+/**
+ * Helper class to setup config file for case studies.
+ */
+public final class KelheimCaseStudyTool {
 
-    public static void setConfigFile(Config config, DrtConfigGroup drtConfig, AV_SERVICE_AREAS avServiceAreas) {
-        // Set drt related things (vehicle file, stops file)
-        if (avServiceAreas == AV_SERVICE_AREAS.CORE) {
-            drtConfig.setTransitStopFile("av-stops-DP-AS.xml");
-        }
+	private KelheimCaseStudyTool() {
+	}
 
-        if (avServiceAreas == AV_SERVICE_AREAS.CORE_WITH_SHOP) {
-            drtConfig.setTransitStopFile("av-stops-DP-AS-shops.xml");
-        }
+	/**
+	 * Different possible services areas for the AV.
+	 */
+	public enum AvServiceArea {NULL, CORE, CORE_WITH_SHOP, HOHENPFAHL, BAUERNSIEDLUNG}
+	// NULL: do not change anything; CORE: Donaupark + Altstadt; HOHENPFAHL: CORE + Hohenpfahl area; BAUERNSIEDLUNG: CORE + Bauernsiedlung area
 
-        if (avServiceAreas == AV_SERVICE_AREAS.HOHENPFAHL) {
-            drtConfig.setTransitStopFile("av-stops-Hohenpfahl-DP-AS.xml");
-        }
+	public static void setConfigFile(Config config, DrtConfigGroup drtConfig, AvServiceArea avServiceAreas) {
+		// Set drt related things (vehicle file, stops file)
+		if (avServiceAreas == AvServiceArea.CORE) {
+			drtConfig.transitStopFile = "av-stops-DP-AS.xml";
+		}
 
-        if (avServiceAreas == AV_SERVICE_AREAS.BAUERNSIEDLUNG) {
-            drtConfig.setTransitStopFile("av-stops-Bauernsiedlung-DP-AS.xml");
-        }
+		if (avServiceAreas == AvServiceArea.CORE_WITH_SHOP) {
+			drtConfig.transitStopFile = "av-stops-DP-AS-shops.xml";
+		}
 
-        // Update output directory
-        if (avServiceAreas != AV_SERVICE_AREAS.NULL){
-            String outputPath = config.controler().getOutputDirectory() + "-" + avServiceAreas.toString();
-            config.controler().setOutputDirectory(outputPath);
-        }
-    }
+		if (avServiceAreas == AvServiceArea.HOHENPFAHL) {
+			drtConfig.transitStopFile = "av-stops-Hohenpfahl-DP-AS.xml";
+		}
+
+		if (avServiceAreas == AvServiceArea.BAUERNSIEDLUNG) {
+			drtConfig.transitStopFile = "av-stops-Bauernsiedlung-DP-AS.xml";
+		}
+
+		// Update output directory
+		if (avServiceAreas != AvServiceArea.NULL) {
+			String outputPath = config.controler().getOutputDirectory() + "-" + avServiceAreas.toString();
+			config.controler().setOutputDirectory(outputPath);
+		}
+	}
 }

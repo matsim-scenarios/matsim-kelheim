@@ -8,35 +8,27 @@ import playground.vsp.pt.fare.DistanceBasedPtFareParams;
 import playground.vsp.pt.fare.PtFareConfigGroup;
 import playground.vsp.pt.fare.PtFareUpperBoundHandler;
 
+/**
+ * Module to install classes for pt fare.
+ */
 public class KelheimPtFareModule extends AbstractModule {
-    @Override
-    public void install() {
-        // Set the money related thing in the config (planCalcScore) file to 0.
-        getConfig().planCalcScore().getModes().get(TransportMode.pt).setDailyMonetaryConstant(0);
-        getConfig().planCalcScore().getModes().get(TransportMode.pt).setMarginalUtilityOfDistance(0);
+	@Override
+	public void install() {
+		// Set the money related thing in the config (planCalcScore) file to 0.
+		getConfig().planCalcScore().getModes().get(TransportMode.pt).setDailyMonetaryConstant(0);
+		getConfig().planCalcScore().getModes().get(TransportMode.pt).setMarginalUtilityOfDistance(0);
 
-        // Initialize config group (and also write in the output config)
-        PtFareConfigGroup ptFareConfigGroup = ConfigUtils.addOrGetModule(this.getConfig(), PtFareConfigGroup.class);
-        DistanceBasedPtFareParams distanceBasedPtFareParams = ConfigUtils.addOrGetModule(this.getConfig(), DistanceBasedPtFareParams.class);
-
-        // Set parameters
-        ptFareConfigGroup.setApplyUpperBound(true);
-        ptFareConfigGroup.setUpperBoundFactor(1.5);
-
-        distanceBasedPtFareParams.setMinFare(2.0);  // Minimum fare (e.g. short trip or 1 zone ticket)
-        distanceBasedPtFareParams.setLongDistanceTripThreshold(50000); // Division between long trip and short trip (unit: m)
-        distanceBasedPtFareParams.setNormalTripSlope(0.00017); // y = ax + b --> a value, for short trips
-        distanceBasedPtFareParams.setNormalTripIntercept(1.6); // y = ax + b --> b value, for short trips
-        distanceBasedPtFareParams.setLongDistanceTripSlope(0.00025); // y = ax + b --> a value, for long trips
-        distanceBasedPtFareParams.setLongDistanceTripIntercept(30); // y = ax + b --> b value, for long trips
+		// Initialize config group (and also write in the output config)
+		PtFareConfigGroup ptFareConfigGroup = ConfigUtils.addOrGetModule(this.getConfig(), PtFareConfigGroup.class);
+		DistanceBasedPtFareParams distanceBasedPtFareParams = ConfigUtils.addOrGetModule(this.getConfig(), DistanceBasedPtFareParams.class);
 
 
-        // Add bindings
-        addEventHandlerBinding().toInstance(new DistanceBasedPtFareHandler(distanceBasedPtFareParams));
-        if (ptFareConfigGroup.getApplyUpperBound()) {
-            PtFareUpperBoundHandler ptFareUpperBoundHandler = new PtFareUpperBoundHandler(ptFareConfigGroup.getUpperBoundFactor());
-            addEventHandlerBinding().toInstance(ptFareUpperBoundHandler);
-            addControlerListenerBinding().toInstance(ptFareUpperBoundHandler);
-        }
-    }
+		// Add bindings
+		addEventHandlerBinding().toInstance(new DistanceBasedPtFareHandler(distanceBasedPtFareParams));
+		if (ptFareConfigGroup.getApplyUpperBound()) {
+			PtFareUpperBoundHandler ptFareUpperBoundHandler = new PtFareUpperBoundHandler(ptFareConfigGroup.getUpperBoundFactor());
+			addEventHandlerBinding().toInstance(ptFareUpperBoundHandler);
+			addControlerListenerBinding().toInstance(ptFareUpperBoundHandler);
+		}
+	}
 }
