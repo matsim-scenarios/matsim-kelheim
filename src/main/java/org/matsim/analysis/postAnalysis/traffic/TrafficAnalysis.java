@@ -7,17 +7,27 @@ import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
 
-public class TrafficAnalysis {
-    public static TravelTime analyzeTravelTimeFromEvents(Network network, String eventsFile) {
-        TravelTimeCalculator.Builder builder = new TravelTimeCalculator.Builder(network);
-        TravelTimeCalculator travelTimeCalculator = builder.build();
+/**
+ * Util class.
+ */
+public final class TrafficAnalysis {
 
-        // event reader add event handeler travelTimeCalculator
-        EventsManager eventsManager = EventsUtils.createEventsManager();
-        eventsManager.addHandler(travelTimeCalculator);
-        MatsimEventsReader eventsReader = new MatsimEventsReader(eventsManager);
-        eventsReader.readFile(eventsFile);
+	private TrafficAnalysis() {
+	}
 
-        return travelTimeCalculator.getLinkTravelTimes();
-    }
+	/**
+	 * Calculate travel times from events.
+	 */
+	public static TravelTime analyzeTravelTimeFromEvents(Network network, String eventsFile) {
+		TravelTimeCalculator.Builder builder = new TravelTimeCalculator.Builder(network);
+		TravelTimeCalculator travelTimeCalculator = builder.build();
+
+		// event reader add event handeler travelTimeCalculator
+		EventsManager eventsManager = EventsUtils.createEventsManager();
+		eventsManager.addHandler(travelTimeCalculator);
+		MatsimEventsReader eventsReader = new MatsimEventsReader(eventsManager);
+		eventsReader.readFile(eventsFile);
+
+		return travelTimeCalculator.getLinkTravelTimes();
+	}
 }

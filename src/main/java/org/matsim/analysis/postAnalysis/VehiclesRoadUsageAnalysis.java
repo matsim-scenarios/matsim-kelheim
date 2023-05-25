@@ -20,114 +20,124 @@ import picocli.CommandLine;
 import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.matsim.application.ApplicationUtils.globFile;
 
 /**
+ * Analyse road usage.
+ *
  * @author Simon Meinhardt (simei94)
  */
-
 public class VehiclesRoadUsageAnalysis implements MATSimAppCommand {
-    @CommandLine.Option(names = "--directory", description = "path to the directory of the simulation output", required = true)
-    private Path directory;
+	@CommandLine.Option(names = "--directory", description = "path to the directory of the simulation output", required = true)
+	private Path directory;
 
-    public static void main(String[] args) {
-        new VehiclesRoadUsageAnalysis().execute(args);
-    }
+	public static void main(String[] args) {
+		new VehiclesRoadUsageAnalysis().execute(args);
+	}
 
-    static class VehicleLinkUsageCounter implements VehicleEntersTrafficEventHandler, LinkEnterEventHandler {
+	@Override
+	public Integer call() throws Exception {
+		Path networkPath = globFile(directory, "*output_network.*");
+		Path eventsFilePath = globFile(directory, "*output_events.*");
+		Path outputFolder = Path.of(directory.toString() + "/analysis-road-usage");
 
-        private final Network network;
-        private final Map<Id<Link>, Integer> vehicleCount;
-        private final Map<String, Integer> blockedLinkCount;
+		if (!Files.exists(outputFolder)) {
+			Files.createDirectory(outputFolder);
+		}
 
-        VehicleLinkUsageCounter(Network network, Map<Id<Link>, Integer> vehicleCount, Map<String, Integer> blockedLinkCount) {
-            this.network = network;
-            this.vehicleCount = vehicleCount;
-            this.blockedLinkCount = blockedLinkCount;
-            reset(0);
-        }
+		Network network = NetworkUtils.readNetwork(networkPath.toString());
+		EventsManager eventsManager = EventsUtils.createEventsManager();
 
-        @Override
-        public void handleEvent(LinkEnterEvent event) {
-            if(blockedLinkCount.containsKey(event.getLinkId().toString())) {
-                blockedLinkCount.replace(event.getLinkId().toString(), blockedLinkCount.get(event.getLinkId().toString()) + 1);
-            }
-            if(!vehicleCount.containsKey(event.getLinkId())) {
-                vehicleCount.put(event.getLinkId(), 1);
-            } else {
-                vehicleCount.replace(event.getLinkId(), vehicleCount.get(event.getLinkId()) + 1);
-            }
-        }
+		Map<Id<Link>, Integer> vehicleCount = new HashMap<>();
+		Map<String, Integer> blockedLinkCount = new HashMap<>();
+//        List<String> blockedLinks = Arrays.asList("-487456219#3", "487456219#3", "-487456219#2", "487456219#2", "-487456219#1", "487456219#1", "-920868265", "920868265", "-487456219#0", "487456219#0", "-376292750", "376292750");
 
-        @Override
-        public void handleEvent(VehicleEntersTrafficEvent event) {
-            if(blockedLinkCount.containsKey(event.getLinkId().toString())) {
-                blockedLinkCount.replace(event.getLinkId().toString(), blockedLinkCount.get(event.getLinkId().toString()) + 1);
-            }
-            if(!vehicleCount.containsKey(event.getLinkId())) {
-                vehicleCount.put(event.getLinkId(), 1);
-            } else {
-                vehicleCount.replace(event.getLinkId(), vehicleCount.get(event.getLinkId()) + 1);
-            }
-        }
+		for (Link link : network.getLinks().values()) {
+			if (link.getId().toString().contains("pt_")) {
+				continue;
+			}
 
-        @Override
-        public void reset(int iteration) {
-            vehicleCount.clear();
-            blockedLinkCount.clear();
-        }
-    }
+			if (link.getCapacity() == 10 && link.getFreespeed() == 0.1) {
+				blockedLinkCount.put(link.getId().toString(), 0);
+			}
+		}
 
-    @Override
-    public Integer call() throws Exception {
-        Path networkPath = globFile(directory, "*output_network.*");
-        Path eventsFilePath = globFile(directory, "*output_events.*");
-        Path outputFolder = Path.of(directory.toString() + "/analysis-road-usage");
+		VehicleLinkUsageCounter vehicleLinkUsageCounter = new VehicleLinkUsageCounter(network, vehicleCount, blockedLinkCount);
+		eventsManager.addHandler(vehicleLinkUsageCounter);
 
-        if (!Files.exists(outputFolder)) {
-            Files.createDirectory(outputFolder);
-        }
+		MatsimEventsReader reader = new MatsimEventsReader(eventsManager);
+		reader.readFile(eventsFilePath.toString());
 
-        Network network = NetworkUtils.readNetwork(networkPath.toString());
-        EventsManager eventsManager = EventsUtils.createEventsManager();
+		//writeResults
+		String vehicleRoadUsageFile = outputFolder + "/" + "allModes_vehicle_road_usage.tsv";
+		CSVPrinter vehicleRoadUsageWriter = new CSVPrinter(new FileWriter(vehicleRoadUsageFile), CSVFormat.TDF);
+		List<String> header = new ArrayList<>();
+		header.add("link_id");
+		header.add("vehicleCount");
 
-        Map<Id<Link>, Integer> vehicleCount = new HashMap<>();
-        Map<String, Integer> blockedLinkCount = new HashMap<>();
-        List<String> blockedLinks = Arrays.asList("-487456219#3", "487456219#3", "-487456219#2", "487456219#2", "-487456219#1", "487456219#1", "-920868265", "920868265", "-487456219#0", "487456219#0", "-376292750", "376292750");
-        for(String linkId : blockedLinks) {
-            blockedLinkCount.put(linkId, 0);
-            System.out.println(linkId);
-        }
+		vehicleRoadUsageWriter.printRecord(header);
 
-        VehicleLinkUsageCounter vehicleLinkUsageCounter = new VehicleLinkUsageCounter(network, vehicleCount, blockedLinkCount);
-        eventsManager.addHandler(vehicleLinkUsageCounter);
+		for (Id<Link> linkId : vehicleCount.keySet()) {
+			List<String> vehicleEntry = new ArrayList<>();
+			vehicleEntry.add(linkId.toString());
+			vehicleEntry.add(vehicleCount.get(linkId).toString());
+			vehicleRoadUsageWriter.printRecord(vehicleEntry);
+		}
+		vehicleRoadUsageWriter.close();
+		return 0;
+	}
 
-        MatsimEventsReader reader = new MatsimEventsReader(eventsManager);
-        reader.readFile(eventsFilePath.toString());
+	static class VehicleLinkUsageCounter implements VehicleEntersTrafficEventHandler, LinkEnterEventHandler {
 
-        for(String s : blockedLinkCount.keySet()) {
-            System.out.println(s + " : " + blockedLinkCount.get(s));
-        }
+		private final Network network;
+		private final Map<Id<Link>, Integer> vehicleCount;
+		private final Map<String, Integer> blockedLinkCount;
 
+		VehicleLinkUsageCounter(Network network, Map<Id<Link>, Integer> vehicleCount, Map<String, Integer> blockedLinkCount) {
+			this.network = network;
+			this.vehicleCount = vehicleCount;
+			this.blockedLinkCount = blockedLinkCount;
+			reset(0);
+		}
 
-        //writeResults
-        String vehicleRoadUsageFile = outputFolder + "/" + "allModes_vehicle_road_usage.tsv";
-        CSVPrinter vehicleRoadUsageWriter = new CSVPrinter(new FileWriter(vehicleRoadUsageFile), CSVFormat.TDF);
-        List<String> header = new ArrayList<>();
-        header.add("link_id");
-        header.add("vehicleCount");
+		@Override
+		public void handleEvent(LinkEnterEvent event) {
+			if (!event.getLinkId().toString().contains("pt_")) {
 
-        vehicleRoadUsageWriter.printRecord(header);
+				if (blockedLinkCount.containsKey(event.getLinkId().toString())) {
+					blockedLinkCount.replace(event.getLinkId().toString(), blockedLinkCount.get(event.getLinkId().toString()) + 1);
+				}
+				if (!vehicleCount.containsKey(event.getLinkId())) {
+					vehicleCount.put(event.getLinkId(), 1);
+				} else {
+					vehicleCount.replace(event.getLinkId(), vehicleCount.get(event.getLinkId()) + 1);
+				}
+			}
+		}
 
-        for(Id<Link> linkId : vehicleCount.keySet()) {
-            List<String> vehicleEntry = new ArrayList<>();
-            vehicleEntry.add(linkId.toString());
-            vehicleEntry.add(vehicleCount.get(linkId).toString());
-            vehicleRoadUsageWriter.printRecord(vehicleEntry);
-        }
-        vehicleRoadUsageWriter.close();
-        return 0;
-    }
+		@Override
+		public void handleEvent(VehicleEntersTrafficEvent event) {
+			if (!event.getLinkId().toString().contains("pt_")) {
+				if (blockedLinkCount.containsKey(event.getLinkId().toString())) {
+					blockedLinkCount.replace(event.getLinkId().toString(), blockedLinkCount.get(event.getLinkId().toString()) + 1);
+				}
+				if (!vehicleCount.containsKey(event.getLinkId())) {
+					vehicleCount.put(event.getLinkId(), 1);
+				} else {
+					vehicleCount.replace(event.getLinkId(), vehicleCount.get(event.getLinkId()) + 1);
+				}
+			}
+		}
+
+		@Override
+		public void reset(int iteration) {
+			vehicleCount.clear();
+			blockedLinkCount.clear();
+		}
+	}
 }
