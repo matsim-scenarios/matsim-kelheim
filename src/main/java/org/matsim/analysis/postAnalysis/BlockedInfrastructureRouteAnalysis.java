@@ -48,7 +48,7 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 	@CommandLine.Mixin
 	private ShpOptions shp = new ShpOptions();
 
-	Map<Id<Person>, Map<Integer, Leg>> relevantLegsBase = new HashMap<>();
+	Map<Id<Person>, Map<Integer, TripStructureUtils.Trip>> relevantTripsBase = new HashMap<>();
 
 	public static void main(String[] args) {
 		new BlockedInfrastructureRouteAnalysis().execute(args);
@@ -63,7 +63,7 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 
 		Path basePopulationPath = globFile(directoryBase, "*output_plans*");
 
-		Path policyPopulationPath = globFile(directoryBase, "*output_plans*");
+		Path policyPopulationPath = globFile(directoryPolicy, "*output_plans*");
 		//output will be written into policy case folder
 		Path outputFolder = Path.of(directoryPolicy.toString() + "/analysis-road-usage");
 
@@ -84,50 +84,35 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 		//get links, which are affected by blocked infrastructure
 		List<String> blockedLinks = getBlockedLinks(network, blockedInfrastructureArea);
 
-		relevantLegsBase = getLegsFromPlans(populationBase, blockedLinks);
-		Map<Id<Person>, Map<Integer, Leg>> relevantLegsPolicy = getLegsFromPlans(populationPolicy, blockedLinks);
+		relevantTripsBase = getTripsFromPlans(populationBase, blockedLinks);
+		Map<Id<Person>, Map<Integer, TripStructureUtils.Trip>> relevantTripsPolicy = getTripsFromPlans(populationPolicy, blockedLinks);
 
 		//writeResults
-		String outputFile = outputFolder + "/" + "blocked_infrastructure_leg_comparison.tsv";
+		String outputFile = outputFolder + "/" + "blocked_infrastructure_trip_comparison.tsv";
 		CSVPrinter tsvPrinter = new CSVPrinter(new FileWriter(outputFile), CSVFormat.TDF);
 		List<String> header = new ArrayList<>();
 		header.add("person_id");
-		header.add("tt_s_base");
-		header.add("tt_s_policy");
-		header.add("dist_m_base");
-		header.add("dist_m_policy");
-		header.add("mode_base");
-		header.add("mode_policy");
-		header.add("startLink_base");
-		header.add("startLink_policy");
-		header.add("endLink_base");
-		header.add("endLink_policy");
-		header.add("route_description_base");
-		header.add("route_description_policy");
+		header.add("trip_number");
+		header.add("trip_id");
+		header.add("tripBase");
+		header.add("tripPolicy");
 
 		tsvPrinter.printRecord(header);
 
-		for (Id<Person> personId : relevantLegsBase.keySet()) {
+		for (Id<Person> personId : relevantTripsBase.keySet()) {
 
-			for (Integer index : relevantLegsBase.get(personId).keySet()) {
+			Integer tripNumber;
 
-				Map<Integer, Leg> basePersonStats = relevantLegsBase.get(personId);
-				Map<Integer, Leg> policyPersonStats = relevantLegsPolicy.get(personId);
+			for (Integer index : relevantTripsBase.get(personId).keySet()) {
+
+				tripNumber = index + 1;
 
 				List<String> entry = new ArrayList<>();
 				entry.add(personId.toString());
-				entry.add(String.valueOf(basePersonStats.get(index).getRoute().getTravelTime().seconds()));
-				entry.add(String.valueOf(policyPersonStats.get(index).getRoute().getTravelTime().seconds()));
-				entry.add(String.valueOf(basePersonStats.get(index).getRoute().getDistance()));
-				entry.add(String.valueOf(policyPersonStats.get(index).getRoute().getDistance()));
-				entry.add(basePersonStats.get(index).getMode());
-				entry.add(policyPersonStats.get(index).getMode());
-				entry.add(basePersonStats.get(index).getRoute().getStartLinkId().toString());
-				entry.add(policyPersonStats.get(index).getRoute().getStartLinkId().toString());
-				entry.add(basePersonStats.get(index).getRoute().getEndLinkId().toString());
-				entry.add(policyPersonStats.get(index).getRoute().getEndLinkId().toString());
-				entry.add(basePersonStats.get(index).getRoute().getRouteDescription());
-				entry.add(policyPersonStats.get(index).getRoute().getRouteDescription());
+				entry.add(tripNumber.toString());
+				entry.add(personId + "_" + tripNumber);
+				entry.add(relevantTripsBase.get(personId).get(index).toString());
+				entry.add(relevantTripsPolicy.get(personId).get(index).toString());
 
 				tsvPrinter.printRecord(entry);
 			}
@@ -153,42 +138,49 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 		return blockedLinks;
 	}
 
-	private Map<Id<Person>, Map<Integer, Leg>> getLegsFromPlans(Population population, List<String> blockedLinks) {
+	private Map<Id<Person>, Map<Integer, TripStructureUtils.Trip>> getTripsFromPlans(Population population, List<String> blockedLinks) {
 
-		Map<Id<Person>, Map<Integer, Leg>> relevantLegs = new HashMap<>();
+		Map<Id<Person>, Map<Integer, TripStructureUtils.Trip>> relevantTrips = new HashMap<>();
 
-		if (relevantLegsBase.size() < 1) {
+		if (relevantTripsBase.size() < 1) {
 			//base case
 			log.info("Analyzing legs on blocked infrastructure for base case population");
 
 			for ( Person person : population.getPersons().values()) {
 				//check if blocked link is part of leg-route
-				for ( Leg leg : TripStructureUtils.getLegs(person.getSelectedPlan())) {
-					for ( String linkId : blockedLinks ) {
-						if (leg.getRoute().getRouteDescription().contains(linkId)) {
-							relevantLegs.putIfAbsent(person.getId(), new HashMap<>());
-							relevantLegs.get(person.getId()).put(person.getSelectedPlan().getPlanElements().indexOf(leg), leg);
-							continue;
+
+				List<TripStructureUtils.Trip> trips = TripStructureUtils.getTrips(person.getSelectedPlan());
+
+				for (int i = 0; i < trips.size(); i++) {
+					for (Leg leg : trips.get(i).getLegsOnly()) {
+						for ( String linkId : blockedLinks ) {
+							if (leg.getRoute().getRouteDescription().contains(linkId)) {
+								relevantTrips.putIfAbsent(person.getId(), new HashMap<>());
+								relevantTrips.get(person.getId()).put(i, trips.get(i));
+								continue;
+							}
 						}
 					}
 				}
 			}
+
 		} else {
 			//policy case
-			//get corresponding legs to base case legs (where the now-blocked infrastructure is used)
+			//get corresponding trips to base case trips (where the now-blocked infrastructure is used)
 			log.info("Analyzing legs on blocked infrastructure for policy case population");
 
-			for (Id<Person> personId : relevantLegsBase.keySet()) {
-				for ( Integer index : relevantLegsBase.get(personId).keySet()) {
-					relevantLegs.putIfAbsent(personId, new HashMap<>());
-					Leg policyLeg = (Leg) population.getPersons().get(personId).getSelectedPlan().getPlanElements().get(index);
-					relevantLegs.get(personId).put(population.getPersons().get(personId).getSelectedPlan().getPlanElements().indexOf(policyLeg),
-							policyLeg);
+			for (Id<Person> personId : relevantTripsBase.keySet()) {
+				for ( Integer index : relevantTripsBase.get(personId).keySet()) {
+					relevantTrips.putIfAbsent(personId, new HashMap<>());
+
+					TripStructureUtils.Trip policyTrip = TripStructureUtils.getTrips(population.getPersons().get(personId).getSelectedPlan()).get(index);
+
+					relevantTrips.get(personId).put(index, policyTrip);
 				}
 			}
 		}
 
-		return relevantLegs;
+		return relevantTrips;
 	}
 
 	static boolean isInsideArea(Link link, Geometry geometry) {
