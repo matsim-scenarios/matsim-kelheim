@@ -84,14 +84,14 @@ import java.util.*;
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-	private static final double WEIGHT_1_PASSENGER = 26387.;
-	private static final double WEIGHT_2_PASSENGER = 3843.;
-	private static final double WEIGHT_3_PASSENGER = 879.;
-	private static final double WEIGHT_4_PASSENGER = 409.;
-	private static final double WEIGHT_5_PASSENGER = 68.;
-	private static final double WEIGHT_6_PASSENGER = 18.;
-	private static final double WEIGHT_7_PASSENGER = 4.;
-	private static final double WEIGHT_8_PASSENGER = 1.;
+	private static final double WEIGHT_1_PASSENGER = 16517.;
+	private static final double WEIGHT_2_PASSENGER = 2084.;
+	private static final double WEIGHT_3_PASSENGER = 532.;
+	private static final double WEIGHT_4_PASSENGER = 163.;
+	private static final double WEIGHT_5_PASSENGER = 20.;
+	private static final double WEIGHT_6_PASSENGER = 5.;
+	private static final double WEIGHT_7_PASSENGER = 0.;
+	private static final double WEIGHT_8_PASSENGER = 0.;
 
 	static final String VERSION = "3.0";
 

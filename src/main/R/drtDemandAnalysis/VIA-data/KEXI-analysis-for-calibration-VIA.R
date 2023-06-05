@@ -37,7 +37,9 @@ datasets <- list(VIArides2021, VIArides2022_1, VIArides2022_2, VIArides2023_1, V
 names <- c("VIA_data_202106_202201","VIA_data_202201_202210","VIA_data_202210_202212","VIA_data_202212_202303","VIAdataSince2022","VIAdataAll")
 i <- 1
 
-avgValues <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("dataset", "avgRidesPerDay", "avgDistance_<5km[m]", "avgDistance_withoutFilter[m]", "avgTravelTime[s]"))
+avgValues <- setNames(data.frame(matrix(ncol = 14, nrow = 0)), c("dataset", "avgBookingsPerDay", "avgDistance_<5km[m]", "avgDistance_withoutFilter[m]", "avgTravelTime[s]",
+                                                                "avgBookingsPerDayInclCompanions", "noRides1Passenger", "noRides2Passengers", "noRides3Passenger", "noRides4Passenger", "noRides5Passenger",
+                                                                "noRides6Passenger", "noRides7Passenger", "noRides8Passenger"))
 
 for(dataset in datasets) {
   print(paste0("Starting to calculate stats for dataset ",names[i]))
@@ -254,43 +256,60 @@ for(dataset in datasets) {
 
   ############################################################################################################################################################
 
-  #calculate avg rides per day
-  ridesPerDay <- ridesToConsider %>%
+  #calculate nr of passengers bins
+  distr <-ridesToConsider %>%
+    group_by(Number.of.Passengers) %>%
+    summarize(n =n())
+
+  passengerDistribution <- data.frame(c(1,2,3,4,5,6,7,8),c(0,0,0,0,0,0,0,0))
+  colnames(passengerDistribution) <- c("Number.of.Passengers","n")
+
+  for ( j in 1:8 ) {
+    ifelse(any(distr$Number.of.Passengers==j), passengerDistribution$n[j]<-distr$n[j],"no changes")
+  }
+
+  passengersPerDay <- ridesToConsider %>%
     group_by(date) %>%
-    tally()
+    summarise(noPassengers = sum(Number.of.Passengers))
+
+  #calculate avg bookings per day
+  dailyValues <- ridesToConsider %>%
+    group_by(date) %>%
+    summarise(noBookings = n()) %>%
+    left_join(passengersPerDay, by="date")
 
 
-  avgRides <- mean(ridesPerDay$n)
-  avgRides
+  avgBookings <- mean(dailyValues$noBookings)
+  avgBookings
+
+  avgBookingsInclCompanions <- mean(dailyValues$noPassengers)
+  avgBookingsInclCompanions
 
   #save avg values into df
-  avgValuesDataset <- data.frame(names[i],avgRides,avgDistance_m,avgDistance_m_withoutFilter,avgTravelTime_s)
+  avgValuesDataset <- data.frame(names[i],avgBookings,avgDistance_m,avgDistance_m_withoutFilter,avgTravelTime_s,avgBookingsInclCompanions,
+                                 as.integer(passengerDistribution$n[1]),as.integer(passengerDistribution$n[2]),as.integer(passengerDistribution$n[3]),as.integer(passengerDistribution$n[4]),
+                                 as.integer(passengerDistribution$n[5]),as.integer(passengerDistribution$n[6]),as.integer(passengerDistribution$n[7]),as.integer(passengerDistribution$n[8]))
   names(avgValuesDataset) <- names(avgValues)
   avgValues <- rbind(avgValues,avgValuesDataset)
 
-  # avgValues$avgRidesPerDay <- avgRides
-  # avgValues$`avgDistance[m]` <- avgDistance_m
-  # avgValues$`avgDistance_withoutFilter[m]` <- avgDistance_m_withoutFilter
-  # avgValues$`avgTravelTime[s]` <- avgTravelTime_s
-
-  boxplot_daily_rides <- ggplot(ridesPerDay, aes(y=n)) +
+  boxplot_daily_bookings <- ggplot(dailyValues, aes(y=noBookings)) +
     stat_boxplot(geom="errorbar", width=3) +
     geom_boxplot(width=5) +
     scale_y_continuous(n.breaks = 8) +
     scale_x_discrete() +
     stat_summary(fun=mean, geom="errorbar",aes(ymax=..y.., ymin=..y.., x=0),
                  width=5, colour="red") +
-    labs(x="", y="rides", title=paste("Boxplot KEXI Rides per day for dataset", names[i])) +
+    labs(x="", y="bookings", title=paste("Boxplot KEXI bookings per day for dataset", names[i])) +
     # labs(x="", y="travel distance [m]") + #for paper only
     theme(plot.title = element_text(hjust=0.5, size=20, face="bold"), axis.text.y = element_text(size=24),
           axis.title.y = element_text(size=25, face="bold"))
 
-  plotFile = paste0("plots/",names[i],"/boxplot_KEXI_daily_rides.png")
+  plotFile = paste0("plots/",names[i],"/boxplot_KEXI_daily_bookings.png")
   paste0("printing plot to ", plotFile)
   ggsave(plotFile, limitsize = FALSE)
 
-  #a typical day here can be seen as a day with no of rides close to the average no of rides (119)
-  # typicalDays <- filter(ridesPerDay, between(n, avgRides - 3, avgRides + 3))
+  #a typical day here can be seen as a day with no of bookings close to the average no of bookings (119)
+  # typicalDays <- filter(dailyValues, between(n, avgBookings - 3, avgBookings + 3))
 
   # #5 days are chosen as typical references
   # typicalDay_jul <- ymd("2021-07-21")
@@ -303,13 +322,13 @@ for(dataset in datasets) {
   #
   # # this is so ugly and hard coded right now, as you have to change the day you want to plot
   # #but a for loop for this just does not seem to work -sm apr22
-  # typicalDayRidesPerInterval <- ridesToConsider %>%
+  # typicalDayBookingsPerInterval <- BookingsToConsider %>%
   #   filter(date == typicalDay_jan) %>%
   #   mutate (interval = floor( (minute(Actual.Pickup.Time) + hour(Actual.Pickup.Time) * 60) / 5)  )  %>%
   #   group_by(interval) %>%
   #   tally()
   #
-  # p <- typicalDayRidesPerInterval %>%
+  # p <- typicalDayBookingsPerInterval %>%
   #   ggplot( aes(x=interval*5/60, y=n)) +
   #   ggtitle(paste("Fahrten pro 5-Minuten-Intervall (VIA): typischer Tag im ", month(typicalDay_jan, label=TRUE))) +
   #   geom_area(fill="#69b3a2", alpha=0.5) +
@@ -318,16 +337,16 @@ for(dataset in datasets) {
   #   xlab("Stunde") +
   #   theme_ipsum()
   #
-  # plotFile = paste("typicalDays/KEXI_rides_VIA_", month(typicalDay_jan, label=TRUE), ".png")
+  # plotFile = paste("typicalDays/KEXI_bookings_VIA_", month(typicalDay_jan, label=TRUE), ".png")
   # paste("printing plot to ", plotFile)
   # png(plotFile, width = 1200, height = 800)
   # p
   # dev.off()
   # ggplotly(p)
 
-  # boxplot(ridesPerDay$n, main = "Boxplot KEXI Rides per day", ylab = "rides")
-  # abline(h = avgRides - 2 * sd(ridesPerDay$n), col="red",lty=2)
-  # abline(h = avgRides + 2 * sd(ridesPerDay$n), col="red",lty=2)
+  # boxplot(dailyValues$noBookings, main = "Boxplot KEXI bookings per day", ylab = "bookings")
+  # abline(h = avgBookings - 2 * sd(dailyValues$noBookings), col="red",lty=2)
+  # abline(h = avgBookings + 2 * sd(dailyValues$noBookings), col="red",lty=2)
 
 
   i <- i + 1
