@@ -168,19 +168,15 @@ public class RunKelheimScenario extends MATSimApplication {
 			config.addModule(new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
 
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
-			DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) multiModeDrtConfig.getModalElements().iterator().next();
-			DrtCompanionParams drtCompanionParams = new DrtCompanionParams();
-			drtCompanionParams.setDrtCompanionSamplingWeights(List.of(
-					WEIGHT_1_PASSENGER,
-					WEIGHT_2_PASSENGER,
-					WEIGHT_3_PASSENGER,
-					WEIGHT_4_PASSENGER,
-					WEIGHT_5_PASSENGER,
-					WEIGHT_6_PASSENGER,
-					WEIGHT_7_PASSENGER,
-					WEIGHT_8_PASSENGER
-			));
-			drtWithExtensionsConfigGroup.addParameterSet(drtCompanionParams);
+
+			for (DrtConfigGroup drtConfigGroup : multiModeDrtConfig.getModalElements()) {
+				//only the KEXI (conventionally driven drt) should get companions
+				if (drtConfigGroup.getMode().equals(TransportMode.drt)) {
+					DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtConfigGroup;
+					addDrtCompanionParameters(drtWithExtensionsConfigGroup);
+				}
+			}
+
 			ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
 			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
 		}
@@ -227,6 +223,21 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		return config;
+	}
+
+	public static void addDrtCompanionParameters(DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup) {
+		DrtCompanionParams drtCompanionParams = new DrtCompanionParams();
+		drtCompanionParams.setDrtCompanionSamplingWeights(List.of(
+				WEIGHT_1_PASSENGER,
+				WEIGHT_2_PASSENGER,
+				WEIGHT_3_PASSENGER,
+				WEIGHT_4_PASSENGER,
+				WEIGHT_5_PASSENGER,
+				WEIGHT_6_PASSENGER,
+				WEIGHT_7_PASSENGER,
+				WEIGHT_8_PASSENGER
+		));
+		drtWithExtensionsConfigGroup.addParameterSet(drtCompanionParams);
 	}
 
 	@Override
