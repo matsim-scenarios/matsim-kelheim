@@ -94,8 +94,8 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 		header.add("person_id");
 		header.add("trip_number");
 		header.add("trip_id");
-		header.add("tripBase");
-		header.add("tripPolicy");
+//		header.add("tripBase");
+//		header.add("tripPolicy");
 
 		tsvPrinter.printRecord(header);
 
@@ -111,8 +111,8 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 				entry.add(personId.toString());
 				entry.add(tripNumber.toString());
 				entry.add(personId + "_" + tripNumber);
-				entry.add(relevantTripsBase.get(personId).get(index).toString());
-				entry.add(relevantTripsPolicy.get(personId).get(index).toString());
+//				entry.add(relevantTripsBase.get(personId).get(index).toString());
+//				entry.add(relevantTripsPolicy.get(personId).get(index).toString());
 
 				tsvPrinter.printRecord(entry);
 			}
