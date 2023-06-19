@@ -225,7 +225,7 @@ for(dataset in datasets) {
   ridesPerIntervals <- ridesPerInterval %>%
     mutate(interval5 = format(round(interval*5/60, 2), nsmall = 2))
   class.df <- data.frame(ridesPerIntervals$interval5,ridesPerIntervals$n, stringsAsFactors = FALSE)
-  write.csv2(class.df,paste0("KEXI_",names[i],"_rides_daily_VIA.csv"),quote=FALSE,row.names=FALSE)
+  # write.csv2(class.df,paste0("KEXI_",names[i],"_rides_daily_VIA.csv"),quote=FALSE,row.names=FALSE)
 
   p <- ggplot(data=ridesPerInterval) +
     geom_line(mapping=aes(x=interval*5/60, y=n), col="#69b3a2") +
