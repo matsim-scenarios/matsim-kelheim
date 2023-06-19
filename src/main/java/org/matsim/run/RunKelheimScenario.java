@@ -21,7 +21,6 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.traffic.LinkStats;
-import org.matsim.application.analysis.travelTimeValidation.TravelTimeAnalysis;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
 import org.matsim.application.prepare.freight.tripExtraction.ExtractRelevantFreightTrips;
@@ -63,6 +62,7 @@ import org.matsim.modechoice.pruning.DistanceBasedPruner;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
+import org.matsim.simwrapper.SimWrapperModule;
 import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.pt.fare.DistanceBasedPtFareParams;
@@ -80,7 +80,7 @@ import java.util.*;
 		CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class
 })
 @MATSimApplication.Analysis({
-		TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
+		LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
@@ -285,6 +285,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				install(new KelheimPtFareModule());
 				install(new SwissRailRaptorModule());
 				install(new PersonMoneyEventsAnalysisModule());
+				install(new SimWrapperModule());
 
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);

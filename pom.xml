@@ -6,7 +6,7 @@
 		<artifactId>matsim-all</artifactId>
 
 		<!-- PR-labelled release -->
-		<version>16.0-PR2560</version>
+		<version>16.0-PR2645</version>
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
 		<!--		<version>16.0-SNAPSHOT</matsim.version>-->
@@ -164,6 +164,12 @@
 					<artifactId>protobuf-java</artifactId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>org.matsim.contrib</groupId>
+			<artifactId>simwrapper</artifactId>
+			<version>${matsim.version}</version>
 		</dependency>
 
 		<dependency>
