@@ -98,8 +98,8 @@ saturday_rides2023_1 <- completedRides2023_1 %>%
   filter(weekday == "Sa")
 
 #dump output
-write.csv2(completedRides, "VIA_Rides_202106_202210.csv", quote = FALSE, row.names = FALSE)
-write.csv2(saturday_rides, "VIA_Rides_Saturdays_202106_202210.csv", quote = FALSE, row.names = FALSE)
+write.csv2(completedRides, "VIA_Rides_202106_202303.csv", quote = FALSE, row.names = FALSE)
+write.csv2(saturday_rides, "VIA_Rides_Saturdays_202106_202303.csv", quote = FALSE, row.names = FALSE)
 write.csv2(completedRides2021, "VIA_Rides_202106_202201.csv", quote = FALSE, row.names = FALSE)
 write.csv2(saturday_rides2021, "VIA_Rides_Saturdays_202106_202201.csv", quote = FALSE, row.names = FALSE)
 write.csv2(completedRides2022_1, "VIA_Rides_202201_202210.csv", quote = FALSE, row.names = FALSE)

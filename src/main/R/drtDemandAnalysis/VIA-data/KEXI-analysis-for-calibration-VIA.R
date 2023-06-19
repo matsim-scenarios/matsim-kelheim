@@ -308,8 +308,16 @@ for(dataset in datasets) {
   paste0("printing plot to ", plotFile)
   ggsave(plotFile, limitsize = FALSE)
 
-  #a typical day here can be seen as a day with no of bookings close to the average no of bookings (119)
-  # typicalDays <- filter(dailyValues, between(n, avgBookings - 3, avgBookings + 3))
+  if (names[i] == "VIAdataSince2022") {
+    #a typical day here can be seen as a day with no of bookings close to the average no of bookings (159 passengers as of 0623)
+    # we are filtering for dataset VIAdataSince2022 as this is the agreed on data to use o calibrate against - sm30623
+    typicalDaysBookings <- filter(dailyValues, between(noBookings, avgBookings - 5, avgBookings + 5))
+    typicalDaysPassengers <- filter(dailyValues, between(noPassengers, avgBookingsInclCompanions - 5, avgBookingsInclCompanions + 5))
+
+    write.csv2(typicalDaysPassengers, "typical_days_passenger_demand_since2022.csv", quote = FALSE, row.names = FALSE)
+  }
+
+
 
   # #5 days are chosen as typical references
   # typicalDay_jul <- ymd("2021-07-21")
@@ -347,7 +355,6 @@ for(dataset in datasets) {
   # boxplot(dailyValues$noBookings, main = "Boxplot KEXI bookings per day", ylab = "bookings")
   # abline(h = avgBookings - 2 * sd(dailyValues$noBookings), col="red",lty=2)
   # abline(h = avgBookings + 2 * sd(dailyValues$noBookings), col="red",lty=2)
-
 
   i <- i + 1
 }
