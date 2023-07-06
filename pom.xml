@@ -15,7 +15,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.matsim-scenarios</groupId>
 	<artifactId>matsim-kelheim</artifactId>
-	<version>3.x-SNAPSHOT</version>
+	<version>3.0</version>
 
 	<name>MATSim Kelheim Model</name>
 	<description>A transport model of the district of Kelheim and it's surroundings</description>
