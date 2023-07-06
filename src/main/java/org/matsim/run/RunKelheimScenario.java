@@ -21,7 +21,6 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.traffic.LinkStats;
-import org.matsim.application.analysis.travelTimeValidation.TravelTimeAnalysis;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
 import org.matsim.application.prepare.freight.tripExtraction.ExtractRelevantFreightTrips;
@@ -63,6 +62,8 @@ import org.matsim.modechoice.pruning.DistanceBasedPruner;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
+import org.matsim.simwrapper.SimWrapperConfigGroup;
+import org.matsim.simwrapper.SimWrapperModule;
 import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.pt.fare.DistanceBasedPtFareParams;
@@ -71,30 +72,30 @@ import playground.vsp.pt.fare.PtTripWithDistanceBasedFareEstimator;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.SplittableRandom;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
-		CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
-		MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
-		CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class
+	CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
+	MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
+	CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class
 })
 @MATSimApplication.Analysis({
-		TravelTimeAnalysis.class, LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
+	LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-	private static final double WEIGHT_1_PASSENGER = 26387.;
-	private static final double WEIGHT_2_PASSENGER = 3843.;
-	private static final double WEIGHT_3_PASSENGER = 879.;
-	private static final double WEIGHT_4_PASSENGER = 409.;
-	private static final double WEIGHT_5_PASSENGER = 68.;
-	private static final double WEIGHT_6_PASSENGER = 18.;
-	private static final double WEIGHT_7_PASSENGER = 4.;
-	private static final double WEIGHT_8_PASSENGER = 1.;
-
 	static final String VERSION = "3.0";
-
+	private static final double WEIGHT_1_PASSENGER = 16517.;
+	private static final double WEIGHT_2_PASSENGER = 2084.;
+	private static final double WEIGHT_3_PASSENGER = 532.;
+	private static final double WEIGHT_4_PASSENGER = 163.;
+	private static final double WEIGHT_5_PASSENGER = 20.;
+	private static final double WEIGHT_6_PASSENGER = 5.;
+	private static final double WEIGHT_7_PASSENGER = 0.;
+	private static final double WEIGHT_8_PASSENGER = 0.;
 	@CommandLine.Mixin
 	private final SampleOptions sample = new SampleOptions(25, 10, 1);
 
@@ -137,6 +138,21 @@ public class RunKelheimScenario extends MATSimApplication {
 		MATSimApplication.run(RunKelheimScenario.class, args);
 	}
 
+	public static void addDrtCompanionParameters(DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup) {
+		DrtCompanionParams drtCompanionParams = new DrtCompanionParams();
+		drtCompanionParams.setDrtCompanionSamplingWeights(List.of(
+			WEIGHT_1_PASSENGER,
+			WEIGHT_2_PASSENGER,
+			WEIGHT_3_PASSENGER,
+			WEIGHT_4_PASSENGER,
+			WEIGHT_5_PASSENGER,
+			WEIGHT_6_PASSENGER,
+			WEIGHT_7_PASSENGER,
+			WEIGHT_8_PASSENGER
+		));
+		drtWithExtensionsConfigGroup.addParameterSet(drtCompanionParams);
+	}
+
 	@Nullable
 	@Override
 	protected Config prepareConfig(Config config) {
@@ -160,6 +176,14 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		config.global().setRandomSeed(randomSeed);
 
+		SimWrapperConfigGroup sw = ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class);
+
+		// Relative to config
+		sw.defaultParams().shp = "../shp/dilutionArea.shp";
+		sw.defaultParams().mapCenter = "11.89,48.91";
+		sw.defaultParams().mapZoomLevel = 11d;
+		sw.defaultParams().sampleSize = String.valueOf(sample.getSample());
+
 		if (intermodal) {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
 		}
@@ -168,19 +192,15 @@ public class RunKelheimScenario extends MATSimApplication {
 			config.addModule(new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
 
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
-			DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) multiModeDrtConfig.getModalElements().iterator().next();
-			DrtCompanionParams drtCompanionParams = new DrtCompanionParams();
-			drtCompanionParams.setDrtCompanionSamplingWeights(List.of(
-					WEIGHT_1_PASSENGER,
-					WEIGHT_2_PASSENGER,
-					WEIGHT_3_PASSENGER,
-					WEIGHT_4_PASSENGER,
-					WEIGHT_5_PASSENGER,
-					WEIGHT_6_PASSENGER,
-					WEIGHT_7_PASSENGER,
-					WEIGHT_8_PASSENGER
-			));
-			drtWithExtensionsConfigGroup.addParameterSet(drtCompanionParams);
+
+			for (DrtConfigGroup drtConfigGroup : multiModeDrtConfig.getModalElements()) {
+				//only the KEXI (conventionally driven drt) should get companions
+				if (drtConfigGroup.getMode().equals(TransportMode.drt)) {
+					DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtConfigGroup;
+					addDrtCompanionParameters(drtWithExtensionsConfigGroup);
+				}
+			}
+
 			ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
 			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
 		}
@@ -220,7 +240,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		if (!planOrigin.isBlank()) {
 			config.plans().setInputFile(
-					config.plans().getInputFile().replace(".plans", ".plans-" + planOrigin)
+				config.plans().getInputFile().replace(".plans", ".plans-" + planOrigin)
 			);
 
 			addRunOption(config, planOrigin);
@@ -246,9 +266,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		if (drt) {
 			scenario.getPopulation()
-					.getFactory()
-					.getRouteFactories()
-					.setRouteFactory(DrtRoute.class, new DrtRouteFactory());
+				.getFactory()
+				.getRouteFactories()
+				.setRouteFactory(DrtRoute.class, new DrtRouteFactory());
 		}
 
 		if (bikeRnd) {
@@ -274,6 +294,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				install(new KelheimPtFareModule());
 				install(new SwissRailRaptorModule());
 				install(new PersonMoneyEventsAnalysisModule());
+				install(new SimWrapperModule());
 
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
@@ -281,17 +302,17 @@ public class RunKelheimScenario extends MATSimApplication {
 				if (strategy.getModeChoice() == StrategyOptions.ModeChoice.randomSubtourMode) {
 					// Configure mode-choice strategy
 					install(strategy.applyModule(binder(), config, builder ->
-											builder.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
-													.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
-													.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
+								builder.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
+									.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
+									.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
 //											.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, "drt", "av")
-													.withTripEstimator(PtTripWithDistanceBasedFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
-													.withActivityEstimator(DefaultActivityEstimator.class)
-													// These are with activity estimation enabled
-													.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
-													.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
-													.withPruner("ad95", new DistanceBasedPruner(1.72092386, 0.03189323))
-							)
+									.withTripEstimator(PtTripWithDistanceBasedFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
+									.withActivityEstimator(DefaultActivityEstimator.class)
+									// These are with activity estimation enabled
+									.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
+									.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
+									.withPruner("ad95", new DistanceBasedPruner(1.72092386, 0.03189323))
+						)
 					);
 				}
 
@@ -331,13 +352,13 @@ public class RunKelheimScenario extends MATSimApplication {
 
 			// Add speed limit to av vehicle
 			double maxSpeed = controler.getScenario()
-					.getVehicles()
-					.getVehicleTypes()
-					.get(Id.create("autonomous_vehicle", VehicleType.class))
-					.getMaximumVelocity();
+				.getVehicles()
+				.getVehicleTypes()
+				.get(Id.create("autonomous_vehicle", VehicleType.class))
+				.getMaximumVelocity();
 			controler.addOverridingModule(
-					new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
-							maxSpeed));
+				new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
+					maxSpeed));
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));

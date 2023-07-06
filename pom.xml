@@ -6,7 +6,7 @@
 		<artifactId>matsim-all</artifactId>
 
 		<!-- PR-labelled release -->
-		<version>16.0-PR2560</version>
+		<version>16.0-PR2660</version>
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
 		<!--		<version>16.0-SNAPSHOT</matsim.version>-->
@@ -168,6 +168,12 @@
 
 		<dependency>
 			<groupId>org.matsim.contrib</groupId>
+			<artifactId>simwrapper</artifactId>
+			<version>${matsim.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.matsim.contrib</groupId>
 			<artifactId>informed-mode-choice</artifactId>
 			<version>${matsim.version}</version>
 		</dependency>
@@ -200,6 +206,7 @@
 				<version>3.0.0-M9</version>
 				<configuration>
 					<forkCount>1</forkCount>
+					<reuseForks>false</reuseForks>
 					<!-- avoid out of memory errors: -->
 					<argLine>@{argLine} -Xmx9500m -Djava.awt.headless=true -Dmatsim.preferLocalDtds=true</argLine>
 					<!--necessary in tu berlin gitlab. BUT not good in other places, so solve by command line switch only where needed.  kai, nov'18-->
