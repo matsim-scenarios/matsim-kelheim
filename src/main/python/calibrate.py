@@ -55,7 +55,7 @@ def filter_modes(df):
     return df[df.main_mode.isin(modes)]
 
 study, obj = calibration.create_mode_share_study("calib", "matsim-kelheim-3.x-SNAPSHOT-00602ea.jar",
-                                        "../input/v3.0/kelheim-v3.0-25pct.config.xml",
+                                        "../input/v3.0/kelheim-v3.0-config.xml",
                                         modes, target, 
                                         initial_asc=initial,
                                         args="--25pct --config:TimeAllocationMutator.mutationRange=900",

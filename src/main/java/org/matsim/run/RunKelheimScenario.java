@@ -107,7 +107,7 @@ public class RunKelheimScenario extends MATSimApplication {
 	/**
 	 * the KEXI service has a zone-dependent fare system which is why we are using a custom fare implementation. Via this option, one can set a flat (constant) price for the AV service.
 	 */
-	@CommandLine.Option(names = "--av-fare", defaultValue = "2.0", description = "AV fare (euro per trip)")
+	@CommandLine.Option(names = "--av-fare", defaultValue = "0.0", description = "AV fare (euro per trip)")
 	private double avFare;
 
 	/**
@@ -136,7 +136,7 @@ public class RunKelheimScenario extends MATSimApplication {
 	}
 
 	public RunKelheimScenario() {
-		super(String.format("input/v%s/kelheim-v%s-25pct.config.xml", VERSION, VERSION));
+		super(String.format("input/v%s/kelheim-v%s-config.xml", VERSION, VERSION));
 	}
 
 	public static void main(String[] args) {
