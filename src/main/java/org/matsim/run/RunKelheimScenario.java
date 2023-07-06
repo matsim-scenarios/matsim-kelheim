@@ -102,12 +102,17 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
 	private boolean drt;
 
-	@CommandLine.Option(names = "--income-dependent", defaultValue = "true", description = "enable income dependent monetary utility", negatable = true)
-	private boolean incomeDependent;
+	// a couple of CommandLine.Options below actually are not strictly necessary but rather allow for circumvention of settings directly via config and/or config options.... (ts 07/23)
 
+	/**
+	 * the KEXI service has a zone-dependent fare system which is why we are using a custom fare implementation. Via this option, one can set a flat (constant) price for the AV service.
+	 */
 	@CommandLine.Option(names = "--av-fare", defaultValue = "2.0", description = "AV fare (euro per trip)")
 	private double avFare;
 
+	/**
+	 * this command line option allows to circumvent setting the drt service area per config. Not my preferred option, but its used to reduce nr. of configs (ts 07/23)
+	 */
 	@CommandLine.Option(names = "--case-study", defaultValue = "NULL", description = "Case study for the av scenario")
 	private KelheimCaseStudyTool.AvServiceArea avServiceArea;
 
@@ -316,13 +321,8 @@ public class RunKelheimScenario extends MATSimApplication {
 					);
 				}
 
-
-				if (incomeDependent) {
-					bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
-				}
-				if (incomeDependent) {
-					bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
-				}
+				//use income-dependent marginal utility of money
+				bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
 
 				if (bikeRnd) {
 					addEventHandlerBinding().toInstance(new PersonDepartureEventHandler() {
