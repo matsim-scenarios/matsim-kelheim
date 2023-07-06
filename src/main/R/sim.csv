@@ -1,0 +1,31 @@
+dist_group,main_mode,trips,mode,scaled_trips,source
+0 - 1000,bike,98,bike,392,sim
+0 - 1000,car,4605,car,18420,sim
+0 - 1000,pt,23,pt,92,sim
+0 - 1000,ride,315,ride,1260,sim
+0 - 1000,walk,8705,walk,34820,sim
+1000 - 2000,bike,977,bike,3908,sim
+1000 - 2000,car,5422,car,21688,sim
+1000 - 2000,pt,134,pt,536,sim
+1000 - 2000,ride,1849,ride,7396,sim
+1000 - 2000,walk,1415,walk,5660,sim
+2000 - 5000,bike,2610,bike,10440,sim
+2000 - 5000,car,11878,car,47512,sim
+2000 - 5000,pt,590,pt,2360,sim
+2000 - 5000,ride,5606,ride,22424,sim
+2000 - 5000,walk,453,walk,1812,sim
+5000 - 10000,bike,1851,bike,7404,sim
+5000 - 10000,car,15732,car,62928,sim
+5000 - 10000,pt,1050,pt,4200,sim
+5000 - 10000,ride,5632,ride,22528,sim
+5000 - 10000,walk,386,walk,1544,sim
+10000 - 20000,bike,1156,bike,4624,sim
+10000 - 20000,car,14101,car,56404,sim
+10000 - 20000,pt,975,pt,3900,sim
+10000 - 20000,ride,3144,ride,12576,sim
+10000 - 20000,walk,287,walk,1148,sim
+20000+,bike,466,bike,1864,sim
+20000+,car,9947,car,39788,sim
+20000+,pt,1128,pt,4512,sim
+20000+,ride,634,ride,2536,sim
+20000+,walk,136,walk,544,sim
