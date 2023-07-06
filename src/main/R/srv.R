@@ -13,10 +13,10 @@ setwd("PLEASE ADJUST TO YOUR LOCAL DIRECTORY FOR matsim-kelheim/src/main/R")
 theme_set(theme_Publication(18))
 
 # trip distance groups
-levels = c("0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+")
-breaks = c(0, 1000, 2000, 5000, 10000, 20000, Inf)
+levels <- c("0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+")
+breaks <- c(0, 1000, 2000, 5000, 10000, 20000, Inf)
 
-shape <- st_read("../../../scenarios/input/shp/dilutionArea.shp", crs=25832)
+shape <- st_read("../../../input/shp/dilutionArea.shp", crs=25832)
 
 #########
 # Read simulation data
@@ -25,7 +25,8 @@ shape <- st_read("../../../scenarios/input/shp/dilutionArea.shp", crs=25832)
 sim_scale <- 4 # set to 4 for 25pct, 10 for 10pct, 100 for 1pct, ...
 f <- "../../../output/output-kelheim-25pct/" # set to run output directory
 
-homes <- read_csv("../../../scenarios/input/kelheim-v3.0-homes.csv", 
+
+homes <- read_csv("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-homes.csv", 
                   col_types = cols(
                     person = col_character()
                   ))
@@ -149,17 +150,17 @@ sim_aggr <- sim %>%
 # Needed share of trips
 tripShare <- 0.19
 shortDistance <- sum(filter(sim, dist_group=="0 - 1000")$trips)
-numTrips = (shortDistance - sim_sum * tripShare) / (tripShare - 1)
+numTrips <- (shortDistance - sim_sum * tripShare) / (tripShare - 1)
 
 
 ##########################
 # Distance distributions based on RegioStar data
 ##########################
 
-levels = c("0 - 500", "500 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", 
+levels <- c("0 - 500", "500 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000",
            "10000 - 20000", "20000 - 50000", "50000 - 100000", "100000+")
 
-breaks = c(0, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, Inf)
+breaks <-c (0, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, Inf)
 
 trips2 <- trips %>%
   mutate(dist_group = cut(traveled_distance, breaks=breaks, labels=levels, right = F)) %>%
