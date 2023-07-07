@@ -29,15 +29,6 @@ target = {
     "ride": 0.17    
 }
 
-# Use adjusted modal split for our distance distribution
-target = {
-    "walk":  0.111505,
-    "bike":  0.068790,
-    "pt":    0.038063,
-    "car":   0.612060,
-    "ride":  0.169581
-}
-
 city = gpd.read_file("../input/shp/dilutionArea.shp").set_crs("EPSG:25832")
 homes = pd.read_csv("../input/v3.0/kelheim-v3.0-homes.csv", dtype={"person": "str"})
 
@@ -60,7 +51,7 @@ study, obj = calibration.create_mode_share_study("calib", "matsim-kelheim-3.x-SN
                                         initial_asc=initial,
                                         args="--25pct --config:TimeAllocationMutator.mutationRange=900",
                                         jvm_args="-Xmx46G -Xms46G -XX:+AlwaysPreTouch -XX:+UseParallelGC",
-                                        lr=calibration.auto_lr_scheduler(),
+                                        lr=calibration.linear_lr_scheduler(interval=6),
                                         person_filter=f, map_trips=filter_modes, chain_runs=calibration.default_chain_scheduler)
 
 

@@ -44,7 +44,6 @@ import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
@@ -150,11 +149,6 @@ public class RunKelheimScenario extends MATSimApplication {
 	protected Config prepareConfig(Config config) {
 
 		SnzActivities.addScoringParams(config);
-
-		for (long ii = 600; ii <= 97200; ii += 600) {
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("accomp_other_" + ii).setTypicalDuration(ii));
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("accomp_children_" + ii).setTypicalDuration(ii));
-		}
 
 		config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
 		config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
