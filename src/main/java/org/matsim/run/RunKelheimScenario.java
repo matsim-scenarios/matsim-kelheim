@@ -44,7 +44,6 @@ import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
@@ -53,12 +52,6 @@ import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
-import org.matsim.modechoice.ModeOptions;
-import org.matsim.modechoice.commands.StrategyOptions;
-import org.matsim.modechoice.estimators.DefaultActivityEstimator;
-import org.matsim.modechoice.estimators.DefaultLegScoreEstimator;
-import org.matsim.modechoice.estimators.FixedCostsEstimator;
-import org.matsim.modechoice.pruning.DistanceBasedPruner;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.run.utils.KelheimCaseStudyTool;
@@ -68,7 +61,6 @@ import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.pt.fare.DistanceBasedPtFareParams;
 import playground.vsp.pt.fare.PtFareConfigGroup;
-import playground.vsp.pt.fare.PtTripWithDistanceBasedFareEstimator;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
@@ -102,12 +94,17 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
 	private boolean drt;
 
-	@CommandLine.Option(names = "--income-dependent", defaultValue = "true", description = "enable income dependent monetary utility", negatable = true)
-	private boolean incomeDependent;
+	// a couple of CommandLine.Options below actually are not strictly necessary but rather allow for circumvention of settings directly via config and/or config options.... (ts 07/23)
 
-	@CommandLine.Option(names = "--av-fare", defaultValue = "2.0", description = "AV fare (euro per trip)")
+	/**
+	 * the KEXI service has a zone-dependent fare system which is why we are using a custom fare implementation. Via this option, one can set a flat (constant) price for the AV service.
+	 */
+	@CommandLine.Option(names = "--av-fare", defaultValue = "0.0", description = "AV fare (euro per trip)")
 	private double avFare;
 
+	/**
+	 * this command line option allows to circumvent setting the drt service area per config. Not my preferred option, but its used to reduce nr. of configs (ts 07/23)
+	 */
 	@CommandLine.Option(names = "--case-study", defaultValue = "NULL", description = "Case study for the av scenario")
 	private KelheimCaseStudyTool.AvServiceArea avServiceArea;
 
@@ -123,15 +120,12 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--plans", defaultValue = "", description = "Use different input plans")
 	private String planOrigin;
 
-	@CommandLine.Mixin
-	private StrategyOptions strategy = new StrategyOptions(StrategyOptions.ModeChoice.subTourModeChoice, "person");
-
 	public RunKelheimScenario(@Nullable Config config) {
 		super(config);
 	}
 
 	public RunKelheimScenario() {
-		super(String.format("input/v%s/kelheim-v%s-25pct.config.xml", VERSION, VERSION));
+		super(String.format("input/v%s/kelheim-v%s-config.xml", VERSION, VERSION));
 	}
 
 	public static void main(String[] args) {
@@ -158,11 +152,6 @@ public class RunKelheimScenario extends MATSimApplication {
 	protected Config prepareConfig(Config config) {
 
 		SnzActivities.addScoringParams(config);
-
-		for (long ii = 600; ii <= 97200; ii += 600) {
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("accomp_other_" + ii).setTypicalDuration(ii));
-			config.planCalcScore().addActivityParams(new PlanCalcScoreConfigGroup.ActivityParams("accomp_children_" + ii).setTypicalDuration(ii));
-		}
 
 		config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
 		config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
@@ -232,9 +221,6 @@ public class RunKelheimScenario extends MATSimApplication {
 		// y = ax + b --> b value, for long trips
 		distanceBasedPtFareParams.setLongDistanceTripIntercept(30);
 
-		if (strategy.getModeChoice() != StrategyOptions.ModeChoice.randomSubtourMode)
-			strategy.applyConfig(config, this::addRunOption);
-
 		if (iterations != -1)
 			addRunOption(config, "iter", iterations);
 
@@ -299,6 +285,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
+				/*
 				if (strategy.getModeChoice() == StrategyOptions.ModeChoice.randomSubtourMode) {
 					// Configure mode-choice strategy
 					install(strategy.applyModule(binder(), config, builder ->
@@ -315,14 +302,10 @@ public class RunKelheimScenario extends MATSimApplication {
 						)
 					);
 				}
+				*/
 
-
-				if (incomeDependent) {
-					bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
-				}
-				if (incomeDependent) {
-					bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
-				}
+				//use income-dependent marginal utility of money
+				bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
 
 				if (bikeRnd) {
 					addEventHandlerBinding().toInstance(new PersonDepartureEventHandler() {

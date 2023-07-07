@@ -58,6 +58,9 @@ sim <- trips %>%
   mutate(scaled_trips=sim_scale * trips) %>%
   mutate(source = "sim")
 
+# Use this to write file needed to do adjustment
+#write_csv(sim, "sim.csv")
+
 ########
 # Read survey data
 ########

@@ -22,26 +22,26 @@
         <param name="numberOfThreads" value="6"/>
     </module>
 
-    <module name="network">
-        <param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/kelheim-v1.3-network-with-pt.xml.gz"/>
-        <param name="laneDefinitionsFile" value="null" />
-    </module>
+	<module name="network">
+		<param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-network-with-pt.xml.gz"/>
+		<param name="laneDefinitionsFile" value="null"/>
+	</module>
 
-    <module name="plans">
-        <param name="inputPlansFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/test.plans.xml"/>
-        <param name="removingUnnecessaryPlanAttributes" value="true"/>
-    </module>
+	<module name="plans">
+		<param name="inputPlansFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/test.plans.xml"/>
+		<param name="removingUnnecessaryPlanAttributes" value="true"/>
+	</module>
 
-    <module name="vehicles">
-        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/duesseldorf/duesseldorf-v1.0/input/duesseldorf-v1.0-vehicle-types.xml"/>
-    </module>
+	<module name="vehicles">
+		<param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-vehicle-types.xml"/>
+	</module>
 
 
-    <module name="transit">
-        <param name="transitScheduleFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/kelheim-v1.3-transitSchedule.xml.gz"/>
-        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/kelheim-v1.3-transitVehicles.xml.gz"/>
-        <param name="useTransit" value="true"/>
-    </module>
+	<module name="transit">
+		<param name="transitScheduleFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-transitSchedule.xml.gz"/>
+		<param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-transitVehicles.xml.gz"/>
+		<param name="useTransit" value="true"/>
+	</module>
 
     <module name="planscalcroute">
         <param name="networkModes" value="car,ride,freight"/>
@@ -73,7 +73,21 @@
         <param name="insertingWaitingVehiclesBeforeDrivingVehicles" value="true"/>
     </module>
 
-<module name="strategy" >
+	<module name="ReplanningAnnealer" >
+		<param name="activateAnnealingModule" value="true" />
+		<parameterset type="AnnealingVariable" >
+			<param name="annealParameter" value="globalInnovationRate" />
+			<param name="annealType" value="sigmoid" />
+			<param name="defaultSubpopulation" value="person" />
+			<!-- this parameter enters the exponential and sigmoid formulas. May be an iteration or a share, i.e. 0.5 for halfLife at 50% of iterations. Exponential: startValue / exp(it/halfLife) -->
+			<param name="halfLife" value="0.5" />
+			<!-- sigmoid: 1/(1+e^(shapeFactor*(it - halfLife))); geometric: startValue * shapeFactor^it; msa: startValue / it^shapeFactor -->
+			<param name="shapeFactor" value="0.01" />
+			<param name="startValue" value="0.6" />
+			<param name="endValue" value="0.01" />
+		</parameterset>
+	</module>
+	<module name="strategy" >
         <!-- the external executable will be called with a config file as argument.  This is the pathname to a possible skeleton config, to which additional information will be added.  Can be null. -->
         <param name="ExternalExeConfigTemplate" value="null" />
         <!-- time out value (in seconds) after which matsim will consider the external strategy as failed -->
@@ -86,53 +100,37 @@
         <param name="maxAgentPlanMemorySize" value="5" />
         <!-- strategyName of PlanSelector for plans removal.  Possible defaults: WorstPlanSelector SelectRandom SelectExpBetaForRemoval ChangeExpBetaForRemoval PathSizeLogitSelectorForRemoval . The current default, WorstPlanSelector is not a good choice from a discrete choice theoretical perspective. Alternatives, however, have not been systematically tested. kai, feb'12 -->
         <param name="planSelectorForRemoval" value="WorstPlanSelector" />
-        <parameterset type="strategysettings" >
-            <!-- iteration after which strategy will be disabled.  most useful for ``innovative'' strategies (new routes, new times, ...). Normally, better use fractionOfIterationsToDisableInnovation -->
-            <param name="disableAfterIteration" value="-1" />
-            <!-- path to external executable (if applicable) -->
-            <param name="executionPath" value="null" />
-            <!-- strategyName of strategy.  Possible default names: SelectRandom BestScore KeepLastSelected ChangeExpBeta SelectExpBeta SelectPathSizeLogit      (selectors), ReRouteTimeAllocationMutatorTimeAllocationMutator_ReRouteChangeSingleTripModeChangeTripModeSubtourModeChoice (innovative strategies). -->
-            <param name="strategyName" value="ChangeExpBeta" />
-            <!-- subpopulation to which the strategy applies. "null" refers to the default population, that is, the set of persons for which no explicit subpopulation is defined (ie no subpopulation attribute) -->
-            <param name="subpopulation" value="person" />
-            <!-- weight of a strategy: for each agent, a strategy will be selected with a probability proportional to its weight -->
-            <param name="weight" value="0.75" />
-        </parameterset>
-        <parameterset type="strategysettings" >
-            <param name="disableAfterIteration" value="140" />
-            <param name="executionPath" value="null" />
-            <param name="strategyName" value="ReRoute" />
-            <param name="subpopulation" value="person" />
-            <param name="weight" value="0.1" />
-        </parameterset>
-        <parameterset type="strategysettings" >
-            <param name="disableAfterIteration" value="130" />
-            <param name="executionPath" value="null" />
-            <param name="strategyName" value="ChangeSingleTripMode" />
-            <param name="subpopulation" value="person" />
-            <param name="weight" value="0.1" />
-        </parameterset>
-        <parameterset type="strategysettings" >
-            <param name="disableAfterIteration" value="130" />
-            <param name="executionPath" value="null" />
-            <param name="strategyName" value="TimeAllocationMutator" />
-            <param name="subpopulation" value="person" />
-            <param name="weight" value="0.05" />
-        </parameterset>
-        <parameterset type="strategysettings" >
-            <param name="disableAfterIteration" value="-1" />
-            <param name="executionPath" value="null" />
-            <param name="strategyName" value="ChangeExpBeta" />
-            <param name="subpopulation" value="freight" />
-            <param name="weight" value="0.95" />
-        </parameterset>
-        <parameterset type="strategysettings" >
-            <param name="disableAfterIteration" value="-1" />
-            <param name="executionPath" value="null" />
-            <param name="strategyName" value="ReRoute" />
-            <param name="subpopulation" value="freight" />
-            <param name="weight" value="0.05" />
-        </parameterset>
+		<parameterset type="strategysettings">
+			<param name="strategyName" value="ChangeExpBeta"/>
+			<param name="subpopulation" value="person"/>
+			<param name="weight" value="0.85"/>
+		</parameterset>
+		<parameterset type="strategysettings">
+			<param name="strategyName" value="ReRoute"/>
+			<param name="subpopulation" value="person"/>
+			<param name="weight" value="0.10"/>
+		</parameterset>
+		<parameterset type="strategysettings">
+			<param name="strategyName" value="SubtourModeChoice"/>
+			<param name="subpopulation" value="person"/>
+			<param name="weight" value="0.10"/>
+		</parameterset>
+		<parameterset type="strategysettings">
+			<param name="strategyName" value="TimeAllocationMutator"/>
+			<param name="subpopulation" value="person"/>
+			<param name="weight" value="0.10"/>
+		</parameterset>
+
+		<parameterset type="strategysettings">
+			<param name="strategyName" value="ChangeExpBeta"/>
+			<param name="subpopulation" value="freight"/>
+			<param name="weight" value="0.95"/>
+		</parameterset>
+		<parameterset type="strategysettings">
+			<param name="strategyName" value="ReRoute"/>
+			<param name="subpopulation" value="freight"/>
+			<param name="weight" value="0.05"/>
+		</parameterset>
     </module>
 
     <module name="changeMode">
