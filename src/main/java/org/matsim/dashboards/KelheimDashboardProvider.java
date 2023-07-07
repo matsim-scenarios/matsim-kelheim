@@ -19,10 +19,7 @@ public class KelheimDashboardProvider implements DashboardProvider {
 
 		TripDashboard trips = new TripDashboard("kelheim_mode_share.csv", "kelheim_mode_share_per_dist.csv", null);
 
-		// TODO: Person needs to have home_x and home_y
-		// then --shp-filter needs to be changed to home (or removed since it is the default)
-
-		trips.setAnalysisArgs("--dist-groups", "0,1000,2000,5000,10000,20000,100000", "--shp-filter", "trip_start_and_end");
+		trips.setAnalysisArgs("--dist-groups", "0,1000,2000,5000,10000,20000");
 
 		return List.of(trips);
 	}
