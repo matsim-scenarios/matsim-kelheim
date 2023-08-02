@@ -54,7 +54,6 @@ weatherstack_kelheim <- read_delim("C:/Users/Simon/Documents/shared-svn/projects
 # Stringency
 json <- fromJSON(file = "C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/2022-11-10.json")
 json <- unlist(json)
-\usepackage{geometry}
 #Mobility
 demand <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate2022.csv")
 
@@ -258,31 +257,61 @@ omega_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+tdiff+tmax+tavg+tmin+pres,
 
 summary(omega_model)
 
+confint(omega_model)
+
 ```
 
 The above model implies that only the parameters stringency, tdiff and tavg are significant for the daily number of KEXI rides. The value for Adjusted R^2 (0.492) is rather low, so the calculated linear regression model is not very accurate. To get a better impression on the model the predicted values should be prepared to the actual values and the residuals are plotted.
 
 ```{r omega residuals,out.width="100%"}
 
-colors <- c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+colors <- c("actual" = "blue","predicted" = "red")
 model <- omega_model
 test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 
-ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+# ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+#   geom_point(aes(x = date,y = noRides,color = "actual"))+
+#   geom_point(aes(x = date,y = pred,color = "predicted"))+
+#   scale_color_manual(values = colors)+
+#   ggtitle("First Linear regression model"))
+
+ggplot(test_data %>% filter(year(date)>=2020)) +
   geom_point(aes(x = date,y = noRides,color = "actual"))+
-  geom_point(aes(x = date,y = pred,color = "predicted"))+
-  scale_color_manual(values = colors)+
-  ggtitle("Linear regression model"))
+  geom_line(aes(x = date,y = pred,color = "predicted"), size = 1.2)+
+  theme_minimal() +
+  xlab("Date") +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  theme(axis.ticks.x = element_line(), 
+                   axis.ticks.y = element_line(),
+                   axis.ticks.length = unit(5, "pt")) +
+  scale_x_date(date_breaks = "4 month", date_labels = "%d/%b/%y") +
+  scale_color_manual(values = colors) +
+  ggtitle("First Linear regression model")
+
+#ggsave("C:/Users/Simon/Desktop/wd/2023-07-31/first-regression-model.png", modelPlot)
+
 ```
 
 
 ```{r ,out.width="100%"}
-ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
+# ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
+#             geom_line(aes(x = date,y = resid,color = "residuals"))+
+#             geom_ref_line(h = 0)+
+#             scale_color_manual(values = colors)+
+#             ggtitle("Residuals"))
+
+ggplot(test_data %>% filter(year(date)>=2020))+
             geom_line(aes(x = date,y = resid,color = "residuals"))+
-            geom_ref_line(h = 0)+
+          #  geom_ref_line(h = 0)+
             scale_color_manual(values = colors)+
-            ggtitle("Residuals"))
+           xlab("Date") +
+           ylab("Residuals") +
+           theme_minimal() +
+           theme(axis.ticks.x = element_line(), 
+      axis.ticks.y = element_line(),
+      axis.ticks.length = unit(5, "pt"), legend.position = "none") +
+            ggtitle("Residuals over time for first linear regression model")
 
 ```
 
@@ -312,7 +341,7 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
             geom_line(aes(x = date,y = resid,color = "residuals"))+
             geom_ref_line(h = 0)+
             scale_color_manual(values = colors)+
-            ggtitle("Residuals"))
+            ggtitle("Residuals over time"))
 
 ```
 
@@ -382,7 +411,7 @@ summary(reduced_3_model)
 
 confint(reduced_3_model) #95% confidence interval
 
-colors <- c("Actual" = "blue","Predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+colors <- c("Actual" = "blue","Predicted" = "red")
 model <- reduced_3_model
 test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
@@ -423,7 +452,7 @@ ggplot(test_data %>% filter(year(date)>=2020))+
            theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-            ggtitle("Residuals for linear regression model with independent variables tavg + date_simplified")
+            ggtitle("Residuals over time for linear regression model with independent variables tavg + date_simplified")
 
 ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
             geom_point()+
@@ -436,7 +465,7 @@ ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
            theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-            ggtitle("Residuals for linear regression model with independent variables tavg + date_simplified")
+            ggtitle("Residuals over predicted values for linear regression model with independent variables tavg + date_simplified")
 
 ```
 
