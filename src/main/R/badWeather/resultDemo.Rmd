@@ -380,7 +380,7 @@ reduced_3_model <- lm(noRides ~ tavg+date_simplified, data = data)
 
 summary(reduced_3_model)
 
-confint(reduced_3_model)
+confint(reduced_3_model) #95% confidence interval
 
 colors <- c("Actual" = "blue","Predicted" = "red","residuals" = "gray50","zerorides" = "purple")
 model <- reduced_3_model
