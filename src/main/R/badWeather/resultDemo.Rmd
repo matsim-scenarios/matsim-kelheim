@@ -54,7 +54,7 @@ weatherstack_kelheim <- read_delim("C:/Users/Simon/Documents/shared-svn/projects
 # Stringency
 json <- fromJSON(file = "C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/2022-11-10.json")
 json <- unlist(json)
-
+\usepackage{geometry}
 #Mobility
 demand <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate2022.csv")
 
@@ -380,23 +380,63 @@ reduced_3_model <- lm(noRides ~ tavg+date_simplified, data = data)
 
 summary(reduced_3_model)
 
-colors <- c("actual" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+confint(reduced_3_model)
+
+colors <- c("Actual" = "blue","Predicted" = "red","residuals" = "gray50","zerorides" = "purple")
 model <- reduced_3_model
 test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 
-ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(aes(x = date,y = noRides,color = "actual"))+
-  geom_point(aes(x = date,y = pred,color = "predicted"))+
-  scale_color_manual(values = colors)+
-  ggtitle("Linear regression model with independent variables tavg + date_simplified"))
+ggplot(test_data %>% filter(year(date)>=2020)) +
+  geom_point(aes(x = date,y = noRides,color = "Actual"))+
+  geom_line(aes(x = date,y = pred,color = "Predicted"), size = 1.2)+
+  theme_minimal() +
+  xlab("Date") +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  theme(axis.ticks.x = element_line(), 
+                   axis.ticks.y = element_line(),
+                   axis.ticks.length = unit(5, "pt")) +
+  scale_x_date(date_breaks = "4 month", date_labels = "%d/%b/%y") +
+  scale_color_manual(values = colors) +
+  ggtitle("Linear regression model with independent variables tavg and date_simplified")
+
+ggplot(test_data %>% filter(year(date)>=2020)) +
+geom_point(aes(x = pred,y = noRides)) +
+geom_abline(aes(intercept = 0, slope = 1), size = 1.5, color = "forestgreen") +
+theme_minimal() +
+xlab("Predicted noRides") +
+ylab("Observed noRides") +
+theme(axis.ticks.x = element_line(), 
+      axis.ticks.y = element_line(),
+      axis.ticks.length = unit(5, "pt")) +
+  ggtitle("Observed vs. Predicted noRides")
+  
 ```
 ```{r,,out.width="100%",out.height="95%"}
-ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
+ggplot(test_data %>% filter(year(date)>=2020))+
             geom_line(aes(x = date,y = resid,color = "residuals"))+
-            geom_ref_line(h = 0)+
+          #  geom_ref_line(h = 0)+
             scale_color_manual(values = colors)+
-            ggtitle("Residuals for linear regression model with independent variables tavg + date_simplified"))
+           xlab("Date") +
+           ylab("Residuals") +
+           theme_minimal() +
+           theme(axis.ticks.x = element_line(), 
+      axis.ticks.y = element_line(),
+      axis.ticks.length = unit(5, "pt"), legend.position = "none") +
+            ggtitle("Residuals for linear regression model with independent variables tavg + date_simplified")
+
+ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
+            geom_point()+
+          #  geom_ref_line(h = 0)+
+            scale_color_manual(values = colors)+
+  geom_smooth(method ="loess", se = FALSE, color = "#666666", size = 1.5) +
+           xlab("predicted noRides") +
+           ylab("Residuals") +
+           theme_minimal() +
+           theme(axis.ticks.x = element_line(), 
+      axis.ticks.y = element_line(),
+      axis.ticks.length = unit(5, "pt"), legend.position = "none") +
+            ggtitle("Residuals for linear regression model with independent variables tavg + date_simplified")
 
 ```
 
@@ -432,6 +472,7 @@ p <- (1 : n) / n - 0.5 / n
 plot1 <- ggplot(test_data) +
   geom_qq(aes(sample=rnorm(resid,10,4)))+
   geom_abline(intercept = 10, slope = 4,color = "red", size = 1.5, alpha = 0.8)+
+  theme_minimal() +
   ggtitle("Normal QQ-Plot for the final linear regression model")
   
 # plot2 <- ggplotly(ggplot(test_data)+
@@ -470,4 +511,3 @@ ggplotly(plot1)
 
 The performed linear regression analysis aimed to better understand the relation of daily number of KEXI rides and multiple weather variables. The real demand data, which is the base for this analysis, showed some significant demand differences depending on whether the date is on a weekend or not as well as whether it is a holiday or not. Hence all holidays and weekends were excluded from the analysis. A general correlation analysis (Pearson correlation coefficients) was performed to get a first idea of the parameter's influence on the daily number of KEXI rides. Only wind and temperature related variables seem to have a meaningful impact on the number of daily rides. As the real demand data is from a time span in which there were many pandemic related restrictions upon the society a strictness of covid policies was taken into account, too. The aforementioned had the strongest correlation on the daily number of KEXI rides.
 A first linear regression model showed a continuous growing trend of daily rides, which led to the conclusion to also integrate a date variable. The inclusion of date improved the model's quality dramatically. In a next step all the non-significant independent weather related variables were excluded. The model's accuracy stayed the same after that step. In a last step covid policy stringency also was excluded from the model because it was non-significant, too. The final linear regression model explains the daily number of KEXI rides (dependent variable) by using variables for average temperature (tavg) and date (date_simplified). Most importantly, the F-statistic for the calculated regression has a p-value of < 2.2e-16. In general, if the p-value is lower than 0.05, the null hypothesis can be revoked, which means that the performed linear regression provides a significant contribution to the change of the daily number of KEXI rides. The model's accuracy is 0.7847 with a residual standard error of 16.09. A scatter plot of actual number of rides vs. predicted number of rides depicts a linear form for the predicted values, which means that a linear regression is the adequate form of analysis. The residuals distribution in a normal form as well as the linear form of the Quantile-Quantile Plot prove the linearity of the calculated linear regression model.
-
