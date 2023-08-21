@@ -56,9 +56,7 @@ json <- fromJSON(file = "C:/Users/Simon/Documents/shared-svn/projects/KelRide/da
 json <- unlist(json)
 #Mobility
 demand <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate2022.csv")
-
-#Expanding the data
-demand2022 <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/VIA_Rides_202201_202210.csv")
+#demand <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate2022_OLD_WRONG_DATA_HANDLING.csv")
 
 #Holidays
 holidays2020 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
@@ -130,10 +128,17 @@ result_data <- result_data %>%
   mutate(wday = as.character(wday(date,week_start = 1))) %>%
   dplyr::arrange(result_data, result_data$date) %>%
   distinct() %>%
-  mutate(date_simplified = as.integer(date) - as.integer(min(result_data$date)))
+  mutate(trend = as.integer(date) - as.integer(min(result_data$date)))
 
 #Append holidays
-result_data <- result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0)) #%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
+result_data <- result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0)) %>% mutate(weekday = wday(date))
+#%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
+
+sundays <- result_data %>% 
+  filter(wday == 7)
+
+meanRidesSunday <- mean(sundays$noRides)
+medianRidesSundy <- median(sundays$noRides)
 
 head(result_data)
 ```
@@ -231,11 +236,11 @@ To get a general impression of the above weather parameters' influence on the nu
 ```{r overall correlations, warning = FALSE}
 
 # test_cor <- result_data  %>% ungroup() %>%
-#   dplyr::select(-weather_impact,-description ,-date,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday, -tsun, -isHoliday)
+#   dplyr::select(-weather_impact,-description ,-date,-season,-wday, -tsun, -isHoliday)
 # print(cor(test_cor))
 
 best_pred <- result_data  %>% ungroup() %>%
-  dplyr::select(-noRides,-description ,-date, -date_simplified,-season,-noRequests,-avgEuclidianDistance_m,-avgTravelTime_s,-wday) %>%
+  dplyr::select(-noRides,-description ,-date, -trend,-season,-wday) %>%
   map_dbl(cor,y = result_data$noRides) %>%
   #map_dbl(abs) %>%
   sort(decreasing = TRUE) 
@@ -320,7 +325,7 @@ The residuals plot indicates a continuous growing trend for the number of daily 
 ```{r omega date residuals,out.width="100%"}
 
 # omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+date+season+wspd,data = data)
-omega_date_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+tdiff+tmax+tavg+tmin+pres+date_simplified,data = data)
+omega_date_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+tdiff+tmax+tavg+tmin+pres+trend,data = data)
 
 summary(omega_date_model)
 ```
@@ -348,7 +353,7 @@ ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
 
 ```
 
-For reasons of dimensioning the given date variable is transformed into an integer, which represents the number of days, which have passed since the KEXI service has started. The inclusion of the subsequent date parameter ("date_simplified") improves the model accuracy to 0.7845. This goes in line with a decrease of the residual standard error by 8.62 to 16.09. The distribution of the predicted model values as well as the residuals show a typical form. To further check the model's correctness, a histogram of the residuals is plotted.
+For reasons of dimensioning the given date variable is transformed into an integer, which represents the number of days, which have passed since the KEXI service has started. The inclusion of the subsequent date parameter ("trend") improves the model accuracy to 0.7845. This goes in line with a decrease of the residual standard error by 8.62 to 16.09. The distribution of the predicted model values as well as the residuals show a typical form. To further check the model's correctness, a histogram of the residuals is plotted.
 
 ```{r residual destributions 1}
 
@@ -364,12 +369,12 @@ The residuals histogram is bell shaped, which indicates that the calculated mode
 
 # Reducing the linear regression model
 
-The above linear regression model includes multiple parameters, which are marked as non-significant. Thus it should be possible to exclude those parameters from the regression model without decreasing the model accuracy. As tavg and tmin are both a description of the temperature, 2 reduced models are calculated, one for each variable while the other variables (stringency and date_simplified) stay the same.
+The above linear regression model includes multiple parameters, which are marked as non-significant. Thus it should be possible to exclude those parameters from the regression model without decreasing the model accuracy. As tavg and tmin are both a description of the temperature, 2 reduced models are calculated, one for each variable while the other variables (stringency and trend) stay the same.
 
 ```{r reduced model 1 residuals}
 
 # reduced_1_model <- lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description+date+wspd,data = data)
-reduced_1_model <- lm(noRides ~ stringency+tavg+date_simplified, data = data)
+reduced_1_model <- lm(noRides ~ stringency+tavg+trend, data = data)
 
 summary(reduced_1_model)
 
@@ -383,7 +388,7 @@ summary(reduced_1_model)
 ```{r reduced model 2 residuals}
 
 # reduced_2_model <- lm(noRides ~ tavg+pres+stringency+weather_impact+description+date,data = data)
-reduced_2_model <- lm(noRides ~ stringency+tmin+date_simplified, data = data)
+reduced_2_model <- lm(noRides ~ stringency+tmin+trend, data = data)
 
 summary(reduced_2_model)
 
@@ -397,18 +402,18 @@ test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = m
 
 For both 'reduced models' the Adjusted R-squared value remain roughly the same as does the Residual standard error. In terms of both values the model including tavg as the main temperature value performs a little better. Therefore, it will be used as the main variable representing the temperature. In opposition to the correlation analysis, which was performed to get a first impression of variable impact on the number of daily KEXI rides, the calculated linear regression model shows that due to its p-value (0.804) the strictness of covid-related policies (stringency) is not relevant for projecting the daily number of KEXI rides. Hence it is excluded from the model, too.
 
-A last correlation check of the left variables (number of KEXI rides, tavg and date_simplified) displays that the two independent variables tavg and date_simplified show a correlation of around 0.13 with each other. This fact should be taken into account when building the final linear regression model. A new parameter dateDependentTemperature = tavg * date_simplified is created and added as a further independent variable of the final model. The resulting model presents the correlation parameter to be non-significant. Further, an exclusion of the newly created variable from the linear regression model does not decrease the model's accuracy, so the correlation variable is removed from the analysis.
+A last correlation check of the left variables (number of KEXI rides, tavg and trend) displays that the two independent variables tavg and trend show a correlation of around 0.13 with each other. This fact should be taken into account when building the final linear regression model. A new parameter dateDependentTemperature = tavg * trend is created and added as a further independent variable of the final model. The resulting model presents the correlation parameter to be non-significant. Further, an exclusion of the newly created variable from the linear regression model does not decrease the model's accuracy, so the correlation variable is removed from the analysis.
 
 ```{r reduced model 3 residuals,out.width="100%"}
 #data = data %>% filter(season == "summer")
 # reduced_3_model <- lm(noRides ~ tavg+stringency,data = data)
 cor_check <- data %>%
-  dplyr::select(noRides,tavg,date_simplified)
+  dplyr::select(noRides,tavg,trend)
 print(cor(cor_check))
 
 data <- data %>%
-  mutate(dateDependentTemperature = tavg * date_simplified)
-reduced_3_model <- lm(noRides ~ tavg+date_simplified, data = data)
+  mutate(dateDependentTemperature = tavg * trend)
+reduced_3_model <- lm(noRides ~ tavg+trend, data = data)
 
 summary(reduced_3_model)
 
@@ -430,7 +435,7 @@ ggplot(test_data %>% filter(year(date)>=2020)) +
                    axis.ticks.length = unit(5, "pt")) +
   scale_x_date(date_breaks = "4 month", date_labels = "%d/%b/%y") +
   scale_color_manual(values = colors) +
-  ggtitle("Linear regression model with independent variables tavg and date_simplified")
+  ggtitle("Linear regression model with independent variables tavg and trend")
 
 ggplot(test_data %>% filter(year(date)>=2020)) +
 geom_point(aes(x = pred,y = noRides)) +
@@ -455,7 +460,7 @@ ggplot(test_data %>% filter(year(date)>=2020))+
            theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-            ggtitle("Residuals over time for linear regression model with independent variables tavg + date_simplified")
+            ggtitle("Residuals over time for linear regression model with independent variables tavg + trend")
 
 ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
             geom_point()+
@@ -468,11 +473,11 @@ ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
            theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-            ggtitle("Residuals over predicted values for linear regression model with independent variables tavg + date_simplified")
+            ggtitle("Residuals over predicted values for linear regression model with independent variables tavg + trend")
 
 ```
 
-The final linear regression model projects the daily number of KEXI rides as the dependent variable with the variables tavg and date_simplified as independent variables. With p-values of < 2e-16 both independent variables are of very high significance for explaining the dependent variable. The final adjusted R-squared value is 0.7847, which means that 78% of variance in the dependent variable (daily number of KEXI rides) can be explained by the independent variables.
+The final linear regression model projects the daily number of KEXI rides as the dependent variable with the variables tavg and trend as independent variables. With p-values of < 2e-16 both independent variables are of very high significance for explaining the dependent variable. The final adjusted R-squared value is 0.7847, which means that 78% of variance in the dependent variable (daily number of KEXI rides) can be explained by the independent variables.
 
 The scatter plot, which compares the predicted number of KEXI rides with the observed number of rides per day, indicates that a linear regression approach is the right tool to describe the dependency of the number of KEXI rides on weather parameters when including a date variable, too. The predicted values have a linear form. The scatter plot as well as the residuals plot show a time span at the end  of June 2021 / beginning of July 2021, where the observed number of KEXI rides values drop to almost 0 and therefore, the linear regression model cannot predict adequate values. This is explained by a change of operators, which resulted in some days of service down time. Due to this explanation the gap will be ignored.
 
@@ -482,7 +487,7 @@ As the resulting linear regression model has been determined, in the concluding 
 
 barplot <- ggplot(test_data, aes(x = resid ))+
   geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=9)+
-  ggtitle("Final residuals distributions with independent variables tavg + date_simplified")
+  ggtitle("Final residuals distributions with independent variables tavg + trend")
 
 ggplotly(barplot)
 
@@ -542,4 +547,4 @@ ggplotly(plot1)
 # Conclusion
 
 The performed linear regression analysis aimed to better understand the relation of daily number of KEXI rides and multiple weather variables. The real demand data, which is the base for this analysis, showed some significant demand differences depending on whether the date is on a weekend or not as well as whether it is a holiday or not. Hence all holidays and weekends were excluded from the analysis. A general correlation analysis (Pearson correlation coefficients) was performed to get a first idea of the parameter's influence on the daily number of KEXI rides. Only wind and temperature related variables seem to have a meaningful impact on the number of daily rides. As the real demand data is from a time span in which there were many pandemic related restrictions upon the society a strictness of covid policies was taken into account, too. The aforementioned had the strongest correlation on the daily number of KEXI rides.
-A first linear regression model showed a continuous growing trend of daily rides, which led to the conclusion to also integrate a date variable. The inclusion of date improved the model's quality dramatically. In a next step all the non-significant independent weather related variables were excluded. The model's accuracy stayed the same after that step. In a last step covid policy stringency also was excluded from the model because it was non-significant, too. The final linear regression model explains the daily number of KEXI rides (dependent variable) by using variables for average temperature (tavg) and date (date_simplified). Most importantly, the F-statistic for the calculated regression has a p-value of < 2.2e-16. In general, if the p-value is lower than 0.05, the null hypothesis can be revoked, which means that the performed linear regression provides a significant contribution to the change of the daily number of KEXI rides. The model's accuracy is 0.7847 with a residual standard error of 16.09. A scatter plot of observed number of rides vs. predicted number of rides depicts a linear form for the predicted values, which means that a linear regression is the adequate form of analysis. The residuals distribution in a normal form as well as the linear form of the Quantile-Quantile Plot prove the linearity of the calculated linear regression model.
+A first linear regression model showed a continuous growing trend of daily rides, which led to the conclusion to also integrate a date variable. The inclusion of date improved the model's quality dramatically. In a next step all the non-significant independent weather related variables were excluded. The model's accuracy stayed the same after that step. In a last step covid policy stringency also was excluded from the model because it was non-significant, too. The final linear regression model explains the daily number of KEXI rides (dependent variable) by using variables for average temperature (tavg) and date (trend). Most importantly, the F-statistic for the calculated regression has a p-value of < 2.2e-16. In general, if the p-value is lower than 0.05, the null hypothesis can be revoked, which means that the performed linear regression provides a significant contribution to the change of the daily number of KEXI rides. The model's accuracy is 0.7847 with a residual standard error of 16.09. A scatter plot of observed number of rides vs. predicted number of rides depicts a linear form for the predicted values, which means that a linear regression is the adequate form of analysis. The residuals distribution in a normal form as well as the linear form of the Quantile-Quantile Plot prove the linearity of the calculated linear regression model.
