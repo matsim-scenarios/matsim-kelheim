@@ -23,6 +23,8 @@ library(rjson)
 rendername = "resultDemo.Rmd"
 ```
 
+ IMPORTANT NOTE: The code in this script is kept up to date, the description texts do not have to match the plots / code. This is due to a paper being worked out at the same time, so all the descriptions are made there. - SME0823
+
 # Input data
 
 Input data is taken from the following resources:
@@ -52,17 +54,19 @@ colnames(ingolstadt_weather) <- c("date", "tavg", "tmin", "tmax", "prcp", "snow"
 weatherstack_kelheim <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Kelheim_weather_since_july_2008.csv",delim = ",")
 
 # Stringency
-json <- fromJSON(file = "C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/2022-11-10.json")
+json <- fromJSON(file = "C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/2022-12-31.json")
 json <- unlist(json)
 #Mobility
-demand <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate2022.csv")
-#demand <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate2022_OLD_WRONG_DATA_HANDLING.csv")
+demand <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate.csv")
+
+requests <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allRequestsByDate.csv")
 
 #Holidays
 holidays2020 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
 holidays2021 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2021.csv") %>% dplyr::select(1,2,3)
 holidays2022 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2022.csv") %>% dplyr::select(1,2,3)
-holidays <- rbind(holidays2020,holidays2021,holidays2022)
+holidays2023 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2023.csv") %>% dplyr::select(1,2,3)
+holidays <- rbind(holidays2020,holidays2021,holidays2022,holidays2023)
 holidays <- holidays %>% mutate(EndDateTime1 = as.Date(as.POSIXct(EndDateTime1, format = "%m.%d.%Y %H:%M")),
                                StartDateTime1 = as.Date(as.POSIXct(StartDateTime1, format = "%m.%d.%Y %H:%M")))
 
@@ -87,6 +91,15 @@ deu_stringency <- json[grep("DEU.stringency_actual",names(json))]
 date_stringency <- sapply(strsplit(names(deu_stringency),split = ".",fixed = TRUE),"[[",2)
 df_stringency <- data.frame(date = date_stringency,stringency = deu_stringency)
 df_stringency <- df_stringency %>% mutate(stringency = as.numeric(stringency), date = as.Date(date))
+
+stringency2022 <- df_stringency %>% filter(date > as.Date("2021-12-31"))
+meanStringency2022 <- mean(stringency2022$stringency)
+
+# dates of missing covid data since 2023.
+stringency2023 <- data.frame(date = as.Date(c(ymd("2023-01-01"):ymd("2023-07-08")), origin = "1970-01-01")) %>% 
+  mutate(stringency = 11.11)
+
+df_stringency <- rbind(df_stringency,stringency2023)
 
 
 
@@ -123,6 +136,7 @@ day_description_impact <- day_description_impact %>% group_by(date)%>%
 #####Join the data#####
 
 result_data <- demand %>% left_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
+# result_data <- requests %>% left_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d")) %>% rename(noRides = `noRequests`)
 #Also need to be added weekday and simplified date variable
 result_data <- result_data %>% 
   mutate(wday = as.character(wday(date,week_start = 1))) %>%
@@ -131,14 +145,11 @@ result_data <- result_data %>%
   mutate(trend = as.integer(date) - as.integer(min(result_data$date)))
 
 #Append holidays
-result_data <- result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0)) %>% mutate(weekday = wday(date))
+result_data <- result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0))
 #%>% filter(noRides != 0) #%>% filter(date <"2021-07-01")
 
 sundays <- result_data %>% 
   filter(wday == 7)
-
-meanRidesSunday <- mean(sundays$noRides)
-medianRidesSundy <- median(sundays$noRides)
 
 head(result_data)
 ```
@@ -157,7 +168,11 @@ result_data <- result_data %>%
   mutate(tdiff = ifelse(season == "winter",tavg-winter,NA)) %>%
   mutate(tdiff = ifelse(season == "spring",tavg-spring,tdiff)) %>%
   mutate(tdiff = ifelse(season == "autumn",tavg-autumn,tdiff)) %>%
-  mutate(tdiff = ifelse(season == "summer",tavg-summer,tdiff))
+  mutate(tdiff = ifelse(season == "summer",tavg-summer,tdiff)) %>% 
+  mutate(wday_char = wday(date,
+       label  = TRUE,
+       abbr = TRUE,
+       locale = "USA"))
 
 ```
 
@@ -172,7 +187,7 @@ plot_data$isHoliday[plot_data$isHoliday==TRUE] <- "Holiday"
 plot_data$isHoliday[plot_data$isHoliday==FALSE] <- "Non-holiday"
 
 wday_plot <- ggplot(plot_data)+
-  geom_boxplot(aes(x = wday,y = noRides)) +
+  geom_boxplot(aes(x = wday_char,y = noRides,col=wday_char)) +
   xlab("Weekday") + 
   ylab("Number of rides") +
   labs(title="Daily no of KEXI rides per weekday") +
@@ -240,7 +255,7 @@ To get a general impression of the above weather parameters' influence on the nu
 # print(cor(test_cor))
 
 best_pred <- result_data  %>% ungroup() %>%
-  dplyr::select(-noRides,-description ,-date, -trend,-season,-wday) %>%
+  dplyr::select(-noRides,-description ,-date, -trend,-season,-wday,-wday_char) %>%
   map_dbl(cor,y = result_data$noRides) %>%
   #map_dbl(abs) %>%
   sort(decreasing = TRUE) 
@@ -258,7 +273,9 @@ After the determination of correlations between the daily number of KEXI rides a
 data <- result_data
 
 # omega_model <- lm(noRides ~ tavg+pres+stringency+snow+wspd,data = data)
-omega_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+tdiff+tmax+tavg+tmin+pres,data = data)
+omega_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+snow+tmax+tavg+tmin+pres,data = data)
+# omega_model <- lm(noRides ~ stringency+wspd+wpgt+snow+tmax+tavg+tmin+tdiff,data = data)
+# omega_model <- lm(noRides ~ wdir+snow+tmax+tavg+tmin+pres,data = data)
 
 summary(omega_model)
 
@@ -270,7 +287,8 @@ The above model implies that only the parameters stringency, tdiff and tavg are 
 
 ```{r omega residuals,out.width="100%"}
 
-colors <- c("observed" = "blue","predicted" = "red")
+# colors <- c("Sun" = "darkorchid4","predicted" = "red", "Mon" = "darkblue", "Tue" = "deepskyblue4", "Wed" = "deepskyblue2", "Thu" = "cadetblue4", "Fri" = "chartreuse4", "Sat" = "darkgoldenrod2", "residuals" = "gray50" )
+colors <- c("predicted" = "red")
 model <- omega_model
 test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
@@ -282,16 +300,16 @@ test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = m
 #   ggtitle("First Linear regression model"))
 
 ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(aes(x = date,y = noRides,color = "observed"))+
-  geom_line(aes(x = date,y = pred,color = "predicted"), size = 1.2)+
+  geom_point(aes(x = date,y = noRides,col=wday_char))+
+  geom_line(mapping=aes(x = date,y = pred),col="red", size = 1.2)+
   theme_minimal() +
   xlab("Date") +
   theme(legend.position = "bottom", legend.title = element_blank()) +
   theme(axis.ticks.x = element_line(), 
                    axis.ticks.y = element_line(),
                    axis.ticks.length = unit(5, "pt")) +
-  scale_x_date(date_breaks = "4 month", date_labels = "%d/%b/%y") +
-  scale_color_manual(values = colors) +
+  scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
+  #scale_color_manual(values = colors) +
   ggtitle("First Linear regression model")
 
 #ggsave("C:/Users/Simon/Desktop/wd/2023-07-31/first-regression-model.png", modelPlot)
@@ -325,7 +343,9 @@ The residuals plot indicates a continuous growing trend for the number of daily 
 ```{r omega date residuals,out.width="100%"}
 
 # omega_date_model = lm(noRides ~ tavg+pres+stringency+snow+date+season+wspd,data = data)
-omega_date_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+tdiff+tmax+tavg+tmin+pres+trend,data = data)
+omega_date_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+snow+tmax+tavg+tmin+pres+trend,data = data)
+# omega_date_model<- lm(noRides ~ wdir+snow+tmax+tavg+tmin+pres+trend,data = data)
+# omega_date_model <- lm(noRides ~ stringency+wspd+wpgt+snow+tmax+tavg+tmin+tdiff+trend,data = data)
 
 summary(omega_date_model)
 ```
@@ -334,16 +354,19 @@ summary(omega_date_model)
 
 ```{r,out.width="100%"}
 colors <- c("observed" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+# colors <- c("Sun" = "darkorchid4","predicted" = "red", "Mon" = "darkblue", "Tue" = "deepskyblue4", "Wed" = "deepskyblue2", "Thu" = "cadetblue4", "Fri" = "chartreuse4", "Sat" = "darkgoldenrod2", "residuals" = "gray50" )
 model <- omega_date_model
 test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
-cor_tmin_tavg <- cor(test_data$tmin, test_data$tavg)
-print(paste("correlation of tmin and tavg:",cor_tmin_tavg))
+# cor_tmin_tavg <- cor(test_data$tmin, test_data$tavg)
+cor_stringency_trend <- cor(test_data$stringency, test_data$trend)
+# print(paste("correlation of tmin and tavg:",cor_tmin_tavg))
+print(paste("correlation of stringency and trend:",cor_stringency_trend))
 
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(aes(x = date,y = noRides,color = "observed"))+
-  geom_point(aes(x = date,y = pred,color = "predicted"))+
-  scale_color_manual(values = colors)+
+  geom_point(aes(x = date,y = noRides,col=wday_char))+
+  geom_point(aes(x = date,y = pred),col="red")+
+  #scale_color_manual(values = colors)+
   ggtitle("Linear regression model with date parameter"))
 ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
             geom_line(aes(x = date,y = resid,color = "residuals"))+
@@ -374,7 +397,7 @@ The above linear regression model includes multiple parameters, which are marked
 ```{r reduced model 1 residuals}
 
 # reduced_1_model <- lm(noRides ~ tavg+pres+stringency+snow+weather_impact*description+date+wspd,data = data)
-reduced_1_model <- lm(noRides ~ stringency+tavg+trend, data = data)
+reduced_1_model <- lm(noRides ~ stringency+pres+trend, data = data)
 
 summary(reduced_1_model)
 
@@ -388,11 +411,12 @@ summary(reduced_1_model)
 ```{r reduced model 2 residuals}
 
 # reduced_2_model <- lm(noRides ~ tavg+pres+stringency+weather_impact+description+date,data = data)
-reduced_2_model <- lm(noRides ~ stringency+tmin+trend, data = data)
+reduced_2_model <- lm(noRides ~ pres+trend, data = data)
 
 summary(reduced_2_model)
 
 colors <- c("observed" = "blue","predicted" = "red","residuals" = "gray50","zerorides" = "purple")
+# colors <- c("Sun" = "darkorchid4","predicted" = "red", "Mon" = "darkblue", "Tue" = "deepskyblue4", "Wed" = "deepskyblue2", "Thu" = "cadetblue4", "Fri" = "chartreuse4", "Sat" = "darkgoldenrod2", "residuals" = "gray50" )
 model <- reduced_2_model
 test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
@@ -413,20 +437,21 @@ print(cor(cor_check))
 
 data <- data %>%
   mutate(dateDependentTemperature = tavg * trend)
-reduced_3_model <- lm(noRides ~ tavg+trend, data = data)
+reduced_3_model <- lm(noRides ~ pres+trend, data = data)
 
 summary(reduced_3_model)
 
 confint(reduced_3_model) #95% confidence interval
 
 colors <- c("observed" = "blue","Predicted" = "red")
+# colors <- c("Sun" = "darkorchid4","predicted" = "red", "Mon" = "darkblue", "Tue" = "deepskyblue4", "Wed" = "deepskyblue2", "Thu" = "cadetblue4", "Fri" = "chartreuse4", "Sat" = "darkgoldenrod2", "residuals" = "gray50" )
 model <- reduced_3_model
 test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 
 ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(aes(x = date,y = noRides,color = "observed"))+
-  geom_line(aes(x = date,y = pred,color = "Predicted"), size = 1.2)+
+  geom_point(aes(x = date,y = noRides,col=wday_char))+
+  geom_line(aes(x = date,y = pred),col = "red", size = 1.2)+
   theme_minimal() +
   xlab("Date") +
   theme(legend.position = "bottom", legend.title = element_blank()) +
@@ -434,8 +459,8 @@ ggplot(test_data %>% filter(year(date)>=2020)) +
                    axis.ticks.y = element_line(),
                    axis.ticks.length = unit(5, "pt")) +
   scale_x_date(date_breaks = "4 month", date_labels = "%d/%b/%y") +
-  scale_color_manual(values = colors) +
-  ggtitle("Linear regression model with independent variables tavg and trend")
+  #scale_color_manual(values = colors) +
+  ggtitle("Linear regression model with independent variables pres and trend")
 
 ggplot(test_data %>% filter(year(date)>=2020)) +
 geom_point(aes(x = pred,y = noRides)) +
@@ -460,7 +485,7 @@ ggplot(test_data %>% filter(year(date)>=2020))+
            theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-            ggtitle("Residuals over time for linear regression model with independent variables tavg + trend")
+            ggtitle("Residuals over time for linear regression model with independent variables pres + trend")
 
 ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
             geom_point()+
@@ -473,7 +498,7 @@ ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
            theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-            ggtitle("Residuals over predicted values for linear regression model with independent variables tavg + trend")
+            ggtitle("Residuals over predicted values for linear regression model with independent variables pres + trend")
 
 ```
 
@@ -487,7 +512,7 @@ As the resulting linear regression model has been determined, in the concluding 
 
 barplot <- ggplot(test_data, aes(x = resid ))+
   geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=9)+
-  ggtitle("Final residuals distributions with independent variables tavg + trend")
+  ggtitle("Final residuals distributions with independent variables pres + trend")
 
 ggplotly(barplot)
 
