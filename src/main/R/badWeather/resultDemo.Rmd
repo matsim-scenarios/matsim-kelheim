@@ -518,7 +518,7 @@ geom_point(aes(x = pred,y = noRides)) +
 geom_abline(aes(intercept = 0, slope = 1), size = 1.5, color = "forestgreen") +
 theme_minimal() +
 xlab("Predicted noRides") +
-ylab("observed noRides") +
+ylab("Observed noRides") +
 theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt")) +
@@ -543,7 +543,7 @@ ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
           #  geom_ref_line(h = 0)+
             scale_color_manual(values = colors)+
   geom_smooth(method ="loess", se = FALSE, color = "#666666", size = 1.5) +
-           xlab("predicted noRides") +
+           xlab("Predicted noRides") +
            ylab("Residuals") +
            theme_minimal() +
            theme(axis.ticks.x = element_line(), 
