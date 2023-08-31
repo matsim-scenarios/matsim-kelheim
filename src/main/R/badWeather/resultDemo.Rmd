@@ -492,6 +492,7 @@ summary(final_model)
 confint(final_model) #95% confidence interval
 
 colors <- c("predicted" = "red", "Mon" = "darkblue", "Tue" = "deepskyblue4", "Wed" = "deepskyblue2", "Thu" = "cadetblue4", "Fri" = "chartreuse4")
+colors2 <- c("Identity line" = "black", "Mon" = "darkblue", "Tue" = "deepskyblue4", "Wed" = "deepskyblue2", "Thu" = "cadetblue4", "Fri" = "chartreuse4")
 model <- final_model
 test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
@@ -514,15 +515,21 @@ ggplot(test_data %>% filter(year(date)>=2020)) +
   #ggtitle("Linear regression model with independent variables snow, tavg and trend")
 
 ggplot(test_data %>% filter(year(date)>=2020)) +
-geom_point(aes(x = pred,y = noRides)) +
-geom_abline(aes(intercept = 0, slope = 1), size = 1.5, color = "forestgreen") +
+# geom_point(aes(x = pred,y = noRides)) +
+  geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = pred,y = noRides,color="Mon"))+
+  geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = pred,y = noRides,color="Tue"))+
+  geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = pred,y = noRides,color="Wed"))+
+  geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = pred,y = noRides,color="Thu"))+
+  geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = pred,y = noRides,color="Fri"))+
+geom_abline(aes(intercept = 0, slope = 1,color="Identity line"), size = 1.5) +
 theme_minimal() +
 xlab("Predicted noRides") +
 ylab("Observed noRides") +
 theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt")) +
-  ggtitle("observed vs. Predicted noRides")
+  ggtitle("Observed vs. Predicted noRides") +
+  scale_color_manual(values = colors2)
   
 ```
 ```{r,,out.width="100%",out.height="95%"}
