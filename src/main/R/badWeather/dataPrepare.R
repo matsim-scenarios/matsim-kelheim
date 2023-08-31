@@ -1,5 +1,6 @@
 library(lubridate)
 library(tidyverse)
+library(dplyr)
 
 #this script is an adaptation of an Rmd script which was then deleted.
 # I created an .R script because it is more understandable. -sme0823
