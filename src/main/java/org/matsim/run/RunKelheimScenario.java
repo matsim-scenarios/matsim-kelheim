@@ -54,7 +54,6 @@ import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
-import org.matsim.run.utils.KelheimCaseStudyTool;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.SimWrapperModule;
 import org.matsim.vehicles.VehicleType;
@@ -102,19 +101,13 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--av-fare", defaultValue = "0.0", description = "AV fare (euro per trip)")
 	private double avFare;
 
-	/**
-	 * this command line option allows to circumvent setting the drt service area per config. Not my preferred option, but its used to reduce nr. of configs (ts 07/23)
-	 */
-	@CommandLine.Option(names = "--case-study", defaultValue = "NULL", description = "Case study for the av scenario")
-	private KelheimCaseStudyTool.AvServiceArea avServiceArea;
-
 	@CommandLine.Option(names = "--bike-rnd", defaultValue = "false", description = "enable randomness in ASC of bike")
 	private boolean bikeRnd;
 
 	@CommandLine.Option(names = "--random-seed", defaultValue = "4711", description = "setting random seed for the simulation")
 	private long randomSeed;
 
-	@CommandLine.Option(names = "--intermodal", defaultValue = "false", description = "enable DRT service")
+	@CommandLine.Option(names = "--intermodal", defaultValue = "false", description = "enable intermodality for DRT service")
 	private boolean intermodal;
 
 	public RunKelheimScenario(@Nullable Config config) {
@@ -312,9 +305,6 @@ public class RunKelheimScenario extends MATSimApplication {
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
-				if (drtCfg.getMode().equals("av")) {
-					KelheimCaseStudyTool.setConfigFile(config, drtCfg, avServiceArea);
-				}
 			}
 
 			//controler.addOverridingModule(new DrtEstimatorModule());
