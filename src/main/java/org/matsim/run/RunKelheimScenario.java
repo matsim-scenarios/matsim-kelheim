@@ -107,7 +107,7 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--random-seed", defaultValue = "4711", description = "setting random seed for the simulation")
 	private long randomSeed;
 
-	@CommandLine.Option(names = "--intermodal", defaultValue = "false", description = "enable DRT service")
+	@CommandLine.Option(names = "--intermodal", defaultValue = "false", description = "enable intermodality for DRT service")
 	private boolean intermodal;
 
 	@CommandLine.Option(names = "--plans", defaultValue = "", description = "Use different input plans")
