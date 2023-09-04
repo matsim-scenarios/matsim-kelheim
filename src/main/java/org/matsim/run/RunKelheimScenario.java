@@ -79,7 +79,7 @@ import java.util.SplittableRandom;
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-	static final String VERSION = "3.0";
+	public static final String VERSION = "3.0";
 	private static final double WEIGHT_1_PASSENGER = 16517.;
 	private static final double WEIGHT_2_PASSENGER = 2084.;
 	private static final double WEIGHT_3_PASSENGER = 532.;
