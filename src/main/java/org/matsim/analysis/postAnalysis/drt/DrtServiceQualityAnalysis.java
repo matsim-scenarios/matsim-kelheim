@@ -31,7 +31,6 @@ import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.core.utils.gis.ShapeFileWriter;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.run.RunKelheimScenario;
 import org.matsim.utils.gis.shp2matsim.ShpGeometryUtils;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleType;
@@ -80,7 +79,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
 			Files.createDirectory(outputFolder);
 		}
 
-		Config config = ConfigUtils.loadConfig(configPath.toString());
+		Config config = ConfigUtils.loadConfig(configPath.toString(), new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
 		int lastIteration = config.controler().getLastIteration();
 		String runId = config.controler().getRunId();
 		Path folderOfLastIteration = Path.of(directory.toString() + "/ITERS/it." + lastIteration);
@@ -88,11 +87,6 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
 		List<String> modes = new ArrayList<>();
 		for (DrtConfigGroup drtCfg : multiModeDrtConfigGroup.getModalElements()) {
 			modes.add(drtCfg.getMode());
-			//only the KEXI (conventionally driven drt) should get companions
-			if (drtCfg.getMode().equals(TransportMode.drt)) {
-				DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtCfg;
-				RunKelheimScenario.addDrtCompanionParameters(drtWithExtensionsConfigGroup);
-			}
 		}
 
 		VehicleType vehicleTypeAv = VehicleUtils.createVehicleType(Id.create("av_type_for_route_calculation", VehicleType.class));

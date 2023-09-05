@@ -33,12 +33,11 @@
     </module>
 
     <module name="vehicles">
-        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-vehicle-types.xml"/>
+        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-vehicle-types-with-drt.xml"/>
     </module>
 
-
     <module name="transit">
-        <param name="transitScheduleFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-transitSchedule.xml.gz"/>
+        <param name="transitScheduleFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-transitSchedule-with-intermodal-stops.xml.gz"/>
         <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-transitVehicles.xml.gz"/>
         <param name="useTransit" value="true"/>
     </module>
@@ -68,7 +67,7 @@
         <param name="trafficDynamics" value="kinematicWaves"/>
         <param name="linkDynamics" value="FIFO"/>
         <param name="useLanes" value="false"/>
-
+        <param name="simStarttimeInterpretation" value="onlyUseStarttime"/>
         <param name="vehiclesSource" value="modeVehicleTypesFromVehiclesData"/>
         <param name="insertingWaitingVehiclesBeforeDrivingVehicles" value="true"/>
     </module>
@@ -124,7 +123,7 @@
 
     <module name="subtourModeChoice">
         <param name="chainBasedModes" value="car,bike"/>
-        <param name="modes" value="car,pt,bike,walk,ride"/>
+        <param name="modes" value="car,pt,bike,walk,ride,drt"/>
         <param name="considerCarAvailability" value="true"/>
         <param name="behavior" value="betweenAllAndFewerConstraints"/>
         <param name="probaForRandomSingleTripMode" value="0.5"/>
@@ -163,9 +162,17 @@
 
         <parameterset type="scoringParameters">
             <!-- mode ASCs come from auto-calibration-->
-			<!-- For a bit of documentation on the non-zero marginal utilities per m, see the following link-->
+            <!-- For a bit of documentation on the non-zero marginal utilities per m, see the following link-->
 			<!-- https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/matsim-kelheim-v3.0-calibration-mode-parameters.pdf -->
             <param name="waitingPt" value="-1.6"/>
+
+            <parameterset type="modeParams">
+                <param name="constant" value="2.45" />
+                <param name="marginalUtilityOfDistance_util_m" value="-2.5E-4" /> <!-- need this to fit the KEXI real data (Jan' 2022 - July 2023)-->
+                <param name="marginalUtilityOfTraveling_util_hr" value="0.0" />
+                <param name="mode" value="drt" />
+                <param name="monetaryDistanceRate" value="0.0" />
+            </parameterset>
 
             <parameterset type="modeParams" >
                 <param name="constant" value="0.10908902922956654" />
@@ -231,4 +238,106 @@
         <!-- maximum beeline distance between stops that agents could transfer to by walking -->
         <param name="maxBeelineWalkConnectionDistance" value="300.0"/>
     </module>
+
+    <module name="multiModeDrt">
+        <parameterset type="drt">
+            <param name="mode" value="drt"/>
+            <parameterset type="ExtensiveInsertionSearch" >
+                <param name="admissibleBeelineSpeedFactor" value="1.0" />
+                <param name="nearestInsertionsAtEndLimit" value="10" />
+            </parameterset>
+            <!-- If true, the startLink is changed to last link in the current schedule, so the taxi starts the next day at the link where it stopped operating the day before. False by default. -->
+            <param name="changeStartLinkToLastLinkInSchedule" value="false"/>
+            <!-- Defines the slope of the maxTravelTime estimation function (optimisation constraint), i.e. maxTravelTimeAlpha * estimated_drt_travel_time + maxTravelTimeBeta. Alpha should not be smaller than 1. -->
+            <param name="maxTravelTimeAlpha" value="1.5"/>
+            <!-- Defines the shift of the maxTravelTime estimation function (optimisation constraint), i.e. maxTravelTimeAlpha * estimated_drt_travel_time + maxTravelTimeBeta. Beta should not be smaller than 0. -->
+            <param name="maxTravelTimeBeta" value="1200.0"/>
+            <!-- Max wait time for the bus to come (optimisation constraint). -->
+            <param name="maxWaitTime" value="1200.0"/>
+            <!-- Maximum walk distance to next stop location in stationbased system. -->
+            <param name="maxWalkDistance" value="1500.0"/>
+            <param name="rejectRequestIfMaxWaitOrTravelTimeViolated" value="false" />
+            <!-- Operational Scheme, either door2door or stopbased. door2door by default -->
+            <param name="operationalScheme" value="stopbased"/>
+            <!-- Bus stop duration. -->
+            <param name="stopDuration" value="60.0"/>
+            <!-- Stop locations file (transit schedule format, but without lines) for DRT stops. Used only for the stopbased mode -->
+            <param name="transitStopFile" value="kelheim-v3.0-drt-stops.xml"/>
+            <!-- Writes out detailed DRT customer stats in each iteration. True by default. -->
+            <param name="writeDetailedCustomerStats" value="true"/>
+            <parameterset type="zonalSystem">
+                <param name="zonesGeneration" value="ShapeFile"/>
+                <!--<param name="cellSize" value="200"/>-->
+                <param name="zonesShapeFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/shp/kelheim-v2.0-drtZonalAnalysisSystem.shp" />
+            </parameterset>
+            <!--<parameterset type="rebalancing">
+                <parameterset type="minCostFlowRebalancingStrategy">
+                    <param name="targetAlpha" value="0.5"/>
+                    <param name="targetBeta" value="0.5"/>
+                </parameterset>-->
+<!--             </parameterset> -->
+        </parameterset>
+    </module>
+
+    <module name="dvrp" >
+        <!-- Mode of which the network will be used for routing vehicles, calculating travel times, etc. (fleet operator's perspective). If null, no mode filtering is done; the standard network (Scenario.getNetwork()) is used -->
+        <param name="networkModes" value="drt,av"/>
+
+        <!-- Used for estimation of travel times for VrpOptimizer by means of the exponential moving average. The weighting decrease, alpha, must be in (0,1]. We suggest small values of alpha, e.g. 0.05. The averaging starts from the initial travel time estimates. If not provided, the free-speed TTs is used as the initial estimates For more info see comments in: VrpTravelTimeEstimator, VrpTravelTimeModules, DvrpModule. -->
+        <param name="travelTimeEstimationAlpha" value="0.05" />
+        <parameterset type="travelTimeMatrix">
+            <param name="cellSize" value="200"/>
+        </parameterset>
+    </module>
+
+
+    <module name="swissRailRaptor">
+        <!--  Sets whether intermodal access and egress modes are selected by least cost (default) or randomly chosen out of the available access / egress modes.  -->
+        <param name="intermodalAccessEgressModeSelection" value="CalcLeastCostModePerStop"/>
+        <!--  Possible values: Default, Individual  -->
+        <param name="scoringParameters" value="Default"/>
+        <param name="transferPenaltyBaseCost" value="0.0"/>
+        <param name="transferPenaltyCostPerTravelTimeHour" value="0.0"/>
+        <param name="transferPenaltyMaxCost" value="Infinity"/>
+        <param name="transferPenaltyMinCost" value="-Infinity"/>
+        <!--  time deducted from transfer walk leg during transfers between pt legs in order to avoid missing a vehicle by a few seconds due to delays.  -->
+        <param name="transferWalkMargin" value="5.0"/>
+        <!--  If true, SwissRailRaptor tries to detect when agents cannot board a vehicle in the previous iteration because it is already full and tries to find an alternative route instead.  -->
+        <param name="useCapacityConstraints" value="false"/>
+        <param name="useModeMappingForPassengers" value="false"/>
+        <param name="useRangeQuery" value="false"/>
+        <param name="useIntermodalAccessEgress" value="true"/>
+        <parameterset type="intermodalAccessEgress">
+            <!--  Radius from the origin / destination coord in which transit stops are searched. Only if less than 2 transit stops are found the search radius is increased step-wise until the maximum search radius set in param radius is reached.  -->
+            <param name="initialSearchRadius" value="10000.0"/>
+            <!--  If the mode is routed on the network, specify which linkId acts as access link to this stop in the transport modes sub-network.  -->
+            <param name="linkIdAttribute" value="null"/>
+            <!--  Radius from the origin / destination coord in which transit stops are accessible by this mode.  -->
+            <param name="maxRadius" value="10000.0"/>
+            <param name="mode" value="drt"/>
+            <param name="personFilterAttribute" value="null" />
+            <param name="personFilterValue" value="null" />
+            <!--  If less than 2 stops were found in initialSearchRadius take the distance of the closest transit stop and add this extension radius to search again.The search radius will not exceed the maximum search radius set in param radius. Default is 200 meters.  -->
+            <param name="searchExtensionRadius" value="1000.0"/>
+            <!--  The share of the trip crowfly distance within which the stops for access and egress will be searched for. This is a harder constraint than initial search radius. Default is positive infinity.  -->
+            <param name="shareTripSearchRadius" value="Infinity"/>
+            <!--  Name of the transit stop attribute used to filter stops that should be included in the set of potential stops for access and egress. The attribute should be of type String. 'null' disables the filter and all stops within the specified radius will be used.  -->
+            <param name="stopFilterAttribute" value="allowDrtAccessEgress"/>
+            <!--  Only stops where the filter attribute has the value specified here will be considered as access or egress stops.  -->
+            <param name="stopFilterValue" value="true"/>
+        </parameterset>
+            <parameterset type="intermodalAccessEgress">
+            <param name="initialSearchRadius" value="1500.0"/>
+            <param name="linkIdAttribute" value="null"/>
+            <param name="maxRadius" value="100000.0"/>
+            <param name="mode" value="walk"/>
+            <param name="personFilterAttribute" value="null"/>
+            <param name="personFilterValue" value="null"/>
+            <param name="searchExtensionRadius" value="1000.0"/>
+            <param name="shareTripSearchRadius" value="Infinity"/>
+            <param name="stopFilterAttribute" value="null"/>
+            <param name="stopFilterValue" value="null"/>
+        </parameterset>
+    </module>
+
 </config>

@@ -24,17 +24,19 @@ VIArides2021 <- read.csv2("VIA_Rides_202106_202201.csv", stringsAsFactors = FALS
 VIArides2022_1 <- read.csv2("VIA_Rides_202201_202210.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
 VIArides2022_2 <- read.csv2("VIA_Rides_202210_202212.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
 VIArides2023_1 <- read.csv2("VIA_Rides_202212_202303.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
+VIArides2023_2 <- read.csv2("VIA_Rides_202304_202307.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
 
 VIAridesAll <- union(VIArides2021, VIArides2022_1)
 VIAridesAll <- union(VIAridesAll, VIArides2022_2)
-VIAridesAll <- union(VIAridesAll, VIArides2023_1) %>%
+VIAridesAll <- union(VIAridesAll, VIArides2023_1)
+VIAridesAll <- union(VIAridesAll, VIArides2023_2) %>%
   filter(!is.na(Actual.Pickup.Time))
 
 VIAridesSince2022 <- VIAridesAll %>%
   filter(year(Actual.Pickup.Time) >= year(ymd("2022-01-01")))
 
-datasets <- list(VIArides2021, VIArides2022_1, VIArides2022_2, VIArides2023_1, VIAridesSince2022, VIAridesAll)
-names <- c("VIA_data_202106_202201","VIA_data_202201_202210","VIA_data_202210_202212","VIA_data_202212_202303","VIAdataSince2022","VIAdataAll")
+datasets <- list(VIArides2021, VIArides2022_1, VIArides2022_2, VIArides2023_1, VIArides2023_2, VIAridesSince2022, VIAridesAll)
+names <- c("VIA_data_202106_202201","VIA_data_202201_202210","VIA_data_202210_202212","VIA_data_202212_202303","VIA_data_202304_202307","VIAdataSince2022","VIAdataAll")
 i <- 1
 
 avgValues <- setNames(data.frame(matrix(ncol = 14, nrow = 0)), c("dataset", "avgBookingsPerDay", "avgDistance_<5km[m]", "avgDistance_withoutFilter[m]", "avgTravelTime[s]",
