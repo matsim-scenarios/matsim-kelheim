@@ -262,7 +262,7 @@
             <!-- Bus stop duration. -->
             <param name="stopDuration" value="60.0"/>
             <!-- Stop locations file (transit schedule format, but without lines) for DRT stops. Used only for the stopbased mode -->
-            <param name="transitStopFile" value="kelheim-v3.0-drt-stops.xml"/>
+            <param name="transitStopFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-drt-stops.xml"/>
             <!-- Writes out detailed DRT customer stats in each iteration. True by default. -->
             <param name="writeDetailedCustomerStats" value="true"/>
             <parameterset type="zonalSystem">
