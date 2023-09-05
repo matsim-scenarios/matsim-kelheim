@@ -2,9 +2,9 @@
 
 [![Build Status](https://github.com/matsim-scenarios/matsim-kelheim/actions/workflows/build.yaml/badge.svg)](https://github.com/matsim-scenarios/matsim-kelheim/actions/workflows/build.yaml)
 ![license](https://img.shields.io/github/license/matsim-scenarios/matsim-kelheim.svg)
-![JDK](https://img.shields.io/badge/JDK-11+-green.svg)
+![JDK](https://img.shields.io/badge/JDK-17+-green.svg)
 
-![Kelheim MATSim network and agents](scenarios/visualization-kelheim.png "Kelheim MATSim network and agents")
+![Kelheim MATSim network and agents](visualization-kelheim.png "Kelheim MATSim network and agents")
 
 
 ### About this project
@@ -33,7 +33,7 @@ Handling of large files within git is not without problems (git lfs files are no
 
 The Kelheim scenario has a command line interface providing the following options:
 
-![Kelheim Scenario CLI](scenarios/cli.png "Kelheim Scenario CLI")
+![Kelheim Scenario CLI](cli.png "Kelheim Scenario CLI")
 
 It can be used by using either of these methods:
 
