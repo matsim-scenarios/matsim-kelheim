@@ -270,9 +270,22 @@ best_pred <- result_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-trend,-season,-wday,-wday_char) %>%
   map_dbl(cor,y = result_data$noRides) %>%
   #map_dbl(abs) %>%
-  sort(decreasing = TRUE) 
+  sort(decreasing = TRUE)
 #print("overall predictors")
 print(best_pred)
+
+best_pred <- data.frame(best_pred) %>% 
+  rownames_to_column("variable") %>% 
+  rename(correlation = "best_pred") %>% 
+  mutate(correlation = round(correlation,2))
+
+barplot <- ggplot(best_pred,aes(x=variable,y=correlation)) +
+  geom_bar(fill="white",color="black",stat = "identity") +
+  geom_text(aes(label=correlation),size = 3, position = position_stack(vjust = 0.5)) +
+  ggtitle("corrielation with noRides per ind. variable")
+barplot
+
+
 ```
 
 The correlation analysis shows that only the covid19 policy stringency has a strong influence on the daily number of KEXI rides (-0.56). Weather parameters do not seem to have a high impact, which might be due to the strong effects of the pandemic. Therefore weather parameters with a correlation value of bigger than |0.04| are taken into account. This includes some parameters in relation to wind (wspd, wpgt, wdir), temperature (tdiff, tmax, tavg, tmin) and air (pres).
