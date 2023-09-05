@@ -93,5 +93,5 @@ jobs:
           name: Package
           path: staging
 
-    #env:
-      #MAVEN_OPTS: -Xmx7G
+    env:
+      MAVEN_OPTS: -Xmx512m
