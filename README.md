@@ -51,8 +51,11 @@ It can be used by using either of these methods:
 
 1. Open the cmd and go to your project directory
 2. Build the scenario using `mvnw package`. Add the option `-Dskiptests=true` in order to skip tests and speed up the process. 
-3. There should be a file directly in the `matsim-kelheim` directory with name approximately as `matsim-kelheim-2.x.jar`.
-4. Run this file from the command line using `java -jar matsim-kelheim-2.x.jar --help` to see all possible options.
+3. There should be a file directly in the `matsim-kelheim` directory with name approximately as `matsim-kelheim-3.x-SNAPSHOT-<commitId>.jar`.
+4. Run this file from the command line using `java -jar matsim-kelheim-3.x-SNAPSHOT-<commitId>.jar --help` to see all possible options.
   1. For example, one can disable lanes or run smaller sample sizes using the available options
-5. Start this scenario using the default config by running `java -jar matsim-kelheim-2.x.jar`.
-6. "Open" the output directory.  You can drag files into VIA as was already done above.
+5. Start this scenario using the default config by running `java -jar matsim-kelheim-3.x-SNAPSHOT-<commitId>.jar`.
+   1. If you want to run the scenario somewhere else, e.g. on a computation cluster, make sure to not only copy the jar but also the 'input' directory and put it right next to the jar.
+6. "Open" the output directory. 
+   1. You can drag files into VIA as was already done above.
+   2. You can also browse the output directory on vsp.berlin/simwrapper and analyze some of your results with interactive dashboards.
