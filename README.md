@@ -14,6 +14,7 @@ This repository provides an open MATSim transport model for Kelheim, provided by
 <a rel="TU Berlin" href="https://www.vsp.tu-berlin.de"><img src="https://svn.vsp.tu-berlin.de/repos/public-svn/ueber_uns/logo/TUB_Logo.png" width="15%" height="15%"/></a>
 
 This scenario contains a 25pct sample of Kelheim and its surrounding area; road capacities are accordingly reduced. The scenario is calibrated taking into consideration the traffic counts, modal split and mode-specific trip distance distributions.
+[Here](https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/matsim-kelheim-v3.0-calibration-mode-parameters.pdf) are some (rather internal) notes on the calibration of modes and distances for v3.0.  
 
 ### Licenses
 
@@ -54,10 +55,10 @@ It can be used by using either of these methods:
 
 1. Open the cmd and go to your project directory
 2. Build the scenario using `mvnw package`. Add the option `-Dskiptests=true` in order to skip tests and speed up the process. 
-3. There should be a file directly in the `matsim-kelheim` directory with name approximately as `matsim-kelheim-3.x-SNAPSHOT-<commitId>.jar`.
-4. Run this file from the command line using `java -jar matsim-kelheim-3.x-SNAPSHOT-<commitId>.jar --help` to see all possible options.
+3. There should be a file directly in the `matsim-kelheim` directory with name approximately as `matsim-kelheim-3.0.jar`.
+4. Run this file from the command line using `java -jar matsim-kelheim-3.0.jar --help` to see all possible options.
   1. For example, one can disable lanes or run smaller sample sizes using the available options
-5. Start this scenario using the default config by running `java -jar matsim-kelheim-3.x-SNAPSHOT-<commitId>.jar`.
+5. Start this scenario using the default config by running `java -jar matsim-kelheim-3.0.jar`.
    1. If you want to run the scenario somewhere else, e.g. on a computation cluster, make sure to not only copy the jar but also the 'input' directory and put it right next to the jar.
 6. "Open" the output directory. 
    1. You can drag files into VIA as was already done above.
@@ -71,7 +72,7 @@ Here are the most common ways to analyse and visualize the results (and inputs):
 1. [Simunto VIA](https://www.simunto.com/via/)
 2. [SimWrapper](https://www.vsp.berlin/simwrapper) 
    1. (use Google for the best experience)
-   2. Browse your local output directory or [the public matsim-kelheim data repo](https://vsp.berlin/simwrapper/public/de/kelheim) 
+   2. Browse your local output directory or [the public matsim-kelheim data repo for v3.0](https://vsp.berlin/simwrapper/public/de/kelheim/kelheim-v3.0) 
    2. Explore and create many interactive visualisations and dashboards
 3. Analysis the output .csv tables using the R language and [the matsim-r package](https://github.com/matsim-vsp/matsim-r)
 
