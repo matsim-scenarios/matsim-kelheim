@@ -9,7 +9,7 @@
 
 ### About this project
 
-This repository provides an open MATSim transport model for Kelheim, provided by the [Transport Systems Planning and Transport Telematics group](https://www.vsp.tu-berlin.de) of [Technische Universität Berlin](http://www.tu-berlin.de).
+This repository provides an open MATSim transport model for Kelheim, provided by the [Transport Systems Planning and Transport Telematics group](https://www.tu.berlin/vsp) of [Technische Universität Berlin](http://www.tu-berlin.de).
 
 <a rel="TU Berlin" href="https://www.vsp.tu-berlin.de"><img src="https://svn.vsp.tu-berlin.de/repos/public-svn/ueber_uns/logo/TUB_Logo.png" width="15%" height="15%"/></a>
 
@@ -24,9 +24,11 @@ The **MATSim input files, output files, analysis data and visualizations** are l
 
 **Other data files**, in particular in `original-input-data`, have their own individual licenses that need to be individually clarified with the copyright holders.
 
-### Note
+The input plans (person transport demand) for this project were generated based on data provided by [Senozon AG](https://senozon.com/).
 
-Handling of large files within git is not without problems (git lfs files are not included in the zip download; we have to pay; ...).  In consequence, large files, both on the input and on the output side, reside at https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim .
+### Note (where to find input and output)
+
+Handling of large files within git is not without problems (git lfs files are not included in the zip download; we have to pay; ...).  In consequence, large files, both on the input and on the output side, reside at [the public matsim-kelheim data repo](https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim).
 
 ----
 ### Run the MATSim Kelheim scenario
@@ -42,7 +44,8 @@ It can be used by using either of these methods:
 
 1. Set up the project in your IDE.
 1. Make sure the project is configured as maven project.
-1. Run the JAVA class `src/main/java/org/matsim/run/RunKelheimScenario.java` with the following program argument `run`. Add '--1pct' for test runs with a smaller sample size.
+1. Run the JAVA class `src/main/java/org/matsim/run/RunKelheimScenario.java` with the following program argument `run`.
+   1. Add '--1pct' for test runs with a smaller sample size. Be aware that the model is calibrated with 25 pct, and outputs for 1 pct might be a little off.
 1. "Open" the output directory.  You can drag files into VIA as was already done above.
 1. Edit the config file or adjust the run class. Re-run MATSim.
 
@@ -59,3 +62,18 @@ It can be used by using either of these methods:
 6. "Open" the output directory. 
    1. You can drag files into VIA as was already done above.
    2. You can also browse the output directory on vsp.berlin/simwrapper and analyze some of your results with interactive dashboards.
+
+----
+### Results and analysis
+
+Here are the most common ways to analyse and visualize the results (and inputs):
+
+1. [Simunto VIA](https://www.simunto.com/via/)
+2. [SimWrapper](https://www.vsp.berlin/simwrapper) 
+   1. (use Google for the best experience)
+   2. Browse your local output directory or [the public matsim-kelheim data repo](https://vsp.berlin/simwrapper/public/de/kelheim) 
+   2. Explore and create many interactive visualisations and dashboards
+3. Analysis the output .csv tables using the R language and [the matsim-r package](https://github.com/matsim-vsp/matsim-r)
+
+If you have questions, feel free to contact us [(VSP)](https://www.tu.berlin/vsp) any time  :)
+
