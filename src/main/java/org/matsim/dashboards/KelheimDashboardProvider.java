@@ -2,6 +2,7 @@ package org.matsim.dashboards;
 
 import org.matsim.application.ApplicationUtils;
 import org.matsim.core.config.Config;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.run.RunKelheimScenario;
 import org.matsim.simwrapper.Dashboard;
 import org.matsim.simwrapper.DashboardProvider;
@@ -25,7 +26,7 @@ public class KelheimDashboardProvider implements DashboardProvider {
 		trips.setAnalysisArgs("--dist-groups", "0,1000,2000,5000,10000,20000");
 		return List.of(
 			trips,
-			new TravelTimeComparisonDashboard(ApplicationUtils.resolve(config.getContext(), "kelheim-v" + RunKelheimScenario.VERSION + "-routes-ref.csv.gz"))
+			new TravelTimeComparisonDashboard(IOUtils.resolveFileOrResource( "kelheim-v" + RunKelheimScenario.VERSION + "-routes-ref.csv.gz").toString())
 		);
 	}
 
