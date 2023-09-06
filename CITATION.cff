@@ -8,7 +8,7 @@ message: >-
   metadata from this file.
 type: software
 authors:
-   - given-names: Tilmann
+  - given-names: Tilmann
     family-names: Schlenther
     email: schlenther@vsp.tu-berlib.de
     affiliation: Technische Universität Berlin
