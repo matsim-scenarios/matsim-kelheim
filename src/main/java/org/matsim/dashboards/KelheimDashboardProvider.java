@@ -1,6 +1,5 @@
 package org.matsim.dashboards;
 
-import org.matsim.application.ApplicationUtils;
 import org.matsim.core.config.Config;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.run.RunKelheimScenario;
