@@ -1,0 +1,38 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: MATSim Open Kelheim Scenario
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+   - given-names: Tilmann
+    family-names: Schlenther
+    email: schlenther@vsp.tu-berlib.de
+    affiliation: Technische Universität Berlin
+    orcid: 'https://orcid.org/0000-0001-6781-6918'
+  - given-names: Chengqi
+    family-names: Lu
+    email: lu@vsp.tu-berlin.de
+    affiliation: Technische Universität Berlin
+  - given-names: Christian
+    family-names: Rakow
+    email: rakow@vsp.tu-berlin.de
+    affiliation: Technische Universität Berlin
+  - given-names: Simon
+    family-names: Meinhardt
+    email: meinhardt@vsp.tu-berlin.de
+    affiliation: Technische Universität Berlin
+  - given-names: Kai
+    family-names: Nagel
+    email: nagel@vsp.tu-berlin.de
+    affiliation: Technische Universität Berlin
+    orcid: 'https://orcid.org/0000-0003-2775-6898'
+url: "https://github.com/matsim-scenarios/matsim-kelheim"
+doi: 10.5281/zenodo.8322240
+date-released: 2023-09-06
+year: 2023
+version: 3.0
+license: AGPL-3.0
