@@ -2,6 +2,7 @@
 
 [![Build Status](https://github.com/matsim-scenarios/matsim-kelheim/actions/workflows/build.yaml/badge.svg)](https://github.com/matsim-scenarios/matsim-kelheim/actions/workflows/build.yaml)
 ![license](https://img.shields.io/github/license/matsim-scenarios/matsim-kelheim.svg)
+[![DOI (v3.0)](https://zenodo.org/badge/360167859.svg)](https://zenodo.org/badge/latestdoi/360167859)
 ![JDK](https://img.shields.io/badge/JDK-17+-green.svg)
 
 ![Kelheim MATSim network and agents](visualization-kelheim.png "Kelheim MATSim network and agents")
@@ -9,7 +10,7 @@
 
 ### About this project
 
-This repository provides an open MATSim transport model for Kelheim, provided by the [Transport Systems Planning and Transport Telematics group](https://www.tu.berlin/vsp) of [Technische Universität Berlin](http://www.tu-berlin.de).
+This repository provides an open MATSim transport model for Kelheim, provided by the [Transport Systems Planning and Transport Telematics group](https://www.vsp.tu-berlin.de) of [Technische Universität Berlin](http://www.tu-berlin.de).
 
 <a rel="TU Berlin" href="https://www.vsp.tu-berlin.de"><img src="https://svn.vsp.tu-berlin.de/repos/public-svn/ueber_uns/logo/TUB_Logo.png" width="15%" height="15%"/></a>
 
