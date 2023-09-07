@@ -1,9 +1,13 @@
 package org.matsim.run.prepare;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.options.ShpOptions;
@@ -14,11 +18,11 @@ import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.opengis.feature.simple.SimpleFeature;
 
-import java.io.BufferedReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -91,40 +95,39 @@ public final class DrtStopsWriter extends MatsimXmlWriter {
 				"repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
 				"KEXI_Haltestellen_Liste_Kelheim_utm32n.csv");
 
-		BufferedReader csvReader = new BufferedReader(new InputStreamReader(data.openStream()));
-		csvReader.readLine();
-		String stopEntry = csvReader.readLine();
-		while (stopEntry != null) {
+        try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(data.getPath())),
+                CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
+            for (CSVRecord row : parser) {
+                Coord coord = new Coord(Double.parseDouble(row.get("x")), Double.parseDouble(row.get("y")));
+                if (serviceArea == null || MGC.coord2Point(coord).within(serviceArea)) {
+                    List<Tuple<String, String>> attributes = new ArrayList<>(5);
+                    attributes.add(createTuple("id", row.get("Haltestell")));
+                    attributes.add(createTuple("x", row.get("x")));
+                    attributes.add(createTuple("y", row.get("y")));
+                    Link link = null;
+                    // If link is already determined by hand in the raw data, then use that link directly.
+                    if (row.get("link_id")!=null){
+                        link = network.getLinks().get(Id.createLinkId(row.get("link_id")));
+                    } else {
+                        link = getStopLink(coord, network);
+                    }
+                    attributes.add(createTuple("linkRefId", link.getId().toString()));
+                    this.writeStartTag("stopFacility", attributes, true);
 
-			String[] stopData = stopEntry.split(";");
-			// write stop
-			Coord coord = new Coord(Double.parseDouble(stopData[2]), Double.parseDouble(stopData[3]));
-
-			if (serviceArea == null || MGC.coord2Point(coord).within(serviceArea)) {
-				List<Tuple<String, String>> attributes = new ArrayList<Tuple<String, String>>(5);
-				attributes.add(createTuple("id", stopData[0]));
-				attributes.add(createTuple("x", stopData[2]));
-				attributes.add(createTuple("y", stopData[3]));
-				Link link = getStopLink(coord, network);
-				attributes.add(createTuple("linkRefId", link.getId().toString()));
-				this.writeStartTag("stopFacility", attributes, true);
-
-				csvWriter.append(stopData[0]);
-				csvWriter.append(",");
-				csvWriter.append(link.getId().toString());
-				csvWriter.append(",");
-				csvWriter.append(Double.toString(link.getToNode().getCoord().getX()));
-				csvWriter.append(",");
-				csvWriter.append(Double.toString(link.getToNode().getCoord().getY()));
-				csvWriter.append("\n");
-			}
-
-			stopEntry = csvReader.readLine();
-		}
-		csvWriter.close();
+                    csvWriter.append(row.get("Haltestell"));
+                    csvWriter.append(",");
+                    csvWriter.append(link.getId().toString());
+                    csvWriter.append(",");
+                    csvWriter.append(Double.toString(link.getToNode().getCoord().getX()));
+                    csvWriter.append(",");
+                    csvWriter.append(Double.toString(link.getToNode().getCoord().getY()));
+                    csvWriter.append("\n");
+                }
+            }
+        }
 	}
 
-	private Link getStopLink(Coord coord, Network network) {
+    private Link getStopLink(Coord coord, Network network) {
 		double shortestDistance = Double.MAX_VALUE;
 		Link nearestLink = null;
 		for (Link link : network.getLinks().values()) {
