@@ -140,6 +140,8 @@ public final class DrtStopsWriter extends MatsimXmlWriter {
             }
         }
 
+		writer.close();
+
 		//write filtered network file (for viz)
 		writeFilteredNetwork(network, allLinks);
 	}
