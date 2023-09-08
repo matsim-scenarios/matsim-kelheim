@@ -15,6 +15,7 @@ import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.run.RunKelheimScenario;
@@ -102,10 +103,9 @@ public final class DrtStopsWriter extends MatsimXmlWriter {
 		URL data = new URL("https://svn.vsp.tu-berlin.de/" +
 				"repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
 				"KEXI_Haltestellen_Liste_Kelheim_utm32n_withLinkIds.csv");
-
 		Set<Id<Link>> allLinks = new HashSet<>();
 
-		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(data.getPath())),
+		try (CSVParser parser = new CSVParser(IOUtils.getBufferedReader(data),
 				CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
 			for (CSVRecord row : parser) {
 				Coord coord = new Coord(Double.parseDouble(row.get("x")), Double.parseDouble(row.get("y")));
@@ -140,7 +140,7 @@ public final class DrtStopsWriter extends MatsimXmlWriter {
 			}
 		}
 
-		writer.close();
+		csvWriter.close();
 
 		//write filtered network file (for viz)
 		writeFilteredNetwork(network, allLinks);
