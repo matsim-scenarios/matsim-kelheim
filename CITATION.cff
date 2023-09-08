@@ -10,7 +10,7 @@ type: software
 authors:
   - given-names: Tilmann
     family-names: Schlenther
-    email: schlenther@vsp.tu-berlib.de
+    email: schlenther@vsp.tu-berlin.de
     affiliation: Technische Universität Berlin
     orcid: 'https://orcid.org/0000-0001-6781-6918'
   - given-names: Chengqi
