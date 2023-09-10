@@ -201,8 +201,9 @@ wday_plot <- ggplot(plot_data)+
   geom_boxplot(data=plot_data %>% filter(wday_char=="Sat"),mapping=aes(x = wday_char,y = noRides,color="Sat")) +
   xlab("Weekday") + 
   ylab("Number of rides") +
-  labs(title="Daily no of KEXI rides per weekday") +
+  # labs(title="Daily no of KEXI rides per weekday") +
   theme(plot.title = element_text(hjust=0.5)) +
+  theme(text = element_text(size = 17)) +
   scale_color_manual(values = colors)
 
 holiday_plot <- ggplot(plot_data)+
@@ -354,6 +355,7 @@ ggplot(test_data %>% filter(year(date)>=2020)) +
                    axis.ticks.y = element_line(),
                    axis.ticks.length = unit(5, "pt")) +
   scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
+  theme(text = element_text(size = 17)) +
   scale_color_manual(values = colors) #+
   # ggtitle("First Linear regression model")
 
@@ -375,10 +377,12 @@ ggplot(test_data %>% filter(year(date)>=2020))+
            xlab("Date") +
            ylab("Residuals") +
            theme_minimal() +
+  theme(text = element_text(size = 17)) +
            theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
-      axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-            ggtitle("Residuals over time for first linear regression model")
+      axis.ticks.length = unit(5, "pt"), legend.position = "none") 
+# +
+#             ggtitle("Residuals over time for first linear regression model")
 
 ```
 
@@ -523,7 +527,8 @@ ggplot(test_data %>% filter(year(date)>=2020)) +
   theme(axis.ticks.x = element_line(), 
                    axis.ticks.y = element_line(),
                    axis.ticks.length = unit(5, "pt")) +
-  scale_x_date(date_breaks = "4 month", date_labels = "%d/%b/%y") +
+  scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
+  theme(text = element_text(size = 17)) +
   scale_color_manual(values = colors) #+
   #ggtitle("Linear regression model with independent variables snow, tavg and trend")
 
@@ -541,7 +546,8 @@ ylab("Observed noRides") +
 theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt")) +
-  ggtitle("Observed vs. Predicted noRides") +
+  theme(text = element_text(size = 17)) +
+  # ggtitle("Observed vs. Predicted noRides") +
   scale_color_manual(values = colors2)
   
 ```
@@ -569,7 +575,9 @@ ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
            theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-            ggtitle("Residuals over predicted values for linear regression model with independent variables snow, tavg and trend")
+  theme(text = element_text(size = 17)) 
+# +
+#             ggtitle("Residuals over predicted values for linear regression model with independent variables snow, tavg and trend")
 
 ```
 
@@ -606,7 +614,8 @@ plot1 <- ggplot(test_data) +
   geom_qq(aes(sample=rnorm(resid,10,4)))+
   geom_abline(intercept = 10, slope = 4,color = "red", size = 1.5, alpha = 0.8)+
   theme_minimal() +
-  ggtitle("Normal QQ-Plot for the final linear regression model") +
+  theme(text = element_text(size = 17)) +
+  # ggtitle("Normal QQ-Plot for the final linear regression model") +
   xlab("Theoretical Quantiles") +
   ylab("Model Residual Quantiles")
   
