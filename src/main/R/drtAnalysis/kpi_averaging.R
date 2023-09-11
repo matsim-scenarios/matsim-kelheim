@@ -54,11 +54,12 @@ print(folders_av_averaged_table)
 
 #####Write averaged av tables####
 
-dir_output_name <- "results_kpi_av"
+dir_output_name <- paste(path_to_data, "results_kpi_av/", sep="")
+print("writing to " + dir_output_name)
 dir.create(dir_output_name)
 
 for(case_name in names(folders_av_averaged_table)){
-  write.table(folders_av_averaged_table[[case_name]],paste0("results_kpi_av/result_av_",case_name,".tsv"),quote = FALSE,row.names = FALSE)
+  write.table(folders_av_averaged_table[[case_name]],paste0(dir_output_name, "result_av_",case_name,".tsv"),quote = FALSE,row.names = FALSE)
 }
 
 
@@ -96,9 +97,10 @@ print(folders_drt_averaged_table)
 
 #####Write averaged drt tables####
 
-output_dir_name <- "results_kpi_drt"
+output_dir_name <- paste(path_to_data, "/results_kpi_drt/", sep="")
+print(paste("writing to " , output_dir_name, sep=""))
 dir.create(output_dir_name)
 
 for(case_name in names(folders_drt_averaged_table)){
-  write.table(folders_drt_averaged_table[[case_name]],paste0("results_kpi_drt/result_drt_",case_name,".tsv"),quote = FALSE,row.names = FALSE)
+  write.table(folders_drt_averaged_table[[case_name]],paste0(output_dir_name, "result_drt_", case_name,".tsv"),quote = FALSE,row.names = FALSE)
 }
