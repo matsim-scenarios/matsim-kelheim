@@ -2,8 +2,8 @@
 library(stringr)
 
 #####global variables####
-path_to_data <- "runs"
-
+path_to_data <- "output-folder (specific case with different seeds)"
+stats = c("mean","median","sd" ,"max", "min")
 
 ##### Collect all folder names####
 
@@ -40,13 +40,27 @@ for(case_name in names(folders_seeded)){
     if(!case_name %in% names(folders_av_averaged_table)){
       folders_av_averaged_table[[case_name]] = av_KPI_table
     }else{
-      folders_av_averaged_table[[case_name]] = folders_av_averaged_table[[case_name]]+av_KPI_table
+      folders_av_averaged_table[[case_name]] = rbind(folders_av_averaged_table[[case_name]],av_KPI_table)
     }
     
   }
   
-  folders_av_averaged_table[[case_name]] = folders_av_averaged_table[[case_name]]/length(folders_seeded[[case_name]])
+
   
+  tbl_colnames = c("stat",colnames(folders_av_averaged_table[[case_name]]))
+  result_tibble = tbl_colnames %>% purrr::map_dfc(setNames, object = list(numeric()))
+  for(stat in stats){
+    func = get(stat)
+    new_row = c(stat)
+    for(column in colnames(folders_av_averaged_table[[case_name]])){
+      new_row = append(new_row,func(folders_av_averaged_table[[case_name]][[column]]))
+    }
+    
+    result_tibble = rbind(result_tibble,new_row)
+  }
+  colnames(result_tibble) = tbl_colnames
+  
+  folders_av_averaged_table[[case_name]] = result_tibble
   
 }
 
@@ -82,13 +96,25 @@ for(case_name in names(folders_seeded)){
     if(!case_name %in% names(folders_drt_averaged_table)){
       folders_drt_averaged_table[[case_name]] = drt_KPI_table
     }else{
-      folders_drt_averaged_table[[case_name]] = folders_drt_averaged_table[[case_name]]+drt_KPI_table
+      folders_drt_averaged_table[[case_name]] = rbind(folders_drt_averaged_table[[case_name]],drt_KPI_table)
     }
     
   }
+
+  tbl_colnames = c("stat",colnames(folders_drt_averaged_table[[case_name]]))
+  result_tibble = tbl_colnames %>% purrr::map_dfc(setNames, object = list(numeric()))
+  for(stat in stats){
+    func = get(stat)
+    new_row = c(stat)
+    for(column in colnames(folders_drt_averaged_table[[case_name]])){
+           new_row = append(new_row,func(folders_drt_averaged_table[[case_name]][[column]]))
+    }
+    
+    result_tibble = rbind(result_tibble,new_row)
+  }
+  colnames(result_tibble) = tbl_colnames
   
-  folders_drt_averaged_table[[case_name]] = folders_drt_averaged_table[[case_name]]/length(folders_seeded[[case_name]])
-  
+  folders_drt_averaged_table[[case_name]] = result_tibble
   
 }
 
@@ -100,5 +126,5 @@ output_dir_name <- "results_kpi_drt"
 dir.create(output_dir_name)
 
 for(case_name in names(folders_drt_averaged_table)){
-  write.table(folders_drt_averaged_table[[case_name]],paste0("results_kpi_drt/result_drt_",case_name,".tsv"),quote = FALSE,row.names = FALSE)
+  write.table(folders_drt_averaged_table[[case_name]],paste0(paste(path_to_data,"result_drt_", sep="/"),case_name,".tsv"),quote = FALSE,row.names = FALSE)
 }
