@@ -102,10 +102,7 @@ for(case_name in names(folders_seeded)){
 
 print(folders_av_averaged_table)
 
-#####Write averaged av tables####
-dir_output_name <- "results_kpi_av"
-dir.create(dir_output_name)
-
+#Write averaged av tables####
 for(case_name in names(folders_av_averaged_table)){
   write.table(folders_av_averaged_table[[case_name]],paste0(path_to_data, "/kpi_summary_av_",case_name,".tsv"),quote = FALSE,row.names = FALSE)
 }
