@@ -184,27 +184,19 @@ From already conducted analysis as well as the following plots we can see a stro
 
 ```{r plotting wday and holidays}
 
-colors <- c("Sun" = "darkorchid4","predicted" = "red", "Mon" = "darkblue", "Tue" = "deepskyblue4", "Wed" = "deepskyblue2", "Thu" = "cadetblue4", "Fri" = "chartreuse4", "Sat" = "darkgoldenrod2")
-
 plot_data <- result_data
   
 plot_data$isHoliday[plot_data$isHoliday==TRUE] <- "Holiday"
 plot_data$isHoliday[plot_data$isHoliday==FALSE] <- "Non-holiday"
 
-wday_plot <- ggplot(plot_data)+
-  geom_boxplot(data=plot_data %>% filter(wday_char=="Sun"),mapping=aes(x = wday_char,y = noRides,color="Sun")) +
-  geom_boxplot(data=plot_data %>% filter(wday_char=="Mon"),mapping=aes(x = wday_char,y = noRides,color="Mon")) +
-  geom_boxplot(data=plot_data %>% filter(wday_char=="Tue"),mapping=aes(x = wday_char,y = noRides,color="Tue")) +
-  geom_boxplot(data=plot_data %>% filter(wday_char=="Wed"),mapping=aes(x = wday_char,y = noRides,color="Wed")) +
-  geom_boxplot(data=plot_data %>% filter(wday_char=="Thu"),mapping=aes(x = wday_char,y = noRides,color="Thu")) +
-  geom_boxplot(data=plot_data %>% filter(wday_char=="Fri"),mapping=aes(x = wday_char,y = noRides,color="Fri")) +
-  geom_boxplot(data=plot_data %>% filter(wday_char=="Sat"),mapping=aes(x = wday_char,y = noRides,color="Sat")) +
+wday_plot <- ggplot(plot_data, aes(x=wday_char,y=noRides))+
+  geom_boxplot(aes(color=wday_char), lwd=0.75) +
   xlab("Weekday") + 
   ylab("Number of rides") +
   # labs(title="Daily no of KEXI rides per weekday") +
-  theme(plot.title = element_text(hjust=0.5)) +
+  theme(plot.title = element_text(hjust=0.5), legend.title = element_blank()) +
   theme(text = element_text(size = 17)) +
-  scale_color_manual(values = colors)
+  scale_color_manual(values = c("darkblue", "deepskyblue4", "deepskyblue2", "cadetblue", "chartreuse4","darkgoldenrod2","darkorchid4"))
 
 holiday_plot <- ggplot(plot_data)+
   geom_boxplot(aes(x = isHoliday, y = noRides)) +
@@ -358,6 +350,7 @@ ggplot(test_data %>% filter(year(date)>=2020)) +
   theme(text = element_text(size = 17)) +
   scale_color_manual(values = colors) +
   ggtitle("First Linear regression model")
+  
 
 #ggsave("C:/Users/Simon/Desktop/wd/2023-07-31/first-regression-model.png", modelPlot)
 
