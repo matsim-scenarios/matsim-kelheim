@@ -2,6 +2,7 @@ package org.matsim.analysis.postAnalysis;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
@@ -22,6 +23,7 @@ import org.matsim.core.utils.geometry.geotools.MGC;
 import picocli.CommandLine;
 
 import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -31,7 +33,7 @@ import static org.matsim.application.ApplicationUtils.globFile;
 /**
  * Analyse routes for agents which use a certain infrastructure segment.
  * 1) Retrieves agents which use the infrastructure (e.g. in base case)
- * 2) Searches for the (new) routes of the agents in a policy case
+ * 2) Save trips of those agents to tsv file for further R analysis.
  *
  * @author Simon Meinhardt (simei94)
  */
@@ -63,7 +65,6 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 
 		Path basePopulationPath = globFile(directoryBase, "*output_plans*");
 
-		Path policyPopulationPath = globFile(directoryPolicy, "*output_plans*");
 		//output will be written into policy case folder
 		Path outputFolder = Path.of(directoryPolicy.toString() + "/analysis-road-usage");
 
@@ -78,48 +79,44 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 
 		Population populationBase = ScenarioUtils.loadScenario(config).getPopulation();
 
-		config.plans().setInputFile(policyPopulationPath.toString());
-		Population populationPolicy = ScenarioUtils.loadScenario(config).getPopulation();
-
 		//get links, which are affected by blocked infrastructure
 		List<String> blockedLinks = getBlockedLinks(network, blockedInfrastructureArea);
 
 		relevantTripsBase = getTripsFromPlans(populationBase, blockedLinks);
-		Map<Id<Person>, Map<Integer, TripStructureUtils.Trip>> relevantTripsPolicy = getTripsFromPlans(populationPolicy, blockedLinks);
 
 		//writeResults
 		String outputFile = outputFolder + "/" + "blocked_infrastructure_trip_comparison.tsv";
 		CSVPrinter tsvPrinter = new CSVPrinter(new FileWriter(outputFile), CSVFormat.TDF);
-		List<String> header = new ArrayList<>();
-		header.add("person_id");
-		header.add("trip_number");
-		header.add("trip_id");
-//		header.add("tripBase");
-//		header.add("tripPolicy");
+		try {
+			List<String> header = new ArrayList<>();
+			header.add("person_id");
+			header.add("trip_number");
+			header.add("trip_id");
 
-		tsvPrinter.printRecord(header);
+			tsvPrinter.printRecord(header);
 
-		for (Id<Person> personId : relevantTripsBase.keySet()) {
+			for (Map.Entry<Id<Person>, Map<Integer, TripStructureUtils.Trip>> entry : relevantTripsBase.entrySet()) {
 
-			Integer tripNumber;
+				Integer tripNumber;
 
-			for (Integer index : relevantTripsBase.get(personId).keySet()) {
+				for (Integer index : relevantTripsBase.get(entry.getKey()).keySet()) {
 
-				tripNumber = index + 1;
+					tripNumber = index + 1;
 
-				List<String> entry = new ArrayList<>();
-				entry.add(personId.toString());
-				entry.add(tripNumber.toString());
-				entry.add(personId + "_" + tripNumber);
-//				entry.add(relevantTripsBase.get(personId).get(index).toString());
-//				entry.add(relevantTripsPolicy.get(personId).get(index).toString());
+					List<String> outputEntry = new ArrayList<>();
+					outputEntry.add(entry.getKey().toString());
+					outputEntry.add(tripNumber.toString());
+					outputEntry.add(entry.getKey() + "_" + tripNumber);
 
-				tsvPrinter.printRecord(entry);
+					tsvPrinter.printRecord(outputEntry);
+				}
 			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			tsvPrinter.close();
+			log.log(Level.INFO, "Analysis output has been written to: {}", outputFile);
 		}
-		tsvPrinter.close();
-
-		log.info("Analysis output has been written to: " + outputFile);
 
 		return 0;
 	}
@@ -129,10 +126,8 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 		List<String> blockedLinks = new ArrayList<>();
 
 		for (Link link : network.getLinks().values()) {
-			if (!link.getId().toString().contains("pt_")) {
-				if (isInsideArea(link, geometry)) {
-					blockedLinks.add(link.getId().toString());
-				}
+			if (!link.getId().toString().contains("pt_") && isInsideArea(link, geometry)) {
+				blockedLinks.add(link.getId().toString());
 			}
 		}
 		return blockedLinks;
@@ -169,13 +164,13 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 			//get corresponding trips to base case trips (where the now-blocked infrastructure is used)
 			log.info("Analyzing legs on blocked infrastructure for policy case population");
 
-			for (Id<Person> personId : relevantTripsBase.keySet()) {
-				for ( Integer index : relevantTripsBase.get(personId).keySet()) {
-					relevantTrips.putIfAbsent(personId, new HashMap<>());
+			for (Map.Entry<Id<Person>, Map<Integer, TripStructureUtils.Trip>> entry : relevantTripsBase.entrySet()) {
+				for ( Integer index : relevantTripsBase.get(entry.getKey()).keySet()) {
+					relevantTrips.putIfAbsent(entry.getKey(), new HashMap<>());
 
-					TripStructureUtils.Trip policyTrip = TripStructureUtils.getTrips(population.getPersons().get(personId).getSelectedPlan()).get(index);
+					TripStructureUtils.Trip policyTrip = TripStructureUtils.getTrips(population.getPersons().get(entry.getKey()).getSelectedPlan()).get(index);
 
-					relevantTrips.get(personId).put(index, policyTrip);
+					relevantTrips.get(entry.getKey()).put(index, policyTrip);
 				}
 			}
 		}
