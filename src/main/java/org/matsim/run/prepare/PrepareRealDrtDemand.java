@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.options.CrsOptions;
@@ -23,14 +24,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 @CommandLine.Command(
-		name = "generate-real-drt-demand",
-		description = "Prepare drt only population based on real data"
+	name = "generate-real-drt-demand",
+	description = "Prepare drt only population based on real data"
 )
 public class PrepareRealDrtDemand implements MATSimAppCommand {
 
 	private static final Logger log = LogManager.getLogger(PrepareRealDrtDemand.class);
 
-	@CommandLine.Option(names = "--drt-stops", description = "path to drt stop xml file", required = true)
+	@CommandLine.Option(names = "--drt-stops", description = "path to drt stop xml file", defaultValue = "")
 	private String drtStops;
 
 	@CommandLine.Option(names = "--demands", description = "path to real drt demand csv file", required = true)
@@ -57,31 +58,34 @@ public class PrepareRealDrtDemand implements MATSimAppCommand {
 //        Map<String, Coord> stationCoordMap = loadStationCoordinates();
 
 		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(demands)),
-				CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
+			CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
 			int counter = 0;
 			for (CSVRecord row : parser) {
-				double fromX = Double.parseDouble(row.get(4));
-				double fromY = Double.parseDouble(row.get(5));
-				double toX = Double.parseDouble(row.get(7));
-				double toY = Double.parseDouble(row.get(8));
+				double fromX = Double.parseDouble(row.get("from_x"));
+				double fromY = Double.parseDouble(row.get("from_y"));
+				double toX = Double.parseDouble(row.get("to_x"));
+				double toY = Double.parseDouble(row.get("to_y"));
 				Coord fromCoord = new Coord(fromX, fromY);
 				Coord transformedFromCoord = crs.getTransformation().transform(fromCoord);
 				Coord toCoord = new Coord(toX, toY);
 				Coord transformedToCoord = crs.getTransformation().transform(toCoord);
-				double departureTime = Double.parseDouble(row.get(2));
+				double departureTime = Double.parseDouble(row.get("time_in_seconds"));
+				int numberOfPassengers = Integer.parseInt(row.get("number_of_passengers"));
 
-				Person person = populationFactory.createPerson(Id.createPersonId("drt_" + counter));
-				Plan plan = populationFactory.createPlan();
-				Activity activity0 = populationFactory.createActivityFromCoord("home", transformedFromCoord);
-				activity0.setEndTime(departureTime);
-				Leg leg = populationFactory.createLeg("drt");
-				Activity activity1 = populationFactory.createActivityFromCoord("work", transformedToCoord);
-				plan.addActivity(activity0);
-				plan.addLeg(leg);
-				plan.addActivity(activity1);
-				person.addPlan(plan);
-				population.addPerson(person);
-				counter += 1;
+				for (int i = 0; i < numberOfPassengers; i++) {
+					Person person = populationFactory.createPerson(Id.createPersonId("drt_person_" + counter));
+					Plan plan = populationFactory.createPlan();
+					Activity activity0 = populationFactory.createActivityFromCoord("dummy", transformedFromCoord);
+					activity0.setEndTime(departureTime);
+					Leg leg = populationFactory.createLeg(TransportMode.drt);
+					Activity activity1 = populationFactory.createActivityFromCoord("dummy", transformedToCoord);
+					plan.addActivity(activity0);
+					plan.addLeg(leg);
+					plan.addActivity(activity1);
+					person.addPlan(plan);
+					population.addPerson(person);
+					counter += 1;
+				}
 			}
 			log.info("There are in total {} DRT requests on that day", counter);
 		}
@@ -96,7 +100,7 @@ public class PrepareRealDrtDemand implements MATSimAppCommand {
 	private Map<String, Coord> loadStationCoordinates() throws IOException {
 		Map<String, Coord> stationCoordMap = new HashMap<>();
 		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(drtStops)),
-				CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
+			CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
 			for (CSVRecord row : parser) {
 				String stationName = row.get(0);
 				double x = Double.parseDouble(row.get(2));

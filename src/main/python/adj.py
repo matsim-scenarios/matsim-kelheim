@@ -15,11 +15,14 @@ if __name__ == "__main__":
     sagg = sim.groupby("dist_group").sum()
     sagg['share'] = sagg.trips / np.sum(sagg.trips)
 
-    print("Start")
+    print("#####   Start")
     print(sagg)
 
-    print("Mid")
-    print(mid)
+    print("#####   Mid")
+#    print(mid)
+    print(mid.groupby("dist_group").sum())
+    print(mid.groupby("mode").sum())
+    print("#############")
 
     # Rescale the distance groups of the survey data so that it matches the distance group distribution of the simulation
     # The overall mode share after this adjustment will the resulting adjusted mode share
@@ -44,7 +47,7 @@ if __name__ == "__main__":
         return err
 
     # One variable for each distance group
-    x0 = np.ones(6) / 6
+    x0 = np.ones(5) / 5
 
     # Sum of weights need to be smaller than one
     cons = [{'type': 'ineq', 'fun': lambda x:  1 - sum(x)}]

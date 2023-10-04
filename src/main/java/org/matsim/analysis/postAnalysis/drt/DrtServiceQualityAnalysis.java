@@ -17,6 +17,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.contrib.common.util.DistanceUtils;
+import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.core.config.Config;
@@ -78,7 +79,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
 			Files.createDirectory(outputFolder);
 		}
 
-		Config config = ConfigUtils.loadConfig(configPath.toString());
+		Config config = ConfigUtils.loadConfig(configPath.toString(), new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
 		int lastIteration = config.controler().getLastIteration();
 		String runId = config.controler().getRunId();
 		Path folderOfLastIteration = Path.of(directory.toString() + "/ITERS/it." + lastIteration);
