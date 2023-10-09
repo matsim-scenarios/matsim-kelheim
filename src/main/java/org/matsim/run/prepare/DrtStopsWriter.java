@@ -1,23 +1,28 @@
 package org.matsim.run.prepare;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.options.ShpOptions;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.io.UncheckedIOException;
+import org.matsim.run.RunKelheimScenario;
 import org.opengis.feature.simple.SimpleFeature;
 
-import java.io.BufferedReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -66,13 +71,19 @@ public final class DrtStopsWriter extends MatsimXmlWriter {
 		this.writeDoctype("transitSchedule", "http://www.matsim.org/files/dtd/transitSchedule_v1.dtd");
 		this.writeStartTag("transitSchedule", null);
 		this.writeStartTag("transitStops", null);
-		this.writeTransitStops(network);
+		this.writeTransitStopsAndVizFiles(network);
 		this.writeEndTag("transitStops");
 		this.writeEndTag("transitSchedule");
 		this.close();
 	}
 
-	private void writeTransitStops(Network network) throws IOException {
+	/**
+	 * additionally to writing the stops xml file, also writes a csv file that contains the same information as well as a network file that contains only
+	 * the links assigned to stops (for visualisation).
+	 * @param network to retrieve link id's from
+	 * @throws IOException if some file can't be opened or written
+	 */
+	private void writeTransitStopsAndVizFiles(Network network) throws IOException {
 		// Write csv file for adjusted stop location
 		FileWriter csvWriter = new FileWriter(outputFolder + "/"
 				+ mode + "-stops-locations.csv");
@@ -89,39 +100,64 @@ public final class DrtStopsWriter extends MatsimXmlWriter {
 		log.info("Start processing the network. This may take some time...");
 		URL data = new URL("https://svn.vsp.tu-berlin.de/" +
 				"repos/public-svn/matsim/scenarios/countries/de/kelheim/original-data/" +
-				"KEXI_Haltestellen_Liste_Kelheim_utm32n.csv");
+				"KEXI_Haltestellen_Liste_Kelheim_utm32n_withLinkIds.csv");
+		Set<Id<Link>> allLinks = new HashSet<>();
 
-		BufferedReader csvReader = new BufferedReader(new InputStreamReader(data.openStream()));
-		csvReader.readLine();
-		String stopEntry = csvReader.readLine();
-		while (stopEntry != null) {
+		try (CSVParser parser = new CSVParser(IOUtils.getBufferedReader(data),
+				CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
+			for (CSVRecord row : parser) {
+				Coord coord = new Coord(Double.parseDouble(row.get("x")), Double.parseDouble(row.get("y")));
+				if (serviceArea == null || MGC.coord2Point(coord).within(serviceArea)) {
+					List<Tuple<String, String>> attributes = new ArrayList<>(5);
+					attributes.add(createTuple("id", row.get("Haltestellen-Nr.")));
+					attributes.add(createTuple("x", row.get("x")));
+					attributes.add(createTuple("y", row.get("y")));
+					Link link = null;
+					// If link is already determined by hand in the raw data, then use that link directly.
+					if (row.get("linkId_v" + RunKelheimScenario.VERSION)!=null){
+						link = network.getLinks().get(Id.createLinkId(row.get("linkId_v" + RunKelheimScenario.VERSION)));
+					} else {
+						link = getStopLink(coord, network);
+					}
+					allLinks.add(link.getId());
+					attributes.add(createTuple("linkRefId", link.getId().toString()));
 
-			String[] stopData = stopEntry.split(";");
-			// write stop
-			Coord coord = new Coord(Double.parseDouble(stopData[2]), Double.parseDouble(stopData[3]));
+					//write into stops xml file
+					this.writeStartTag("stopFacility", attributes, true);
 
-			if (serviceArea == null || MGC.coord2Point(coord).within(serviceArea)) {
-				List<Tuple<String, String>> attributes = new ArrayList<Tuple<String, String>>(5);
-				attributes.add(createTuple("id", stopData[0]));
-				attributes.add(createTuple("x", stopData[2]));
-				attributes.add(createTuple("y", stopData[3]));
-				Link link = getStopLink(coord, network);
-				attributes.add(createTuple("linkRefId", link.getId().toString()));
-				this.writeStartTag("stopFacility", attributes, true);
-
-				csvWriter.append(stopData[0]);
-				csvWriter.append(",");
-				csvWriter.append(link.getId().toString());
-				csvWriter.append(",");
-				csvWriter.append(Double.toString(link.getToNode().getCoord().getX()));
-				csvWriter.append(",");
-				csvWriter.append(Double.toString(link.getToNode().getCoord().getY()));
-				csvWriter.append("\n");
+					//write into csv file for viz
+					csvWriter.append(row.get("Haltestellen-Nr."));
+					csvWriter.append(",");
+					csvWriter.append(link.getId().toString());
+					csvWriter.append(",");
+					csvWriter.append(Double.toString(link.getToNode().getCoord().getX()));
+					csvWriter.append(",");
+					csvWriter.append(Double.toString(link.getToNode().getCoord().getY()));
+					csvWriter.append("\n");
+				}
 			}
-
-			stopEntry = csvReader.readLine();
 		}
+
 		csvWriter.close();
+
+		//write filtered network file (for viz)
+		writeFilteredNetwork(network, allLinks);
+	}
+
+	private void writeFilteredNetwork(Network network, Set<Id<Link>> allLinks) {
+		//remove all links but the ones in the set
+		network.getLinks().keySet()
+			.forEach(linkId -> {
+				if (!allLinks.contains(linkId)) {
+					network.removeLink(linkId);
+				}
+			});
+		//remove 'empty' nodes
+		network.getNodes().values().stream()
+			.filter(node -> node.getInLinks().size() == 0 && node.getOutLinks().size() == 0)
+			.forEach(node -> network.removeNode(node.getId()));
+
+		NetworkUtils.writeNetwork(network, outputFolder + "/" + mode + "-stops-links.xml.gz");
 	}
 
 	private Link getStopLink(Coord coord, Network network) {
