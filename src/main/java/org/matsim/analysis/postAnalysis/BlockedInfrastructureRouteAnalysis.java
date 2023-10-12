@@ -112,7 +112,7 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 				}
 			}
 		} catch (IOException e) {
-			log.log(Level.FATAL,e);
+			log.log(Level.FATAL, e);
 		} finally {
 			tsvPrinter.close();
 			log.log(Level.INFO, "Analysis output has been written to: {}", outputFile);
