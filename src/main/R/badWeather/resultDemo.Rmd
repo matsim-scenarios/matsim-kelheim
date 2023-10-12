@@ -51,21 +51,21 @@ ingolstadt_weather <- read_delim("https://bulk.meteostat.net/v2/daily/10860.csv.
 colnames(ingolstadt_weather) <- c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
 
 # Weatherstack data
-weatherstack_kelheim <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Kelheim_weather_since_july_2008.csv",delim = ",")
+weatherstack_kelheim <- read_delim("../../../../../../shared-svn/projects/KelRide/data/badWeather/data/Kelheim_weather_since_july_2008.csv",delim = ",")
 
 # Stringency
-json <- fromJSON(file = "C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/2022-12-31.json")
+json <- fromJSON(file = "../../../../../../shared-svn/projects/KelRide/data/badWeather/data/2022-12-31.json")
 json <- unlist(json)
 #Mobility
-demand <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate.csv")
+demand <- read_delim("../../../../../../shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate.csv")
 
-requests <- read_delim("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/allRequestsByDate.csv")
+requests <- read_delim("../../../../../../shared-svn/projects/KelRide/data/badWeather/data/allRequestsByDate.csv")
 
 #Holidays
-holidays2020 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
-holidays2021 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2021.csv") %>% dplyr::select(1,2,3)
-holidays2022 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2022.csv") %>% dplyr::select(1,2,3)
-holidays2023 <- read_csv2("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/badWeather/data/Holidays2023.csv") %>% dplyr::select(1,2,3)
+holidays2020 <- read_csv2("../../../../../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
+holidays2021 <- read_csv2("../../../../../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2021.csv") %>% dplyr::select(1,2,3)
+holidays2022 <- read_csv2("../../../../../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2022.csv") %>% dplyr::select(1,2,3)
+holidays2023 <- read_csv2("../../../../../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2023.csv") %>% dplyr::select(1,2,3)
 holidays <- rbind(holidays2020,holidays2021,holidays2022,holidays2023)
 holidays <- holidays %>% mutate(EndDateTime1 = as.Date(as.POSIXct(EndDateTime1, format = "%m.%d.%Y %H:%M")),
                                StartDateTime1 = as.Date(as.POSIXct(StartDateTime1, format = "%m.%d.%Y %H:%M")))
