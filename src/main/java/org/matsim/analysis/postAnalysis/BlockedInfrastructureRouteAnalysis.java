@@ -144,19 +144,11 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 			for ( Person person : population.getPersons().values()) {
 				//check if blocked link is part of leg-route
 
+
+
 				List<TripStructureUtils.Trip> trips = TripStructureUtils.getTrips(person.getSelectedPlan());
 
-				for (int i = 0; i < trips.size(); i++) {
-					for (Leg leg : trips.get(i).getLegsOnly()) {
-						for ( String linkId : blockedLinks ) {
-							if (leg.getRoute().getRouteDescription().contains(linkId)) {
-								relevantTrips.putIfAbsent(person.getId(), new HashMap<>());
-								relevantTrips.get(person.getId()).put(i, trips.get(i));
-								continue;
-							}
-						}
-					}
-				}
+				getTripsFromPersons(blockedLinks, person, trips, relevantTrips);
 			}
 
 		} else {
@@ -176,6 +168,20 @@ class BlockedInfrastructureRouteAnalysis implements MATSimAppCommand {
 		}
 
 		return relevantTrips;
+	}
+
+	private static void getTripsFromPersons(List<String> blockedLinks, Person person, List<TripStructureUtils.Trip> trips, Map<Id<Person>, Map<Integer, TripStructureUtils.Trip>> relevantTrips) {
+		for (int i = 0; i < trips.size(); i++) {
+			for (Leg leg : trips.get(i).getLegsOnly()) {
+				for ( String linkId : blockedLinks) {
+					if (leg.getRoute().getRouteDescription().contains(linkId)) {
+						relevantTrips.putIfAbsent(person.getId(), new HashMap<>());
+						relevantTrips.get(person.getId()).put(i, trips.get(i));
+						continue;
+					}
+				}
+			}
+		}
 	}
 
 	static boolean isInsideArea(Link link, Geometry geometry) {
