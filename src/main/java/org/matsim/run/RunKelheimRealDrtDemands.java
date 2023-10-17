@@ -14,7 +14,7 @@ import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
+import org.matsim.core.config.groups.RoutingConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
@@ -59,17 +59,17 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
 			config.plans().setInputFile("./real-drt-demands/" + date + "-drt.plans.xml");
 			log.info("Setting input plans file to: " + config.plans().getInputFile());
 
-			String outputDirectory = Path.of(config.controler().getOutputDirectory()).getParent().toString() + "/" + date;
-			config.controler().setOutputDirectory(outputDirectory);
-			log.info("Setting output directory to: " + config.controler().getOutputDirectory());
+			String outputDirectory = Path.of(config.controller().getOutputDirectory()).getParent().toString() + "/" + date;
+			config.controller().setOutputDirectory(outputDirectory);
+			log.info("Setting output directory to: " + config.controller().getOutputDirectory());
 
 			config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.info);
-			config.plansCalcRoute().setAccessEgressType(PlansCalcRouteConfigGroup.AccessEgressType.accessEgressModeToLink);
+			config.routing().setAccessEgressType(RoutingConfigGroup.AccessEgressType.accessEgressModeToLink);
 			if (!networkChangeEventsFile.equals("")) {
 				config.network().setTimeVariantNetwork(true);
 				config.network().setChangeEventsInputFile(networkChangeEventsFile);
 			}
-			config.controler()
+			config.controller()
 					.setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 
 			Scenario scenario = DrtControlerCreator.createScenarioWithDrtRouteFactory(config);

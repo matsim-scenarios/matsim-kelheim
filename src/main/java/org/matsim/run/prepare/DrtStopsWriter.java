@@ -17,7 +17,6 @@ import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlWriter;
-import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.run.RunKelheimScenario;
 import org.opengis.feature.simple.SimpleFeature;
 
@@ -65,7 +64,7 @@ public final class DrtStopsWriter extends MatsimXmlWriter {
 	/**
 	 * Write content to specified folder.
 	 */
-	public void write() throws UncheckedIOException, IOException {
+	public void write() throws IOException {
 		this.openFile(outputFolder + "/" + mode + "-stops.xml");
 		this.writeXmlHead();
 		this.writeDoctype("transitSchedule", "http://www.matsim.org/files/dtd/transitSchedule_v1.dtd");
