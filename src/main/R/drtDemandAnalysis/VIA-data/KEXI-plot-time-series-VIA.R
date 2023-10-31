@@ -10,7 +10,8 @@ library(hrbrthemes)
 ### INPUT DEFINITIONS ###
 
 # set working directory
-setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
+#setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
+setwd("D:/Module/vsp/shared-svn/")
 
 # read data
 VIAdata2021 <- read.csv2("Via_data_2022-02-08/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
@@ -18,19 +19,21 @@ VIAdata2022_1 <- read.csv2("Via_data_2022-10-10/Data_request_TUB_for_Kelheim-Act
 VIAdata2022_2 <- read.csv2("Via_data_2023-01-17/Data_request_TUB_for_Kelheim-Actual_Data-Oct-Dec_2022-Data_TUB_for_Kelheim-Actual_Data-Oct_to_Dec_22_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
 VIAdata2023_1 <- read.csv2("Via_data_2023-04-19/Data_request_TUB_for_Kelheim-Actual_Data-Jan-Mar_2023-Kelheim-Actual_Data-Jan-Mar_2023_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
 VIAdata2023_2 <- read.csv2("Via_data_2023-07-10/Data_request_TUB_for_Kelheim-Actual_Data-Apr-Jul_2023-Kelheim-Actual_Data-Apr-Jul_23_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
+VIAdata2023_3 <- read.csv2("Via_data_2023-10-24/Data_request_TUB_for_Kelheim-Actual_Data-Jul-Oct_2023-Kelheim-Actual_Data-Jul-Oct_23_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
 
 
 VIAdataAll <- union(VIAdata2021, VIAdata2022_1)
 VIAdataAll <- union(VIAdataAll, VIAdata2022_2)
 VIAdataAll <- union(VIAdataAll, VIAdata2023_1)
-VIAdataAll <- union(VIAdataAll, VIAdata2023_2) %>%
+VIAdataAll <- union(VIAdataAll, VIAdata2023_2)
+VIAdataAll <- union(VIAdataAll, VIAdata2023_3) %>%
   distinct(Request.ID, .keep_all = TRUE)
 
 VIAdataSince2022 <- VIAdataAll %>%
   filter(year(Actual.Pickup.Time) >= year(ymd("2022-01-01")))
 
-datasets <- list(VIAdata2021, VIAdata2022_1, VIAdata2022_2, VIAdata2023_1, VIAdata2023_2, VIAdataSince2022, VIAdataAll)
-names <- c("VIA_data_202106_202201","VIA_data_202201_202210","VIA_data_202210_202212","VIA_data_202212_202303","VIA_data_202304_202307","VIAdataSince2022","VIAdataAll")
+datasets <- list(VIAdata2021, VIAdata2022_1, VIAdata2022_2, VIAdata2023_1, VIAdata2023_2,VIAdata2023_3, VIAdataSince2022, VIAdataAll)
+names <- c("VIA_data_202106_202201","VIA_data_202201_202210","VIA_data_202210_202212","VIA_data_202212_202303","VIA_data_202304_202307","VIA_data_202307_202310","VIAdataSince2022","VIAdataAll")
 i <- 1
 
 print("Starting to print different plots!")
