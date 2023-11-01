@@ -43,10 +43,10 @@ public class PrepareVehicleFile implements MATSimAppCommand {
 		if (shp.isDefined()) {
 			Geometry serviceArea = shp.getGeometry();
 			startLocations.addAll(network.getLinks().values().stream().
-				filter(l -> l.getAllowedModes().contains(TransportMode.car)).
+				filter(l -> l.getAllowedModes().contains(TransportMode.drt)).
 				filter(l -> serviceArea.contains(MGC.coord2Point(l.getToNode().getCoord()))).toList());
 		} else {
-			startLocations.addAll(network.getLinks().values().stream().filter(l -> l.getAllowedModes().contains(TransportMode.car)).toList());
+			startLocations.addAll(network.getLinks().values().stream().filter(l -> l.getAllowedModes().contains(TransportMode.drt)).toList());
 		}
 		int numOfLinks = startLocations.size();
 		Random random = new Random();
@@ -61,13 +61,20 @@ public class PrepareVehicleFile implements MATSimAppCommand {
 		freightVehicleType.setPcuEquivalents(3.5);
 
 		VehicleType drtVehicleType = VehicleUtils.createVehicleType(Id.create("conventional_vehicle", VehicleType.class));
+		drtVehicleType.setDescription("Conventional DRT");
 		drtVehicleType.getCapacity().setSeats(8);
+
+		VehicleType avVehicleType = VehicleUtils.createVehicleType(Id.create("autonomous_vehicle", VehicleType.class));
+		avVehicleType.setDescription("Autonomous DRT");
+		avVehicleType.getCapacity().setSeats(6);
+		avVehicleType.setMaximumVelocity(5);
 
 		Vehicles vehicles = new VehiclesImpl();
 		vehicles.addVehicleType(carVehicleType);
 		vehicles.addVehicleType(rideVehicleType);
 		vehicles.addVehicleType(freightVehicleType);
 		vehicles.addVehicleType(drtVehicleType);
+		vehicles.addVehicleType(avVehicleType);
 
 		for (int i = 1; i <= fleetSize; i++) {
 			Link startLink = startLocations.get(random.nextInt(numOfLinks));
@@ -80,6 +87,8 @@ public class PrepareVehicleFile implements MATSimAppCommand {
 
 			vehicles.addVehicle(drtVehicle);
 		}
+
+		// Future extension: add autonomous vehicles.
 
 		VehicleUtils.writeVehicles(vehicles, outputFiles);
 		return 0;
