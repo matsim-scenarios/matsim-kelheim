@@ -77,7 +77,11 @@ for(dataset in datasets) {
     geom_line(mapping=aes(x=date, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=date, y=n), fill="#69b3a2", alpha=0.5) +
     labs(x="Tag",y="Requests", title="Zeitverlauf der Anfragen pro Tag (VIA)") +
-    scale_x_date(breaks = "3 month")
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold")) +
+    scale_x_date(breaks = "3 month") 
+    
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_requests_VIA.png")
@@ -94,7 +98,10 @@ for(dataset in datasets) {
   #plot avg nr of requests per weekday
   p <- ggplot(data=reqProWochentag) +
     geom_bar(mapping=aes(x=weekday, y=avg), stat="identity") +
-    labs(x="Wochentag",y="Durchschn. Anzahl Requests", title="Durchschn. Anzahl Requests pro Wochentag (VIA)")
+    labs(x="Wochentag",y="Durchschn. Anzahl Requests", title="Durchschn. Anzahl Requests pro Wochentag (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_requests_weekdays_VIA.png")
@@ -113,7 +120,10 @@ for(dataset in datasets) {
   p <- ggplot(data=requestsPerInterval) +
     geom_line(mapping=aes(x=interval * 5/60, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=interval * 5/60, y=n), fill="#69b3a2", alpha=0.5) +
-    labs(x="Stunde", y="Anzahl Requests pro Intervall", title="Requests pro 5 Minuten-Intervall (VIA)")
+    labs(x="Stunde", y="Anzahl Requests pro Intervall", title="Requests pro 5 Minuten-Intervall (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_requests_daily_VIA.png")
@@ -140,6 +150,9 @@ for(dataset in datasets) {
     geom_line(mapping=aes(x=date, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=date, y=n), fill="#69b3a2", alpha=0.5) +
     labs(x="Tag", y="Fahrten", title="Zeitverlauf der Fahrten pro Tag (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=2),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold")) +
     scale_x_date(breaks = "3 month")
 
   plotFile = paste0("plots/",names[i],"/KEXI_rides_VIA.png")
@@ -178,7 +191,10 @@ for(dataset in datasets) {
   #plot avg nr of requests per weekday
   p <- ggplot(data=ridesProWochentag) +
     geom_bar(mapping=aes(x=weekday, y=avg), stat="identity") +
-    labs(x="Tag", y="Durchschn. Anzahl Fahrten", title="Durchschn. Anzahl Fahrten pro Wochentag (VIA)")
+    labs(x="Tag", y="Durchschn. Anzahl Fahrten", title="Durchschn. Anzahl Fahrten pro Wochentag (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_rides_weekdays_VIA.png")
@@ -198,6 +214,9 @@ for(dataset in datasets) {
     geom_line(mapping=aes(x=date, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=date, y=n), fill="#69b3a2", alpha=0.5) +
     labs(x="Tag",y="Fahrten", title="Zeitverlauf der Fahrten pro Samstag (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=2),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold")) +
     scale_x_date(breaks = "3 month")
 
   
@@ -235,7 +254,10 @@ for(dataset in datasets) {
   p <- ggplot(data=ridesPerInterval) +
     geom_line(mapping=aes(x=interval*5/60, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=interval*5/60, y=n), fill="#69b3a2", alpha=0.5) +
-    labs(x="Stunde",y="Anzahl Fahrten", title="Fahrten pro 5-Minuten-Intervall (VIA)")
+    labs(x="Stunde",y="Anzahl Fahrten", title="Fahrten pro 5-Minuten-Intervall (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_rides_daily_VIA.png")
@@ -255,7 +277,10 @@ for(dataset in datasets) {
   p <- ggplot(data=saturdays_day) +
     geom_line(mapping=aes(x=interval*5/60, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=interval*5/60, y=n), fill="#69b3a2", alpha=0.5) +
-    labs(x="Stunde",y="Anzahl Fahrten", title="SA: Fahrten pro 5-Minuten-Intervall (VIA)")
+    labs(x="Stunde",y="Anzahl Fahrten", title="SA: Fahrten pro 5-Minuten-Intervall (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_rides_saturdays_daily_VIA.png")

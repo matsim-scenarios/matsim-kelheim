@@ -10,7 +10,7 @@ library(ggplot2)
 library(plotly)
 library(hrbrthemes)
 library(geosphere)
-
+Sys.setlocale("LC_TIME", "en_US.UTF-8")
 #####################################################################
 ####################################################
 ### INPUT DEFINITIONS ###
@@ -72,10 +72,10 @@ for(dataset in datasets) {
   # write.csv2(noPUTime, "VIA_Rides_202106_202201_noPUTime.csv", quote = FALSE)
 
   weekdayRides <- dataset %>%
-    filter(weekday != "Fr",
-           weekday != "Sa",
-           weekday != "So",
-           weekday != "Mo")
+    filter(weekday != "Fri",
+           weekday != "Sat",
+           weekday != "Sun",
+           weekday != "Mon")
 
   #Possibly add a lockdown in late 2021 / early 2022 here,
   # although the "low periods" observed in the "Zeitverlauf der Fahrten pro Tag (VIA)"-plot seem be explainable through holiday times (christmas and summer)
@@ -192,7 +192,8 @@ for(dataset in datasets) {
 
   hist_TravelTime_s <- ggplot(j, aes(x=travelTime_s)) +
     geom_histogram() +
-    labs(title=paste("Histogram of KEXI travel time for dataset", names[i]))
+    labs(title=paste("Histogram of KEXI travel time for dataset", names[i])) +
+    theme(plot.title = element_text(hjust=0.5, size = 10))
 
   plotFile = paste0("plots/",names[i],"/hist_KEXI_travel_time_s.png")
   paste0("printing plot to ", plotFile)
@@ -208,8 +209,8 @@ for(dataset in datasets) {
                  width=5, colour="red") +
     labs(x="", y="travel time [s]", title=paste("Boxplot KEXI Travel Time for dataset", names[i])) +
     # labs(x="", y="travel time [s]") + #for paper only
-    theme(plot.title = element_text(hjust=0.5, size=20, face="bold"), axis.text.y = element_text(size=24),
-          axis.title.y = element_text(size=25, face="bold"))
+    theme(plot.title = element_text(hjust=0.5, size=10, face="bold"), axis.text.y = element_text(size=8),
+          axis.title.y = element_text(size=15, face="bold"))
 
   plotFile = paste0("plots/",names[i],"/boxplot_KEXI_travel_time_s.png")
   paste0("printing plot to ", plotFile)
@@ -232,7 +233,8 @@ for(dataset in datasets) {
 
   hist_distance_m <- ggplot(k, aes(x=distance_m)) +
     geom_histogram() +
-    labs(title=paste("Histogram of KEXI travel distance for dataset", names[i]))
+    labs(title=paste("Histogram of KEXI travel distance for dataset", names[i])) +
+    theme(plot.title = element_text(hjust=0.5, size = 10))
 
   plotFile = paste0("plots/",names[i],"/hist_KEXI_travel_distance_m.png")
   paste0("printing plot to ", plotFile)
@@ -247,8 +249,8 @@ for(dataset in datasets) {
                  width=5, colour="red") +
     labs(x="", y="travel distance [m]", title=paste("Boxplot KEXI Travel Distance for dataset", names[i])) +
     # labs(x="", y="travel distance [m]") + #for paper only
-    theme(plot.title = element_text(hjust=0.5, size=20, face="bold"), axis.text.y = element_text(size=24),
-          axis.title.y = element_text(size=25, face="bold"))
+    theme(plot.title = element_text(hjust=0.5, size=10, face="bold"), axis.text.y = element_text(size=8),
+          axis.title.y = element_text(size=15, face="bold"))
 
   plotFile = paste0("plots/",names[i],"/boxplot_KEXI_travel_distance_m.png")
   paste0("printing plot to ", plotFile)
@@ -305,8 +307,8 @@ for(dataset in datasets) {
                  width=5, colour="red") +
     labs(x="", y="bookings", title=paste("Boxplot KEXI bookings per day for dataset", names[i])) +
     # labs(x="", y="travel distance [m]") + #for paper only
-    theme(plot.title = element_text(hjust=0.5, size=20, face="bold"), axis.text.y = element_text(size=24),
-          axis.title.y = element_text(size=25, face="bold"))
+    theme(plot.title = element_text(hjust=0.5, size=10, face="bold"), axis.text.y = element_text(size=8),
+          axis.title.y = element_text(size=15, face="bold"))
 
   plotFile = paste0("plots/",names[i],"/boxplot_KEXI_daily_bookings.png")
   paste0("printing plot to ", plotFile)
