@@ -25,7 +25,6 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
@@ -34,12 +33,13 @@ import org.matsim.core.utils.io.IOUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileSystem;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 
-public class TransformCoordinatesTripCSV {
+class TransformCoordinatesTripCSV {
+
+	private TransformCoordinatesTripCSV(){}
 
 	public static void main(String[] args) {
 		String path = "C:/Users/Tilmann/tubCloud/VSP_WiMi/Projekte/KelRide/2023-10-results-exchange-VIA/AV-speed-mps-5/SAR2023-AV5/seed-5-SAR2023";
@@ -49,6 +49,12 @@ public class TransformCoordinatesTripCSV {
 
 	}
 
+	/**
+	 *
+	 * transforms coordinates in output legs and output trips csv files from UTM32N to WGS84
+	 *
+	 * @param input the output file to process
+	 */
 	private static void process(File input) {
 		String output = input.getAbsolutePath().substring(0, input.getAbsolutePath().lastIndexOf(".csv")) + "_WGS84.csv";
 
@@ -65,21 +71,21 @@ public class TransformCoordinatesTripCSV {
 			Map<String, Integer> headerMap = reader.getHeaderMap();
 
 			Iterator<CSVRecord> iterator = reader.iterator();
-			while(iterator.hasNext()){
-				CSVRecord record = iterator.next();
+			while (iterator.hasNext()){
+				CSVRecord dataSet = iterator.next();
 
 				Integer fromX_idx = headerMap.get("fromX") == null ? headerMap.get("start_x") : headerMap.get("fromX");
 				Integer fromY_idx = headerMap.get("fromY") == null ? headerMap.get("start_y") : headerMap.get("fromY");
 				Integer toX_idx = headerMap.get("toX") == null ? headerMap.get("end_x") : headerMap.get("toX");
 				Integer toY_idx = headerMap.get("toY") == null ? headerMap.get("end_y") : headerMap.get("toY");
 
-				Coord from = new Coord(Double.parseDouble(record.get(fromX_idx)), Double.parseDouble(record.get(fromY_idx)));
-				Coord to = new Coord(Double.parseDouble(record.get(toX_idx)), Double.parseDouble(record.get(toY_idx)));
+				Coord from = new Coord(Double.parseDouble(dataSet.get(fromX_idx)), Double.parseDouble(dataSet.get(fromY_idx)));
+				Coord to = new Coord(Double.parseDouble(dataSet.get(toX_idx)), Double.parseDouble(dataSet.get(toY_idx)));
 
 				Coord fromTransformed = transformer.transform(from);
 				Coord toTransformed =transformer.transform(to);
 
-				String[] modified = record.values().clone();
+				String[] modified = dataSet.values().clone();
 				modified[fromX_idx] = String.valueOf(fromTransformed.getX());
 				modified[fromY_idx] = String.valueOf(fromTransformed.getY());
 				modified[toX_idx] = String.valueOf(toTransformed.getX());
