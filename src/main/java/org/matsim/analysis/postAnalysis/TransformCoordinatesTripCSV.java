@@ -37,7 +37,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 
-class TransformCoordinatesTripCSV {
+final class TransformCoordinatesTripCSV {
 
 	private TransformCoordinatesTripCSV(){}
 
@@ -50,9 +50,7 @@ class TransformCoordinatesTripCSV {
 	}
 
 	/**
-	 *
-	 * transforms coordinates in output legs and output trips csv files from UTM32N to WGS84
-	 *
+	 * transforms coordinates in output legs and output trips csv files from UTM32N to WGS84.
 	 * @param input the output file to process
 	 */
 	private static void process(File input) {
