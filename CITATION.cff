@@ -16,14 +16,17 @@ authors:
   - given-names: Chengqi
     family-names: Lu
     email: lu@vsp.tu-berlin.de
+    orcid: 'https://orcid.org/0000-0002-1930-4675'
     affiliation: Technische Universität Berlin
   - given-names: Christian
     family-names: Rakow
     email: rakow@vsp.tu-berlin.de
     affiliation: Technische Universität Berlin
+    orcid: 'https://orcid.org/0000-0003-3760-2243'
   - given-names: Simon
     family-names: Meinhardt
     email: meinhardt@vsp.tu-berlin.de
+    orcid: 'https://orcid.org/0000-0002-6354-4529'
     affiliation: Technische Universität Berlin
   - given-names: Kai
     family-names: Nagel
@@ -34,5 +37,5 @@ url: "https://github.com/matsim-scenarios/matsim-kelheim"
 doi: 10.5281/zenodo.8322240
 date-released: 2023-09-06
 year: 2023
-version: 3.0
+version: 3.1
 license: AGPL-3.0
