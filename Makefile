@@ -5,10 +5,7 @@ CRS := EPSG:25832
 MEMORY ?= 20G
 JAR := matsim-kelheim-*.jar
 
-ifndef SUMO_HOME
-	export SUMO_HOME := $(abspath ../../sumo-1.15.0/)
-endif
-
+SUMO_HOME ?= $(abspath ../../sumo-1.18.0/)
 osmosis := osmosis/bin/osmosis
 
 # Scenario creation tool
@@ -140,6 +137,13 @@ input/$V/kelheim-$V-25pct.plans-initial.xml.gz: input/freight-trips.xml.gz input
     	 --sample-size 0.25\
     	 --samples 0.1 0.01\
 
+choice-set: input/$V/kelheim-$V-25pct.plans-initial.xml.gz
+	# Population path is relative to config
+	$(sc) prepare generate-choice-set --scenario org.matsim.run.RunKelheimScenario\
+		 --population $(notdir $<)\
+		 --config input/$V/kelheim-$V-config.xml\
+		 --pruning p999\
+		 --output input/$V/kelheim-$V-25pct.plans-fixed-choice.xml.gz\
 
 check: input/$V/kelheim-$V-25pct.plans-initial.xml.gz
 	$(sc) analysis check-population $<\

@@ -59,6 +59,8 @@ import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesC
 import org.matsim.modechoice.InformedModeChoiceConfigGroup;
 import org.matsim.modechoice.InformedModeChoiceModule;
 import org.matsim.modechoice.ModeOptions;
+import org.matsim.modechoice.commands.GenerateChoiceSet;
+import org.matsim.modechoice.constraints.RelaxedMassConservationConstraint;
 import org.matsim.modechoice.estimators.DefaultActivityEstimator;
 import org.matsim.modechoice.estimators.DefaultLegScoreEstimator;
 import org.matsim.modechoice.estimators.FixedCostsEstimator;
@@ -83,7 +85,8 @@ import java.util.SplittableRandom;
 @MATSimApplication.Prepare({
 	CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
 	MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
-	CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class
+	CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class,
+	GenerateChoiceSet.class
 })
 @MATSimApplication.Analysis({
 	LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
@@ -301,9 +304,10 @@ public class RunKelheimScenario extends MATSimApplication {
 					.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
 					.withTripEstimator(PtTripWithDistanceBasedFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
 					.withActivityEstimator(DefaultActivityEstimator.class)
-					.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
-					.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
-					.withPruner("ad95", new DistanceBasedPruner(1.72092386, 0.03189323));
+					.withConstraint(RelaxedMassConservationConstraint.class)
+					.withPruner("p999", new DistanceBasedPruner(3.03073657, 0.22950583))
+					.withPruner("p99", new DistanceBasedPruner(2.10630819, 0.0917091))
+					.withPruner("p95", new DistanceBasedPruner(1.72092386, 0.03189323));
 
 				if (drt) {
 					imc.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.drt, "av");

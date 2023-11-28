@@ -133,6 +133,7 @@
 	<module name="informedModeChoice">
 		<param name="modes" value="car,pt,bike,walk,ride,drt"/>
 		<param name="topK" value="5"/>
+		<param name="constraintCheck" value="repair"/>
 	</module>
 
     <module name="transitRouter">
