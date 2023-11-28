@@ -30,6 +30,10 @@ import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
 import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
+import org.matsim.contrib.drt.extension.estimator.MultiModalDrtLegEstimator;
+import org.matsim.contrib.drt.extension.estimator.run.DrtEstimatorConfigGroup;
+import org.matsim.contrib.drt.extension.estimator.run.DrtEstimatorModule;
+import org.matsim.contrib.drt.extension.estimator.run.MultiModeDrtEstimatorConfigGroup;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
@@ -52,6 +56,13 @@ import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
+import org.matsim.modechoice.InformedModeChoiceConfigGroup;
+import org.matsim.modechoice.InformedModeChoiceModule;
+import org.matsim.modechoice.ModeOptions;
+import org.matsim.modechoice.estimators.DefaultActivityEstimator;
+import org.matsim.modechoice.estimators.DefaultLegScoreEstimator;
+import org.matsim.modechoice.estimators.FixedCostsEstimator;
+import org.matsim.modechoice.pruning.DistanceBasedPruner;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
@@ -60,6 +71,7 @@ import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.pt.fare.DistanceBasedPtFareParams;
 import playground.vsp.pt.fare.PtFareConfigGroup;
+import playground.vsp.pt.fare.PtTripWithDistanceBasedFareEstimator;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
@@ -165,6 +177,10 @@ public class RunKelheimScenario extends MATSimApplication {
 		sw.defaultParams().mapCenter = "11.89,48.91";
 		sw.defaultParams().mapZoomLevel = 11d;
 		sw.defaultParams().sampleSize = sample.getSample();
+
+		// Config needs to be loaded at least once
+		InformedModeChoiceConfigGroup imc = ConfigUtils.addOrGetModule(config, InformedModeChoiceConfigGroup.class);
+		imc.setTopK(5);
 
 		if (intermodal) {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
@@ -278,24 +294,22 @@ public class RunKelheimScenario extends MATSimApplication {
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
-				/*
-				if (strategy.getModeChoice() == StrategyOptions.ModeChoice.randomSubtourMode) {
-					// Configure mode-choice strategy
-					install(strategy.applyModule(binder(), config, builder ->
-								builder.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
-									.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
-									.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
-//											.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, "drt", "av")
-									.withTripEstimator(PtTripWithDistanceBasedFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
-									.withActivityEstimator(DefaultActivityEstimator.class)
-									// These are with activity estimation enabled
-									.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
-									.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
-									.withPruner("ad95", new DistanceBasedPruner(1.72092386, 0.03189323))
-						)
-					);
+				// Configure mode-choice strategy
+				InformedModeChoiceModule.Builder imc = new InformedModeChoiceModule.Builder()
+					.withFixedCosts(FixedCostsEstimator.DailyConstant.class, TransportMode.car)
+					.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.bike, TransportMode.ride, TransportMode.walk)
+					.withLegEstimator(DefaultLegScoreEstimator.class, ModeOptions.ConsiderIfCarAvailable.class, TransportMode.car)
+					.withTripEstimator(PtTripWithDistanceBasedFareEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.pt)
+					.withActivityEstimator(DefaultActivityEstimator.class)
+					.withPruner("ad999", new DistanceBasedPruner(3.03073657, 0.22950583))
+					.withPruner("ad99", new DistanceBasedPruner(2.10630819, 0.0917091))
+					.withPruner("ad95", new DistanceBasedPruner(1.72092386, 0.03189323));
+
+				if (drt) {
+					imc.withLegEstimator(MultiModalDrtLegEstimator.class, ModeOptions.AlwaysAvailable.class, TransportMode.drt, "av");
 				}
-				*/
+
+				install(imc.build());
 
 				//use income-dependent marginal utility of money
 				bind(ScoringParametersForPerson.class).to(IncomeDependentUtilityOfMoneyPersonScoringParameters.class).asEagerSingleton();
@@ -340,11 +354,11 @@ public class RunKelheimScenario extends MATSimApplication {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
 			}
 
-			//controler.addOverridingModule(new DrtEstimatorModule());
+			controler.addOverridingModule(new DrtEstimatorModule());
 
-			// TODO: when to include AV?
-			//estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));
-
+			MultiModeDrtEstimatorConfigGroup estimatorConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtEstimatorConfigGroup.class);
+			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("drt"));
+			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));
 
 //            if (intermodal){
 //                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
