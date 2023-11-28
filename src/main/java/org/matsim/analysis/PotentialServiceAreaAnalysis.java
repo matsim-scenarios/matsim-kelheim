@@ -35,15 +35,13 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.contrib.freight.carrier.*;
-import org.matsim.contrib.freight.controler.FreightUtils;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.algorithms.TransportModeNetworkFilter;
 import org.matsim.core.population.routes.NetworkRoute;
-import org.matsim.core.router.FastAStarLandmarksFactory;
+import org.matsim.core.router.speedy.SpeedyALTFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -54,6 +52,7 @@ import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.freight.carriers.*;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleType;
 import org.matsim.vehicles.VehicleUtils;
@@ -130,7 +129,7 @@ public final class PotentialServiceAreaAnalysis {
 
 	private static void writeStats(Network network, Map<String, PreparedGeometry> serviceAreas, Map<PreparedGeometry, Collection<Stop>> area2Stops, Carriers carriers, Map<Tuple<Id<Stop>, Id<Stop>>, Integer> relations) {
 		String outputFileName = INPUT_SERVICE_AREAS_SHAPE.substring(0, INPUT_SERVICE_AREAS_SHAPE.lastIndexOf(".")) + "_stats.csv";
-		LeastCostPathCalculator router = new FastAStarLandmarksFactory(4).createPathCalculator(network, new TravelDisutility() {
+		LeastCostPathCalculator router = new SpeedyALTFactory().createPathCalculator(network, new TravelDisutility() {
 			@Override
 			public double getLinkTravelDisutility(Link link, double time, Person person, Vehicle vehicle) {
 				return link.getLength();
@@ -211,23 +210,23 @@ public final class PotentialServiceAreaAnalysis {
 	@SuppressWarnings("IllegalCatch")
 	private static Carriers getCarriersWithPlannedRoundTours(Network network, Map<String, PreparedGeometry> serviceAreas, Map<PreparedGeometry, Collection<Stop>> area2Stops) {
 		Config config = ConfigUtils.createConfig();
-		config.controler().setLastIteration(0);
+		config.controller().setLastIteration(0);
 		config.network().setInputFile(INPUT_NETWORK);
-		config.controler().setOutputDirectory("D:/KelRide-test/testServiceAreaTours/");
-		config.controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
+		config.controller().setOutputDirectory("D:/KelRide-test/testServiceAreaTours/");
+		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 
 		//container
-		Carriers carriers = FreightUtils.addOrGetCarriers(scenario);
+		Carriers carriers = CarriersUtils.addOrGetCarriers(scenario);
 		VehicleType type = createVehicleType();
-		FreightUtils.getCarrierVehicleTypes(scenario).getVehicleTypes().put(type.getId(), type);
+		CarriersUtils.getCarrierVehicleTypes(scenario).getVehicleTypes().put(type.getId(), type);
 
 		//iterate over service areas and create carrier
 		serviceAreas.forEach((areaName, geom) -> carriers.addCarrier(buildCarrier(areaName, area2Stops.get(geom), network, type)));
 
 		try {
-			FreightUtils.runJsprit(scenario);
+			CarriersUtils.runJsprit(scenario);
 		} catch (Exception e) {
 			log.error(e);
 		}
@@ -281,9 +280,9 @@ public final class PotentialServiceAreaAnalysis {
 
 	private static Carrier buildCarrier(String areaName, Collection<Stop> stops, Network network, VehicleType vehicleType) {
 		//carrier
-		Carrier carrier = CarrierUtils.createCarrier(Id.create(areaName, Carrier.class));
-		CarrierUtils.setCarrierMode(carrier, TransportMode.car);
-		CarrierUtils.setJspritIterations(carrier, 10000);
+		Carrier carrier = CarriersUtils.createCarrier(Id.create(areaName, Carrier.class));
+		CarriersUtils.setCarrierMode(carrier, TransportMode.car);
+		CarriersUtils.setJspritIterations(carrier, 10000);
 		//we will specify one vehicle and only want one tour
 		carrier.getCarrierCapabilities().setFleetSize(CarrierCapabilities.FleetSize.FINITE);
 		carrier.getCarrierCapabilities().getVehicleTypes().add(vehicleType);

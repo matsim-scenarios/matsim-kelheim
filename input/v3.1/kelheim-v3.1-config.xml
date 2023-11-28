@@ -6,13 +6,13 @@
     </module>
 
     <module name="controller">
-        <param name="lastIteration" value="1"/>
-        <param name="overwriteFiles" value="deleteDirectoryIfExists"/>
-        <param name="runId" value="kelheim"/>
-        <param name="outputDirectory" value="./output/test"/>
-        <param name="writeEventsInterval" value="50"/>
-        <param name="writePlansInterval" value="50"/>
-        <param name="enableLinkToLinkRouting" value="false" />
+        <param name="lastIteration" value="1000"/>
+        <param name="overwriteFiles" value="failIfDirectoryExists"/>
+        <param name="runId" value="kelheim-v3.1-25pct"/>
+        <param name="outputDirectory" value="./output/output-kelheim-v3.1-25pct"/>
+        <param name="writeEventsInterval" value="100"/>
+        <param name="writePlansInterval" value="100"/>
+        <param name="enableLinkToLinkRouting" value="false"/>
         <param name="routingAlgorithmType" value="SpeedyALT"/>
     </module>
 
@@ -22,26 +22,26 @@
         <param name="numberOfThreads" value="6"/>
     </module>
 
-	<module name="network">
-		<param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-network-with-pt.xml.gz"/>
-		<param name="laneDefinitionsFile" value="null"/>
-	</module>
+    <module name="network">
+        <param name="inputNetworkFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-network-with-pt.xml.gz"/>
+        <param name="laneDefinitionsFile" value="null"/>
+    </module>
 
-	<module name="plans">
-		<param name="inputPlansFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v1.0/input/test.plans.xml"/>
-		<param name="removingUnnecessaryPlanAttributes" value="true"/>
-	</module>
+    <module name="plans">
+        <param name="inputPlansFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-25pct-plans.xml.gz"/>
+        <param name="removingUnnecessaryPlanAttributes" value="true"/>
+    </module>
 
-	<module name="vehicles">
-		<param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-vehicle-types.xml"/>
-	</module>
+    <module name="vehicles">
+        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-vehicle-types.xml"/>
+    </module>
 
 
-	<module name="transit">
-		<param name="transitScheduleFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-transitSchedule.xml.gz"/>
-		<param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-transitVehicles.xml.gz"/>
-		<param name="useTransit" value="true"/>
-	</module>
+    <module name="transit">
+        <param name="transitScheduleFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-transitSchedule.xml.gz"/>
+        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-transitVehicles.xml.gz"/>
+        <param name="useTransit" value="true"/>
+    </module>
 
     <module name="routing">
         <param name="networkModes" value="car,ride,freight"/>
@@ -58,14 +58,14 @@
     </module>
 
     <module name="qsim">
-        <param name="endTime" value="36:00:00"/>
-        <param name="flowCapacityFactor" value="10000"/>
-        <param name="mainMode" value="car,freight"/>
-        <param name="numberOfThreads" value="8"/>
-        <param name="startTime" value="00:00:00"/>
-        <param name="storageCapacityFactor" value="10000"/>
+        <param name="flowCapacityFactor" value="0.25"/>
+		<param name="mainMode" value="car,freight"/>
+		<param name="numberOfThreads" value="8"/>
+		<param name="startTime" value="00:00:00"/>
+		<param name="endTime" value="36:00:00"/>
+		<param name="storageCapacityFactor" value="0.25"/>
         <param name="stuckTime" value="30.0"/>
-		<param name="trafficDynamics" value="kinematicWaves"/>
+        <param name="trafficDynamics" value="kinematicWaves"/>
         <param name="linkDynamics" value="FIFO"/>
         <param name="useLanes" value="false"/>
 
@@ -163,18 +163,17 @@
 
         <parameterset type="scoringParameters">
             <!-- mode ASCs come from auto-calibration-->
+			<!-- For a bit of documentation on the non-zero marginal utilities per m, see the following link-->
+			<!-- https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/matsim-kelheim-v3.0-calibration-mode-parameters.pdf -->
             <param name="waitingPt" value="-1.6"/>
 
             <parameterset type="modeParams" >
                 <param name="constant" value="0.10908902922956654" />
                 <param name="dailyMonetaryConstant" value="-5.3" />
-                <!-- [utils] daily utility constant. default=0 to be backwards compatible -->
                 <param name="dailyUtilityConstant" value="0.0" />
-                <!-- [utils/m] utility of traveling (e.g. walking or driving) per m, normally negative.  this is on top of the time (dis)utility. -->
                 <param name="marginalUtilityOfDistance_util_m" value="0.0" />
                 <param name="marginalUtilityOfTraveling_util_hr" value="-0.0" />
                 <param name="mode" value="car" />
-                <!-- [unit_of_money/m] conversion of distance into money. Normally negative. -->
                 <param name="monetaryDistanceRate" value="-2.0E-4" />
             </parameterset>
             <parameterset type="modeParams" >
@@ -182,7 +181,7 @@
                 <param name="dailyMonetaryConstant" value="-0.0" />
                 <param name="dailyUtilityConstant" value="0.0" />
                 <param name="marginalUtilityOfDistance_util_m" value="0.0" />
-                <param name="marginalUtilityOfTraveling_util_hr" value="-12.0" />
+                <param name="marginalUtilityOfTraveling_util_hr" value="-12.0" /> <!-- see comment above-->
                 <param name="mode" value="ride" />
                 <param name="monetaryDistanceRate" value="-2.0E-4" />
             </parameterset>
@@ -200,7 +199,7 @@
                 <param name="dailyMonetaryConstant" value="0.0" />
                 <param name="dailyUtilityConstant" value="0.0" />
                 <param name="marginalUtilityOfDistance_util_m" value="0.0" />
-                <param name="marginalUtilityOfTraveling_util_hr" value="-3.0" />
+                <param name="marginalUtilityOfTraveling_util_hr" value="-3.0" /> <!-- see comment above-->
                 <param name="mode" value="bike" />
                 <param name="monetaryDistanceRate" value="0.0" />
             </parameterset>
@@ -232,5 +231,4 @@
         <!-- maximum beeline distance between stops that agents could transfer to by walking -->
         <param name="maxBeelineWalkConnectionDistance" value="300.0"/>
     </module>
-
 </config>

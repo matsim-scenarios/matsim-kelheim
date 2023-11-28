@@ -44,7 +44,7 @@ import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
+import org.matsim.core.config.groups.RoutingConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
@@ -78,7 +78,7 @@ import java.util.SplittableRandom;
 })
 public class RunKelheimScenario extends MATSimApplication {
 
-	public static final String VERSION = "3.0";
+	public static final String VERSION = "3.1";
 	private static final double WEIGHT_1_PASSENGER = 16517.;
 	private static final double WEIGHT_2_PASSENGER = 2084.;
 	private static final double WEIGHT_3_PASSENGER = 532.;
@@ -146,15 +146,15 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		SnzActivities.addScoringParams(config);
 
-		config.controler().setOutputDirectory(sample.adjustName(config.controler().getOutputDirectory()));
+		config.controller().setOutputDirectory(sample.adjustName(config.controller().getOutputDirectory()));
 		config.plans().setInputFile(sample.adjustName(config.plans().getInputFile()));
-		config.controler().setRunId(sample.adjustName(config.controler().getRunId()));
+		config.controller().setRunId(sample.adjustName(config.controller().getRunId()));
 
 		config.qsim().setFlowCapFactor(sample.getSize() / 100.0);
 		config.qsim().setStorageCapFactor(sample.getSize() / 100.0);
 
 		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.abort);
-		config.plansCalcRoute().setAccessEgressType(PlansCalcRouteConfigGroup.AccessEgressType.accessEgressModeToLink);
+		config.routing().setAccessEgressType(RoutingConfigGroup.AccessEgressType.accessEgressModeToLink);
 
 		config.global().setRandomSeed(randomSeed);
 
@@ -184,7 +184,7 @@ public class RunKelheimScenario extends MATSimApplication {
 			}
 
 			ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
-			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
+			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.scoring(), config.routing());
 		}
 
 		// Config is always needed
