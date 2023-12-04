@@ -131,19 +131,25 @@ input/$V/kelheim-$V-25pct.plans-initial.xml.gz: input/freight-trips.xml.gz input
 
 	$(sc) prepare merge-populations $@ $< --output $@
 
-	$(sc) prepare extract-home-coordinates $@ --csv input/$V/kelheim-$V-homes.csv
-
 	$(sc) prepare downsample-population $@\
     	 --sample-size 0.25\
     	 --samples 0.1 0.01\
 
-choice-set: input/$V/kelheim-$V-25pct.plans-initial.xml.gz
-	# Population path is relative to config
+choice-set:
+
 	$(sc) prepare generate-choice-set --scenario org.matsim.run.RunKelheimScenario\
-		 --population $(notdir $<)\
-		 --config input/$V/kelheim-$V-config.xml\
+		 --population "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-25pct-plans.xml.gz"\
+		 --config input/$V/kelheim-$V-25pct.kexi.config.xml\
+		 --args "--with-drt"\
 		 --pruning p999\
-		 --output input/$V/kelheim-$V-25pct.plans-fixed-choice.xml.gz\
+		 --output input/$V/kelheim-$V-25pct.plans-fixed-choice-pessimistic.xml.gz\
+
+	$(sc) prepare generate-choice-set --scenario org.matsim.run.RunKelheimScenario\
+		 --population "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-25pct-plans.xml.gz"\
+		 --config input/$V/kelheim-$V-25pct.kexi.config.xml\
+		 --args "--with-drt --drt-estimator optimistic"\
+		 --pruning p999\
+		 --output input/$V/kelheim-$V-25pct.plans-fixed-choice-optimistic.xml.gz\
 
 check: input/$V/kelheim-$V-25pct.plans-initial.xml.gz
 	$(sc) analysis check-population $<\

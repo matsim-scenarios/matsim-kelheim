@@ -31,6 +31,8 @@ import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
 import org.matsim.contrib.drt.extension.estimator.MultiModalDrtLegEstimator;
+import org.matsim.contrib.drt.extension.estimator.impl.ConstantDrtEstimator;
+import org.matsim.contrib.drt.extension.estimator.impl.PessimisticDrtEstimator;
 import org.matsim.contrib.drt.extension.estimator.run.DrtEstimatorConfigGroup;
 import org.matsim.contrib.drt.extension.estimator.run.DrtEstimatorModule;
 import org.matsim.contrib.drt.extension.estimator.run.MultiModeDrtEstimatorConfigGroup;
@@ -107,6 +109,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
 	@CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
 	private boolean drt;
+
+	@CommandLine.Option(names = "--drt-estimator", defaultValue = "pessimistic", description = "DRT estimator to use")
+	private DrtEstimator drtEstimator;
 
 	// a couple of CommandLine.Options below actually are not strictly necessary but rather allow for circumvention of settings directly via config and/or config options.... (ts 07/23)
 
@@ -358,7 +363,11 @@ public class RunKelheimScenario extends MATSimApplication {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
 			}
 
-			controler.addOverridingModule(new DrtEstimatorModule());
+			controler.addOverridingModule(new DrtEstimatorModule()
+				.withInitialEstimator((cfg) -> switch (drtEstimator) {
+					case optimistic -> new ConstantDrtEstimator(cfg, 1, 200);
+					case pessimistic -> new PessimisticDrtEstimator(cfg);
+				}, "drt", "av"));
 
 			MultiModeDrtEstimatorConfigGroup estimatorConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtEstimatorConfigGroup.class);
 			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("drt"));
@@ -376,4 +385,10 @@ public class RunKelheimScenario extends MATSimApplication {
 //            }
 		}
 	}
+
+	enum DrtEstimator {
+		optimistic,
+		pessimistic
+	}
+
 }

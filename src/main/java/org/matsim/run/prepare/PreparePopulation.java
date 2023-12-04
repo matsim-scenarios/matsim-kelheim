@@ -8,6 +8,7 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.options.ShpOptions;
+import org.matsim.application.prepare.population.ExtractHomeCoordinates;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PersonUtils;
@@ -111,6 +112,8 @@ public class PreparePopulation implements MATSimAppCommand {
 				}
 			}
 
+			ExtractHomeCoordinates.setHomeCoordinate(person);
+
 			// Assign income to person (skip the freight agents)
 			if (person.getId().toString().startsWith("freight")) {
 				continue;
@@ -146,7 +149,7 @@ public class PreparePopulation implements MATSimAppCommand {
 				// https://www.destatis.de/EN/Themes/Society-Environment/Population/Households-Families/_node.html
 				// https://www.destatis.de/EN/Themes/Society-Environment/Population/Current-Population/_node.html;jsessionid=E0D7A060D654B31C3045AAB1E884CA75.live711
 			};
-			PersonUtils.setIncome(person, income);
+			PersonUtils.setIncome(person, (int) income);
 		}
 
 		ProjectionUtils.putCRS(population, "EPSG:25832");
