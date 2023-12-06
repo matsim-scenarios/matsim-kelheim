@@ -188,7 +188,6 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		// Config needs to be loaded at least once
 		InformedModeChoiceConfigGroup imc = ConfigUtils.addOrGetModule(config, InformedModeChoiceConfigGroup.class);
-		imc.setTopK(5);
 
 		if (intermodal) {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
