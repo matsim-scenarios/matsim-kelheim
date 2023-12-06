@@ -31,7 +31,6 @@ import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
 import org.matsim.contrib.drt.extension.estimator.MultiModalDrtLegEstimator;
-import org.matsim.contrib.drt.extension.estimator.impl.ConstantDrtEstimator;
 import org.matsim.contrib.drt.extension.estimator.impl.PessimisticDrtEstimator;
 import org.matsim.contrib.drt.extension.estimator.run.DrtEstimatorConfigGroup;
 import org.matsim.contrib.drt.extension.estimator.run.DrtEstimatorModule;
@@ -67,6 +66,7 @@ import org.matsim.modechoice.estimators.DefaultActivityEstimator;
 import org.matsim.modechoice.estimators.DefaultLegScoreEstimator;
 import org.matsim.modechoice.estimators.FixedCostsEstimator;
 import org.matsim.modechoice.pruning.DistanceBasedPruner;
+import org.matsim.run.drt.OptimisticDrtEstimator;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
@@ -365,7 +365,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
 			controler.addOverridingModule(new DrtEstimatorModule()
 				.withInitialEstimator((cfg) -> switch (drtEstimator) {
-					case optimistic -> new ConstantDrtEstimator(cfg, 1, 200);
+					case optimistic -> new OptimisticDrtEstimator(cfg, 0.5, 200);
 					case pessimistic -> new PessimisticDrtEstimator(cfg);
 				}, "drt", "av"));
 

@@ -74,7 +74,7 @@
     </module>
 
 	<module name="replanningAnnealer" >
-		<param name="activateAnnealingModule" value="true" />
+		<param name="activateAnnealingModule" value="false" />
 		<parameterset type="AnnealingVariable" >
 			<param name="annealParameter" value="globalInnovationRate" />
 			<param name="annealType" value="sigmoid" />
@@ -100,7 +100,7 @@
             <param name="weight" value="0.10"/>
         </parameterset>
         <parameterset type="strategysettings">
-            <param name="strategyName" value="SelectSubtourMode"/>
+            <param name="strategyName" value="SelectBestKPlanModes"/>
             <param name="subpopulation" value="person"/>
             <param name="weight" value="0.10"/>
         </parameterset>
@@ -133,7 +133,7 @@
 
     <module name="informedModeChoice">
         <param name="modes" value="car,pt,bike,walk,ride"/>
-        <param name="topK" value="5"/>
+        <param name="topK" value="20"/>
 		<param name="constraintCheck" value="repair"/>
     </module>
 
