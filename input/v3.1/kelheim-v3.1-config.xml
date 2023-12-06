@@ -134,7 +134,7 @@
     <module name="informedModeChoice">
         <param name="modes" value="car,pt,bike,walk,ride"/>
         <param name="topK" value="20"/>
-		<param name="constraintCheck" value="ignore"/>
+		<param name="constraintCheck" value="none"/>
     </module>
 
     <module name="transitRouter">
