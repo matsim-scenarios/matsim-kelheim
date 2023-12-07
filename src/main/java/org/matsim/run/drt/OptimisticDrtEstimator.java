@@ -33,7 +33,7 @@ public class OptimisticDrtEstimator implements DrtInitialEstimator {
 	public Estimate estimate(DrtRoute route, OptionalTime departureTime) {
 
 		double distance = route.getDistance();
-		double travelTime = Math.max(route.getTravelTime().seconds(), route.getMaxTravelTime() * proportion);
+		double travelTime = Math.max(route.getDirectRideTime(), route.getMaxTravelTime() * proportion);
 
 		double fare = 0;
 		if (drtConfig.getDrtFareParams().isPresent()) {
