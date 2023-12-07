@@ -45,8 +45,12 @@ public class OptimisticDrtEstimator implements DrtInitialEstimator {
 				+ fareParams.baseFare;
 
 			fare = Math.max(fare, fareParams.minFarePerTrip);
+
+
 		}
 
-		return new Estimate(distance, proportion * maxTravelTime, waitingTime, fare, 0);
+		double travelTime = Math.max(route.getDirectRideTime(), maxTravelTime * proportion);
+
+		return new Estimate(distance, travelTime, waitingTime, fare, 0);
 	}
 }
