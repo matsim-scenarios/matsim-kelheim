@@ -369,8 +369,13 @@ public class RunKelheimScenario extends MATSimApplication {
 				}, "drt", "av"));
 
 			MultiModeDrtEstimatorConfigGroup estimatorConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtEstimatorConfigGroup.class);
-			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("drt"));
-			estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));
+			DrtEstimatorConfigGroup drtEst = new DrtEstimatorConfigGroup("drt");
+			drtEst.estimator = DrtEstimatorConfigGroup.EstimatorType.INITIAL;
+			estimatorConfig.addParameterSet(drtEst);
+
+			DrtEstimatorConfigGroup avEst = new DrtEstimatorConfigGroup("av");
+			avEst.estimator = DrtEstimatorConfigGroup.EstimatorType.INITIAL;
+			estimatorConfig.addParameterSet(avEst);
 
 //            if (intermodal){
 //                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
