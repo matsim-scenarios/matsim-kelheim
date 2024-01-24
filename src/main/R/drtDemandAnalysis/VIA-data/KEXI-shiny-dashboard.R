@@ -42,7 +42,13 @@ ui <- fluidPage(
   navbarPage(
     title = "KEXI Dashboard",
     fluidRow(
-      column(6,
+      column(3,
+             selectInput("anbieterFilter", label = "Filter Anbieter",
+                         choices = unique(data$Anbietername),
+                         selected = c("AV","no vendor"),
+                         multiple = TRUE)
+      ),
+      column(3,
         dateRangeInput("dateRange", label = "Filter nach Erstellungsdatum:",
                        start = min(data$Erstellungszeit),
                        end = max(data$Erstellungszeit),
@@ -50,7 +56,7 @@ ui <- fluidPage(
                        max = max(data$Erstellungszeit),
                        separator = " - ")
       ),
-      column(6,
+      column(3,
         selectInput("statusFilter", label = "Filter nach Status der Fahrtanfrage:",
                     choices = unique(data$Status.der.Fahrtanfrage),
                     selected = "Completed",
@@ -59,34 +65,28 @@ ui <- fluidPage(
     ),
     tabPanel(
       "Auslastung / Nachfrage",
-      #sidebarLayout(
-        #sidebarPanel(
-          
-        #),
-        mainPanel(
-          # Hier fügen Sie Ihre Diagramme oder Tabellen hinzu
-          leafletOutput("map"), # Karte für Standorte der Fahrten
-          plotlyOutput("rideRequestsOverTime"),
-          plotlyOutput("totalPassengersOverTime"),
-          plotlyOutput("distances_walking"),
-          plotlyOutput("travelStats")
-        )
-      #)
+        fluidRow(
+          column(12,
+              # Hier fügen Sie Ihre Diagramme oder Tabellen hinzu
+              leafletOutput("map", height = 600), # Karte für Standorte der Fahrten
+              plotlyOutput("rideRequestsOverTime"),
+              plotlyOutput("totalPassengersOverTime"),
+              plotlyOutput("distances_walking"),
+              plotlyOutput("travelStats")
+            )   
+        )      
     ),
     tabPanel(
       "Service Level",
-      #sidebarLayout(
-        #sidebarPanel(
-          
-        #),
-        mainPanel(
+      fluidRow(
+        column(12,
           plotlyOutput("vehiclesOverTime"),
           textOutput("vehicleStatsPerDay"),
           plotlyOutput("einstieg_diff_angefragt"),
           plotlyOutput("einstieg_diff_geplant"),
           plotlyOutput("speed")
-        )     
-      #)
+        )
+      )
     )
   )
 )
@@ -101,10 +101,11 @@ server <- function(input, output) {
   
   # Hier können Sie die Reaktionen auf Benutzereingaben hinzufügen
   filtered_data <- reactive({
-    req(input$dateRange, input$statusFilter)
+    req(input$dateRange, input$statusFilter, input$anbieterFilter)
     data %>%
       filter(Erstellungszeit >= input$dateRange[1] & Erstellungszeit <= input$dateRange[2],
-             Status.der.Fahrtanfrage %in% input$statusFilter)
+             Status.der.Fahrtanfrage %in% input$statusFilter,
+             Anbietername %in% input$anbieterFilter)
   })
   
   timeDifferenceData <- reactive({
@@ -157,6 +158,16 @@ server <- function(input, output) {
       summarise(n = sum(ii))
   })
   
+  # Berechnung der durchschnittlichen Anzahl Fahrzeuge pro Tag
+  output$vehicleStatsPerDay <- renderText({
+    avg_vehicles <- mean(vehiclesPerDay()$n)
+    min_vehicles <- min(vehiclesPerDay()$n)
+    max_vehicles <- max(vehiclesPerDay()$n)
+    paste("Anzahl zugewiesene Fahrzeuge pro Tag. Durchschnitt: ", round(avg_vehicles, 2),
+          "Minimum: ", min_vehicles,
+          "Maximum: ", max_vehicles)
+  })
+  
   ####################################################################
   ## Nachfrage Reiter Plots
   ####################################################################
@@ -173,26 +184,19 @@ server <- function(input, output) {
                  gradient = heat.colors(10))
   })
   
-  # Berechnung der durchschnittlichen Anzahl Fahrzeuge pro Tag
-  output$vehicleStatsPerDay <- renderText({
-    avg_vehicles <- mean(vehiclesPerDay()$n)
-    min_vehicles <- min(vehiclesPerDay()$n)
-    max_vehicles <- max(vehiclesPerDay()$n)
-    paste("Anzahl zugewiesene Fahrzeuge pro Tag. Durchschnitt: ", round(avg_vehicles, 2),
-          "Minimum: ", min_vehicles,
-          "Maximum: ", max_vehicles)
-  })
-
-  
   # Beispiel: Stacked Area Plot für den Status der Fahrtanfrage pro Tag
   output$rideRequestsOverTime <- renderPlotly({
     gg <- ggplot(filtered_data(), aes(x = Erstellungsdatum, fill = `Status.der.Fahrtanfrage`)) +
       geom_area(stat = "count") +
-      labs(title = "Status der Fahrtanfrage pro Tag",
+      labs(title = "Anzahl der Fahrtanfragen pro Tag",
+           subtitle="für obige Filterauswahl",
            x = "Datum",
            y = "Anzahl der Fahrtanfragen") +
       theme_minimal() + 
-      theme(legend.position = "top", legend.justification = "center")
+      theme(legend.position = "top", legend.justification = "center",
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
+            plot.subtitle = element_text(size = 16, hjust = 0.5)
+            )
     
     ggplotly(gg)
   })
@@ -203,10 +207,14 @@ server <- function(input, output) {
       geom_line(aes(y = `TotalPassengers`, color = "Total Passengers")) +
       geom_line(aes(y = Fahrtanfragen, color = "Fahrtanfragen")) +
       labs(title = "Anzahl der Fahrgäste und Fahrtanfragen pro Tag",
+           subtitle="für obige Filterauswahl",
            x = "Datum",
            y = "Anzahl") +
       theme_minimal() +
-      scale_color_manual(values = c("Total Passengers" = "blue", "Fahrtanfragen" = "red"))
+      scale_color_manual(values = c("Total Passengers" = "blue", "Fahrtanfragen" = "red"))+
+      theme(legend.position = "top", legend.justification = "center",
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+            plot.subtitle = element_text(size = 16, hjust = 0.5))
     
     ggplotly(gg)
   })
@@ -217,10 +225,13 @@ server <- function(input, output) {
       geom_line(data = distances_einstieg_data(), aes(x = Erstellungsdatum, y = mean_distance_einstieg, color = "Einstieg"), linetype = "solid") +
       geom_line(data = distances_ausstieg_data(), aes(x = Erstellungsdatum, y = mean_distance_ausstieg, color = "Ausstieg"), linetype = "dashed") +
       labs(title = "Durchschnittliche Laufdistanzen",
+           subtitle="für obige Filterauswahl",
            x = "Datum",
            y = "Durchschn. Distanz") +
       theme_minimal() + 
-      theme(legend.position = "top", legend.justification = "center")
+      theme(legend.position = "top", legend.justification = "center",
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
+            plot.subtitle = element_text(size = 16, hjust = 0.5))
     
     ggplotly(gg)
   })
@@ -254,10 +265,19 @@ server <- function(input, output) {
     # Layout-Anpassungen
     fig <- fig %>% 
       layout(
-        title = "Durchschnittliche Distanz und Zeit",
+        title = list(
+          text = "Durchschnittliche Distanz und Zeit",
+          font = list(size = 14, color = "black", family = "Arial", weight = "bold"),
+          x = 0.5  # Zentriert den Titel
+        ),
         xaxis = list(title = "Datum"),
         yaxis = list(title = "Durchschnittliche Distanz", side = "left"),
-        yaxis2 = list(title = "Durchschnittliche Zeit", overlaying = "y", side = "right")
+        yaxis2 = list(title = "Durchschnittliche Zeit", overlaying = "y", side = "right")#,
+        #plot.subtitle = list(
+        #  text = "Ihr Untertitel hier",
+        #  font = list(size = 16, color = "grey", family = "Arial"),
+        #  x = 0.5  # Zentriert den Untertitel
+        #)
       )
     
     fig
@@ -279,7 +299,10 @@ server <- function(input, output) {
       labs(title = "Anzahl der eingesetzten Fzge (mit Auftrag) pro Tag",
            x = "Datum",
            y = "Anzahl") +
-      theme_minimal()
+      theme_minimal() +
+      theme(legend.position = "top", legend.justification = "center",
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
+            plot.subtitle = element_text(size = 16, hjust = 0.5))
     
     ggplotly(gg)
   })
@@ -294,7 +317,10 @@ server <- function(input, output) {
            x = "Datum",
            y = "Zeitdifferenz (Minuten)") +
       theme_minimal() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better visibility
+      theme(axis.text.x = element_text(angle = 45, hjust = 1), # Rotate x-axis labels for better visibility
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
+            plot.subtitle = element_text(size = 16)
+            )  
     
     ggplotly(gg)
   })
@@ -309,7 +335,10 @@ server <- function(input, output) {
            x = "Datum",
            y = "Zeitdifferenz (Minuten)") +
       theme_minimal() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better visibility
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),   # Rotate x-axis labels for better visibility
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
+            plot.subtitle = element_text(size = 16)
+            )
     
     ggplotly(gg)
   })
@@ -335,7 +364,11 @@ server <- function(input, output) {
     # Layout-Anpassungen
     fig <- fig %>% 
       layout(
-        title = "Durchschnittlicher Speed mit Pax an Board",
+        title = list(
+          text = "Durchschnittlicher Speed mit Pax an Board",
+          font = list(size = 14, color = "black", family = "Arial", weight = "bold"),
+          x = 0.5  # Zentriert den Titel
+        ),
         xaxis = list(title = "Datum"),
         yaxis = list(title = "Speed [km/h]")
       )
