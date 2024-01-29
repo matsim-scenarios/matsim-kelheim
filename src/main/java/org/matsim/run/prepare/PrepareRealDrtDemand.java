@@ -8,7 +8,6 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.options.CrsOptions;
@@ -58,26 +57,33 @@ public class PrepareRealDrtDemand implements MATSimAppCommand {
 //        Map<String, Coord> stationCoordMap = loadStationCoordinates();
 
 		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(demands)),
-			CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
+			CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
 			int counter = 0;
 			for (CSVRecord row : parser) {
-				double fromX = Double.parseDouble(row.get("from_x"));
-				double fromY = Double.parseDouble(row.get("from_y"));
-				double toX = Double.parseDouble(row.get("to_x"));
-				double toY = Double.parseDouble(row.get("to_y"));
+				double fromX = Double.parseDouble(row.get("fromX"));
+				double fromY = Double.parseDouble(row.get("fromY"));
+				double toX = Double.parseDouble(row.get("toX"));
+				double toY = Double.parseDouble(row.get("toY"));
+//				double fromX = Double.parseDouble(row.get("from_x"));
+//				double fromY = Double.parseDouble(row.get("from_y"));
+//				double toX = Double.parseDouble(row.get("to_x"));
+//				double toY = Double.parseDouble(row.get("to_y"));
 				Coord fromCoord = new Coord(fromX, fromY);
 				Coord transformedFromCoord = crs.getTransformation().transform(fromCoord);
 				Coord toCoord = new Coord(toX, toY);
 				Coord transformedToCoord = crs.getTransformation().transform(toCoord);
-				double departureTime = Double.parseDouble(row.get("time_in_seconds"));
-				int numberOfPassengers = Integer.parseInt(row.get("number_of_passengers"));
+//				double departureTime = Double.parseDouble(row.get("time_in_seconds"));
+				double departureTime = Double.parseDouble(row.get("departureTime"));
+//				int numberOfPassengers = Integer.parseInt(row.get("number_of_passengers"));
+				int numberOfPassengers = 1;
 
 				for (int i = 0; i < numberOfPassengers; i++) {
 					Person person = populationFactory.createPerson(Id.createPersonId("drt_person_" + counter));
 					Plan plan = populationFactory.createPlan();
 					Activity activity0 = populationFactory.createActivityFromCoord("dummy", transformedFromCoord);
 					activity0.setEndTime(departureTime);
-					Leg leg = populationFactory.createLeg(TransportMode.drt);
+					Leg leg = populationFactory.createLeg("av");
+//					Leg leg = populationFactory.createLeg(TransportMode.drt);
 					Activity activity1 = populationFactory.createActivityFromCoord("dummy", transformedToCoord);
 					plan.addActivity(activity0);
 					plan.addLeg(leg);
