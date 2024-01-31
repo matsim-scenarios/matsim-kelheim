@@ -11,6 +11,10 @@ library(leaflet)
 library(leaflet.extras) # for heatmap
 
 #read data
+
+
+ 
+#data <- read.csv2("D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_01_29/KEXI Daten ioki LK 11_2023 bis 01_2024_raw.csv", sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 data <- read.csv2("D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_sample_2023_12_20/Fahrtanfragen-2023-12-20.csv", sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 
 #prepare data
