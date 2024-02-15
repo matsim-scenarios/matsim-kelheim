@@ -14,8 +14,13 @@ library(leaflet.extras) # for heatmap
 
 
  
-#data <- read.csv2("D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_01_29/KEXI Daten ioki LK 11_2023 bis 01_2024_raw.csv", sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
-data <- read.csv2("D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_sample_2023_12_20/Fahrtanfragen-2023-12-20.csv", sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+testdata <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_sample_2023_12_20/Fahrtanfragen-2023-12-20.csv"
+data_feb_14 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_14/Fahrtanfragen-2024-02-14.csv"
+data <- read.csv2(data_feb_14, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+
+#Id s for test booking
+testingCustomerIds <- c(1, 43, 649, 3432, 3847, 3887, 12777)
+testingCustomerIds_extended <- c(1, 43, 649, 3432, 3847, 3887, 12777, 673, 4589, 7409, 7477, 9808, 9809, 10718, 13288, 10031)
 
 #prepare data
 data <- data %>% 
@@ -33,8 +38,12 @@ data <- data %>%
          Start.Breitengrad = as.numeric(Start.Breitengrad),
          Start.Längengrad = as.numeric(Start.Längengrad),
          Zielort.Breitengrad = as.numeric(Zielort.Breitengrad),
-         Zielort.Längengrad = as.numeric(Zielort.Längengrad)
-         )
+         Zielort.Längengrad = as.numeric(Zielort.Längengrad),
+         isTestBooking = Fahrgast.ID %in% testingCustomerIds_extended
+          )
+
+test <- data %>%
+  select(Fahrgast.ID, isTestBooking)
 ###
 
 ##TODO :
@@ -65,6 +74,12 @@ ui <- fluidPage(
                     choices = unique(data$Status.der.Fahrtanfrage),
                     selected = "Completed",
                     multiple = TRUE)
+      ),
+      column(3,
+             selectInput("testbookingFilter", label = "Filter Testbuchungen",
+                         choices = unique(data$isTestBooking),
+                         selected = "FALSE",
+                         multiple = TRUE)
       )
     ),
     tabPanel(
@@ -73,8 +88,10 @@ ui <- fluidPage(
           column(12,
               # Hier fügen Sie Ihre Diagramme oder Tabellen hinzu
               leafletOutput("map", height = 600), # Karte für Standorte der Fahrten
-              plotlyOutput("rideRequestsOverTime"),
+              plotlyOutput("passengersWeekly"),
               plotlyOutput("totalPassengersOverTime"),
+              #plotlyOutput("rideRequestsOverTime"),
+              plotlyOutput("passengerCountDistribution"),
               plotlyOutput("distances_walking"),
               plotlyOutput("travelStats")
             )   
@@ -105,11 +122,12 @@ server <- function(input, output) {
   
   # Hier können Sie die Reaktionen auf Benutzereingaben hinzufügen
   filtered_data <- reactive({
-    req(input$dateRange, input$statusFilter, input$anbieterFilter)
+    req(input$dateRange, input$statusFilter, input$anbieterFilter, input$testbookingFilter)
     data %>%
       filter(Erstellungszeit >= input$dateRange[1] & Erstellungszeit <= input$dateRange[2],
              Status.der.Fahrtanfrage %in% input$statusFilter,
-             Anbietername %in% input$anbieterFilter)
+             Anbietername %in% input$anbieterFilter,
+             isTestBooking %in% input$testbookingFilter)
   })
   
   timeDifferenceData <- reactive({
@@ -153,6 +171,31 @@ server <- function(input, output) {
                 TotalPassengers = sum(`Anzahl.der.Fahrgäste`))
   })
   
+  passengerCount <- reactive({
+    filtered_data() %>%
+      group_by(Erstellungsdatum, Anzahl.der.Fahrgäste) %>%
+      summarise(Frequency = n())
+  })
+
+  avg_passengerCount <- reactive({
+    filtered_data() %>%
+      group_by(Erstellungsdatum) %>%
+      summarise(avg = mean(Anzahl.der.Fahrgäste), Anzahl.der.Fahrgäste = "avg")
+  })
+
+  #avg_passengerCount <- passengerCount %>%
+  #  group_by(Erstellungsdatum) %>%
+  #  summarise(avg = mean(Anzahl.der.Fahrgäste), Anzahl.der.Fahrgäste = "avg")
+
+  # Grouped data by week with total passengers
+  grouped_data_weekly <- reactive({
+    filtered_data() %>%
+      mutate(week = lubridate::week(Erstellungszeit)) %>%  # Extract week number
+      group_by(week) %>%
+      summarise(Fahrtanfragen = n(),
+                TotalPassengers = sum(`Anzahl.der.Fahrgäste`))
+  })
+
   vehiclesPerDay <- reactive({
     filtered_data() %>%
       filter(!is.na(Fahrzeug.ID)) %>%  # Filtere fehlende Werte
@@ -187,11 +230,11 @@ server <- function(input, output) {
                  radius = 10, intensity = 2, 
                  gradient = heat.colors(10))
   })
-  
-  # Beispiel: Stacked Area Plot für den Status der Fahrtanfrage pro Tag
+
   output$rideRequestsOverTime <- renderPlotly({
     gg <- ggplot(filtered_data(), aes(x = Erstellungsdatum, fill = `Status.der.Fahrtanfrage`)) +
-      geom_area(stat = "count") +
+      #geom_area(stat = "count") +
+      geom_bar() +
       labs(title = "Anzahl der Fahrtanfragen pro Tag",
            subtitle="für obige Filterauswahl",
            x = "Datum",
@@ -207,22 +250,71 @@ server <- function(input, output) {
   
   'Passagiere am Tag'
   output$totalPassengersOverTime <- renderPlotly({
-    gg <- ggplot(grouped_data(), aes(x = Erstellungsdatum)) +
-      geom_line(aes(y = `TotalPassengers`, color = "Total Passengers")) +
-      geom_line(aes(y = Fahrtanfragen, color = "Fahrtanfragen")) +
-      labs(title = "Anzahl der Fahrgäste und Fahrtanfragen pro Tag",
-           subtitle="für obige Filterauswahl",
-           x = "Datum",
+   gg <- ggplot(grouped_data(), aes(x = Erstellungsdatum, y = TotalPassengers, fill = `Status.der.Fahrtanfrage`)) +
+    geom_bar(stat = "identity") +  # Stacked Bar mit TotalPassengers
+    labs(title = "Anzahl der Fahrgäste pro Tag",
+         subtitle = "für obige Filterauswahl",
+         x = "Datum",
+         y = "Anzahl") +
+    theme_minimal() +
+    scale_fill_manual(values = c("Fahrtanfragen" = "red", "Completed" = "blue")) +  # Legende anpassen
+    theme(legend.position = "right", legend.justification = "top",
+          plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+          plot.subtitle = element_text(size = 16, hjust = 0.5))
+
+   gg <- ggplot(grouped_data(), aes(x = Erstellungsdatum, y = TotalPassengers, fill = `Status.der.Fahrtanfrage`)) +
+     geom_bar(stat = "identity") +  # Stacked Bar mit TotalPassengers
+     labs(title = "Anzahl der Fahrgäste pro Tag",
+          subtitle = "für obige Filterauswahl",
+          x = "Datum",
+          y = "Anzahl") +
+     theme_minimal() +
+     scale_fill_manual(values = c("Fahrtanfragen" = "red", "Completed" = "blue")) +  # Legende anpassen
+     theme(legend.position = "right", legend.justification = "top",
+           plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+           plot.subtitle = element_text(size = 16, hjust = 0.5))
+
+    ggplotly(gg)
+  })
+
+
+  # Plot für ride requests und total passengers pro Woche
+  output$passengersWeekly <- renderPlotly({
+    gg <- ggplot(grouped_data_weekly(), aes(x = factor(week))) +
+      geom_bar(aes(y = TotalPassengers, fill = "Fahrgäste"), stat = "identity", position = "dodge", width = 0.9) +
+      labs(title = "Anzahl der Fahrgäste pro Woche",
+           x = "Woche",
            y = "Anzahl") +
+      scale_fill_manual(values = c("Fahrgäste" = "green"),
+                        name = "Legende",
+                        labels = c( "Fahrgäste")) +
       theme_minimal() +
-      scale_color_manual(values = c("Total Passengers" = "blue", "Fahrtanfragen" = "red"))+
       theme(legend.position = "top", legend.justification = "center",
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+
+    ggplotly(gg)
+  })
+
+
+
+  output$passengerCountDistribution <- renderPlotly({
+    gg <- ggplot(passengerCount(), aes(x = as.factor(Erstellungsdatum), y = Frequency, fill = as.factor( Anzahl.der.Fahrgäste ))) +
+      geom_bar(stat = "identity") +
+      geom_line(data = avg_passengerCount(), aes(x = as.factor(Erstellungsdatum), y = avg, group = 1), color = "black", size = 1.5) + # Linie für den Durchschnitt hinzufügen
+      labs(title = "Verteilung der Anzahl Fahrgäste",
+           x = "Datum",
+           y = "Häufigkeit",
+           fill = "Anzahl der Fahrgäste") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
             plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
-            plot.subtitle = element_text(size = 16, hjust = 0.5))
+            legend.position = "bottom"
+      )
     
     ggplotly(gg)
   })
   
+
   # Beispiel: Line Plot für durchschnittliche Distanzen pro Tag
   output$distances_walking <- renderPlotly({
     gg <- ggplot() +
@@ -315,7 +407,8 @@ server <- function(input, output) {
   output$einstieg_diff_angefragt <- renderPlotly({
     gg <- ggplot(timeDifferenceData(), aes(x = as.factor(Erstellungsdatum), y = einstieg_diff_angefragt)) +
       geom_boxplot() +
-      stat_summary(fun.y = "mean", geom = "point", shape = 18, size = 1, color = "red") +
+      stat_summary(fun.y = "mean", geom = "point", shape = 18, size = 1, color = "red",
+                   aes(label = round(..y.., 2))) + # Runde auf zwei Dezimalstellen
       labs(title = "Boxplot der Differenz zwischen Angefragte und Tatsächliche Einstiegszeit",
            subtitle = "Positiv = Verspätung, Negativ = früher",
            x = "Datum",
@@ -333,7 +426,8 @@ server <- function(input, output) {
   output$einstieg_diff_geplant <- renderPlotly({
     gg <- ggplot(timeDifferenceData(), aes(x = as.factor(Erstellungsdatum), y = einstieg_diff_geplant)) +
       geom_boxplot() +
-      stat_summary(fun.y = "mean", geom = "point", shape = 18, size = 1, color = "red") +
+      stat_summary(fun.y = "mean", geom = "point", shape = 18, size = 1, color = "red",
+                   aes(label = round(..y.., 2))) + # Runde auf zwei Dezimalstellen
       labs(title = "Boxplot der Differenz zwischen ursprünglich geplanter und tatsächlicher Einstiegszeit",
            subtitle = "Positiv = Verspätung, Negativ = früher",
            x = "Datum",
