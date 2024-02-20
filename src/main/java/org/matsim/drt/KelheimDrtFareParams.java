@@ -11,14 +11,14 @@ import java.util.Map;
 @SuppressWarnings({"MemberName", "MethodName"})
 public final class KelheimDrtFareParams extends ReflectiveConfigGroup {
 	public static final String SET_NAME = "kelheimDrtFare";
-	public static final String BASEFARE = "baseFare";
+	public static final String BASE_FARE = "baseFare";
 	public static final String ZONE_2_SURCHARGE = "zone2Surcharge";
 	public static final String MINFARE_PER_TRIP = "minFarePerTrip";
 	public static final String DAILY_FEE = "dailySubscriptionFee";
 	public static final String TIMEFARE = "timeFare_h";
 	public static final String DISTANCEFARE = "distanceFare_m";
-	public static final String MODE = "mode";
-	public static final String SHAPEFILE = "shapeFile";
+	public static final String DRT_MODE = "mode";
+	public static final String SHAPE_FILE = "shapeFile";
 
 	@PositiveOrZero
 	private double baseFare;
@@ -47,24 +47,24 @@ public final class KelheimDrtFareParams extends ReflectiveConfigGroup {
 	@Override
 	public Map<String, String> getComments() {
 		Map<String, String> map = super.getComments();
-		map.put(BASEFARE, "Basefare per trip: 2 EUR (For trips within zone 1 base fare will be charged)");
+		map.put(BASE_FARE, "Basefare per trip: 2 EUR (For trips within zone 1 base fare will be charged)");
 		map.put(ZONE_2_SURCHARGE, "Surcharge for trips traveling to/within zone 2: 1 EUR");
 		map.put(MINFARE_PER_TRIP,
 				"Minimum fare per trip (paid instead of the sum of base, time and distance fare if that sum would be lower than the minimum fare, positive or zero value).");
 		map.put(DAILY_FEE, "Daily subscription fee (positive or zero value)");
 		map.put(TIMEFARE, "drt fare per hour (positive or zero value)");
 		map.put(DISTANCEFARE, "drt fare per meter (positive or zero value)");
-		map.put(MODE, "transport mode for which the fare applies. Default: drt");
-		map.put(SHAPEFILE, "shape file of the DRT fare zonal system");
+		map.put(DRT_MODE, "transport mode for which the fare applies. Default: drt");
+		map.put(SHAPE_FILE, "shape file of the DRT fare zonal system");
 		return map;
 	}
 
-	@StringGetter(BASEFARE)
+	@StringGetter(BASE_FARE)
 	public double getBaseFare() {
 		return baseFare;
 	}
 
-	@StringSetter(BASEFARE)
+	@StringSetter(BASE_FARE)
 	public void setBaseFare(double baseFare) {
 		this.baseFare = baseFare;
 	}
@@ -119,22 +119,22 @@ public final class KelheimDrtFareParams extends ReflectiveConfigGroup {
 		this.distanceFare_m = distanceFare_m;
 	}
 
-	@StringGetter(SHAPEFILE)
+	@StringGetter(SHAPE_FILE)
 	public String getShapeFile() {
 		return shapeFile;
 	}
 
-	@StringSetter(SHAPEFILE)
+	@StringSetter(SHAPE_FILE)
 	public void setShapeFile(String shapeFile) {
 		this.shapeFile = shapeFile;
 	}
 
-	@StringGetter(MODE)
+	@StringGetter(DRT_MODE)
 	public String getMode() {
 		return mode;
 	}
 
-	@StringSetter(MODE)
+	@StringSetter(DRT_MODE)
 	public void setMode(String mode) {
 		this.mode = mode;
 	}
