@@ -28,9 +28,12 @@ import org.matsim.contrib.dvrp.fleet.Fleet;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Returns the individual start link of each {@code DvrpVehicle}.
+ */
 public class StartLinkAsDepot implements DepotFinder {
 
-	private Map<DvrpVehicle, Link> vehicleToStartLink;
+	private final Map<DvrpVehicle, Link> vehicleToStartLink;
 
 	public StartLinkAsDepot(Fleet fleet) {
 		this.vehicleToStartLink = fleet.getVehicles()
