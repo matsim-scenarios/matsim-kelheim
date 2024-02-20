@@ -1,4 +1,4 @@
-package org.matsim.drtFare;
+package org.matsim.drt;
 
 import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;

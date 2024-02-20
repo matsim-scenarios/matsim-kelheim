@@ -1,4 +1,4 @@
-package org.matsim.drtFare;
+package org.matsim.drt;
 
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.drt.run.DrtConfigGroup;

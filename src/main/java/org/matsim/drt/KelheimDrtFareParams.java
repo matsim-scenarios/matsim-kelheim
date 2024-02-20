@@ -1,4 +1,4 @@
-package org.matsim.drtFare;
+package org.matsim.drt;
 
 import jakarta.validation.constraints.PositiveOrZero;
 import org.matsim.core.config.ReflectiveConfigGroup;

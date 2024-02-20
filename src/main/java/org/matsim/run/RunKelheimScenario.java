@@ -30,12 +30,15 @@ import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
 import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
+import org.matsim.contrib.drt.optimizer.depot.DepotFinder;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.DrtConfigs;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtModule;
+import org.matsim.contrib.dvrp.fleet.Fleet;
+import org.matsim.contrib.dvrp.run.AbstractDvrpModeQSimModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
@@ -50,7 +53,8 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
-import org.matsim.drtFare.KelheimDrtFareModule;
+import org.matsim.drt.KelheimDrtFareModule;
+import org.matsim.drt.StartLinkAsDepot;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
@@ -338,6 +342,16 @@ public class RunKelheimScenario extends MATSimApplication {
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
+				if (drtCfg.mode.equals("av")) {
+					//we want to override the DepotFinder - but only for AV
+					controler.addOverridingQSimModule(new AbstractDvrpModeQSimModule(drtCfg.mode) {
+						@Override
+						protected void configureQSim() {
+							bindModal(DepotFinder.class).toProvider(
+								modalProvider(getter -> new StartLinkAsDepot(getter.getModal(Fleet.class)))).asEagerSingleton();
+						}
+					});
+				}
 			}
 
 			//controler.addOverridingModule(new DrtEstimatorModule());

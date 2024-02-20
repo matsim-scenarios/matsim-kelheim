@@ -19,7 +19,7 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.drtFare.KelheimDrtFareModule;
+import org.matsim.drt.KelheimDrtFareModule;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
