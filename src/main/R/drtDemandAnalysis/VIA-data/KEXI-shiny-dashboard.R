@@ -10,21 +10,49 @@ library(plotly)
 library(leaflet)
 library(leaflet.extras) # for heatmap
 
-#read data
 
 
- 
+#### read data.
+##### you have to download the data in Excel format and then export to csv !!with semi-colon as separator!! because the addresses have commata in them and then commata does not work as delimiter!!
+
+#input files
 testdata <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_sample_2023_12_20/Fahrtanfragen-2023-12-20.csv"
 data_feb_14 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_14/Fahrtanfragen-2024-02-14.csv"
-data <- read.csv2(data_feb_14, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+data_jan_01_feb_27 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_27/Fahrtanfragen-2024-02-27.csv"
+data_jan_01_feb_27_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_27/Fahrerschichten-2024-02-27.csv"
 
-#Id s for test booking
-testingCustomerIds <- c(1, 43, 649, 3432, 3847, 3887, 12777)
-testingCustomerIds_extended <- c(1, 43, 649, 3432, 3847, 3887, 12777, 673, 4589, 7409, 7477, 9808, 9809, 10718, 13288, 10031)
+#parse data
+data <- read.csv2(data_jan_01_feb_27, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 
-#prepare data
+
+### prepare data
+
+## filter out test bookings
+
+#10718 is a real customer
+#10031 too
+testingCustomerIds_extended <- c(1, 
+                                 43, 
+                                 649, 
+                                 673,
+                                 3432, 
+                                 3847, 
+                                 3887, 
+                                 4589, 
+                                 7409,
+                                 7477,
+                                 9808, 
+                                 9809, 
+                                 8320,
+                                 12777, 
+                                 13288
+)
+
+
+#pepare data tyopes
 data <- data %>% 
-  mutate(Erstellungszeit = ymd_hms(Erstellungszeit.der.Fahrtanfrage),
+  mutate(
+         Erstellungszeit = ymd_hms(Erstellungszeit.der.Fahrtanfrage),
          Erstellungsdatum = date(Erstellungsdatum.der.Fahrtanfrage),
          Angefragte.Einstiegszeit = ymd_hms(Angefragte.Einstiegszeit),
          Angefragte.Ausstiegszeit = ymd_hms(Angefragte.Ausstiegszeit),
@@ -39,16 +67,25 @@ data <- data %>%
          Start.Längengrad = as.numeric(Start.Längengrad),
          Zielort.Breitengrad = as.numeric(Zielort.Breitengrad),
          Zielort.Längengrad = as.numeric(Zielort.Längengrad),
+         Fahrtbewertung..1.5. = as.numeric(Fahrtbewertung..1.5.),
          isTestBooking = Fahrgast.ID %in% testingCustomerIds_extended
-          )
+          ) 
+#for some reason, doing this with an ifelse clause does not work, so making sure time is not N/A in a separate step
+data <- data %>% 
+  mutate(time = if_else(is.na(Angefragte.Einstiegszeit), Angefragte.Ausstiegszeit, Angefragte.Einstiegszeit),
+         date = date(time))
+
+data_fahrerschichten  <- read.csv2(data_jan_01_feb_27_fahrerschichten, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
+  mutate(time = ymd_hms(Datum),
+         date = date(time))
+
+
+## TODO:
+#Anbietername wieder aufnehmen und filtern!
 
 test <- data %>%
   select(Fahrgast.ID, isTestBooking)
 ###
-
-##TODO :
-# 1) filter AV data
-# filter test bookings. -> by IDs? 
 
 # Shiny-App erstellen
 ui <- fluidPage(
@@ -62,20 +99,20 @@ ui <- fluidPage(
                          multiple = TRUE)
       ),
       column(3,
-        dateRangeInput("dateRange", label = "Filter nach Erstellungsdatum:",
-                       #start = min(data$Erstellungszeit),
+        dateRangeInput("dateRange", label = "Filter nach Angefragtem Einstieg:",
+                       #start = min(data$time),
                        start = "2024-01-01",
-                       end = max(data$Erstellungszeit),
-                       min = min(data$Erstellungszeit),
-                       max = max(data$Erstellungszeit),
+                       end = max(data$time),
+                       min = min(data$time),
+                       max = max(data$time),
                        separator = " - ")
       ),
-      column(3,
-        selectInput("statusFilter", label = "Filter nach Status der Fahrtanfrage:",
-                    choices = unique(data$Status.der.Fahrtanfrage),
-                    selected = "Completed",
-                    multiple = TRUE)
-      ),
+      #column(3,
+      #  selectInput("statusFilter", label = "Filter nach Status der Fahrtanfrage:",
+      #              choices = unique(data$Status.der.Fahrtanfrage),
+      #              selected = "Completed",
+      #              multiple = TRUE)
+      #),
       column(3,
              selectInput("testbookingFilter", label = "Filter Testbuchungen",
                          choices = unique(data$isTestBooking),
@@ -84,31 +121,61 @@ ui <- fluidPage(
       )
     ),
     tabPanel(
-      "Auslastung / Nachfrage",
+      "O1: Auslastung",
         fluidRow(
           column(12,
               # Hier fügen Sie Ihre Diagramme oder Tabellen hinzu
-              leafletOutput("map", height = 600), # Karte für Standorte der Fahrten
               plotlyOutput("passengersWeekly"),
               plotlyOutput("totalPassengersOverTime"),
               #plotlyOutput("rideRequestsOverTime"),
               plotlyOutput("passengerCountDistribution"),
-              plotlyOutput("distances_walking"),
-              plotlyOutput("travelStats")
-            )   
+              plotlyOutput("pooledRides"),
+              leafletOutput("map", height = 600) # Karte für Standorte der Fahrten
+           
+          )
         )      
     ),
     tabPanel(
-      "Service Level",
+      "O2: Kundenzufriedenheit",
+      fluidRow(
+        column(12,
+               plotlyOutput("customerRating"),
+               plotlyOutput("ratingFrequencies")
+        )
+      )
+    ),
+    tabPanel(
+      "O3: Erreichung Zielgruppen",
+      fluidRow(
+        column(12,
+               
+        )
+      )
+    ),
+    tabPanel(
+      "O4: Service Level",
       fluidRow(
         column(12,
           plotlyOutput("vehiclesOverTime"),
           textOutput("vehicleStatsPerDay"),
-          plotlyOutput("einstieg_diff_angefragt"),
+          
+          plotlyOutput("rideRequestsRelativeOverTime"),
+          plotlyOutput("rideRequestsOverTime"),
+          
           plotlyOutput("einstieg_diff_geplant"),
-          plotlyOutput("speed")
+          plotlyOutput("einstieg_diff_angefragt")
         )
       )
+    ),
+    tabPanel(
+      "Extras",
+      fluidRow(
+        column(12,
+               plotlyOutput("distances_walking"),
+               plotlyOutput("travelStats"),
+               plotlyOutput("speed")
+        )   
+      )      
     )
   )
 )
@@ -123,12 +190,36 @@ server <- function(input, output) {
   
   # Hier können Sie die Reaktionen auf Benutzereingaben hinzufügen
   filtered_data <- reactive({
-    req(input$dateRange, input$statusFilter, input$anbieterFilter, input$testbookingFilter)
+    req(input$dateRange,
+        #input$statusFilter, 
+        input$anbieterFilter, input$testbookingFilter)
     data %>%
-      filter(Erstellungszeit >= input$dateRange[1] & Erstellungszeit <= input$dateRange[2],
-             Status.der.Fahrtanfrage %in% input$statusFilter,
+      filter(time >= input$dateRange[1] & time <= input$dateRange[2],
+             #Status.der.Fahrtanfrage %in% input$statusFilter,
+             Status.der.Fahrtanfrage == "Completed",
              Anbietername %in% input$anbieterFilter,
              isTestBooking %in% input$testbookingFilter)
+  })
+  
+  # Definieren Sie die Reihenfolge der Faktoren
+  status_order <- c("Completed","No Show", "Cancel", "Invalid","Unaccepted Proposal", "Seat Unavailable")  
+  
+  filtered_fahrerschichten <- reactive({
+    req(input$dateRange)
+    data %>%
+      filter(time >= input$dateRange[1] & time <= input$dateRange[2])
+  })
+  
+  
+  filtered_requests <- reactive({
+    req(input$dateRange,
+        #input$statusFilter, 
+        input$anbieterFilter, input$testbookingFilter)
+    data %>%
+      filter(time >= input$dateRange[1] & time <= input$dateRange[2],
+             Anbietername %in% input$anbieterFilter,
+             isTestBooking %in% input$testbookingFilter) %>% 
+      mutate(Status.der.Fahrtanfrage = factor(Status.der.Fahrtanfrage, levels = status_order))
   })
   
   timeDifferenceData <- reactive({
@@ -140,58 +231,60 @@ server <- function(input, output) {
   distances_einstieg_data <- reactive({
     filtered_data() %>% 
       filter(!is.na(Laufdistanz..Einstieg.)) %>%
-      group_by(Erstellungsdatum) %>%
+      group_by(date) %>%
       summarise(mean_distance_einstieg = mean(Laufdistanz..Einstieg.))
   })
   
   distances_ausstieg_data <- reactive({
     filtered_data() %>% 
       filter(!is.na(Laufdistanz..Ausstieg.)) %>%
-      group_by(Erstellungsdatum) %>%
+      group_by(date) %>%
       summarise(mean_distance_ausstieg = mean(Laufdistanz..Ausstieg.))
   })
   
   traveled_distances_data <- reactive({
     filtered_data() %>% 
       filter(!is.na(Fahrtdistanz)) %>%
-      group_by(Erstellungsdatum) %>%
+      group_by(date) %>%
       summarise(mean_traveled_distance = mean(Fahrtdistanz))
   })
   
   traveled_time_data <- reactive({
     filtered_data() %>% 
       filter(!is.na(Fahrtdauer)) %>%
-      group_by(Erstellungsdatum) %>%
+      group_by(date) %>%
       summarise(mean_traveled_time = mean(Fahrtdauer))
   })
   
   grouped_data <- reactive({
     filtered_data() %>%
-      group_by(Erstellungsdatum, `Status.der.Fahrtanfrage`) %>%
+      group_by(date, `Status.der.Fahrtanfrage`) %>%
       summarise(Fahrtanfragen = n(),
                 TotalPassengers = sum(`Anzahl.der.Fahrgäste`))
   })
   
   passengerCount <- reactive({
     filtered_data() %>%
-      group_by(Erstellungsdatum, Anzahl.der.Fahrgäste) %>%
-      summarise(Frequency = n())
+      group_by(date, Anzahl.der.Fahrgäste) %>%
+      summarise(Frequency = n()) %>% 
+      ungroup
   })
 
   avg_passengerCount <- reactive({
     filtered_data() %>%
-      group_by(Erstellungsdatum) %>%
-      summarise(avg = mean(Anzahl.der.Fahrgäste), Anzahl.der.Fahrgäste = "avg")
+      group_by(date) %>%
+      summarise(avg = mean(Anzahl.der.Fahrgäste), Anzahl.der.Fahrgäste = "avg") %>% 
+      ungroup
   })
 
   #avg_passengerCount <- passengerCount %>%
-  #  group_by(Erstellungsdatum) %>%
+  #  group_by(date) %>%
   #  summarise(avg = mean(Anzahl.der.Fahrgäste), Anzahl.der.Fahrgäste = "avg")
 
   # Grouped data by week with total passengers
   grouped_data_weekly <- reactive({
     filtered_data() %>%
-      mutate(week = lubridate::week(Erstellungszeit)) %>%  # Extract week number
+      mutate(week = lubridate::week(time)) %>%  # Extract week number
       group_by(week) %>%
       summarise(Fahrtanfragen = n(),
                 TotalPassengers = sum(`Anzahl.der.Fahrgäste`))
@@ -200,9 +293,18 @@ server <- function(input, output) {
   vehiclesPerDay <- reactive({
     filtered_data() %>%
       filter(!is.na(Fahrzeug.ID)) %>%  # Filtere fehlende Werte
-      group_by(Erstellungsdatum, `Fahrzeug.ID`) %>%
+      group_by(date, `Fahrzeug.ID`) %>%
       summarise(ii=1) %>% 
-      group_by(Erstellungsdatum) %>% 
+      group_by(date) %>% 
+      summarise(n = sum(ii))
+  })
+  
+  schichtfahrzeugeProTag <- reactive({
+    filtered_fahrerschichten() %>%
+      #filter(!is.na(Fahrzeug.ID)) %>%  # Filtere fehlende Werte
+      group_by(date, `Fahrzeug.ID`) %>%
+      summarise(ii=1) %>% 
+      group_by(date) %>% 
       summarise(n = sum(ii))
   })
   
@@ -229,11 +331,13 @@ server <- function(input, output) {
                  lng = ~Start.Längengrad,
                  blur = 20, max = 1,
                  radius = 10, intensity = 2, 
-                 gradient = heat.colors(10))
+                 gradient = heat.colors(10)) %>%   
+      addMarkers(lng = filtered_data()$Start.Längengrad, lat = filtered_data()$Start.Breitengrad,
+                 popup = paste("Startadresse:", filtered_data()$Startadresse))
   })
 
   output$rideRequestsOverTime <- renderPlotly({
-    gg <- ggplot(filtered_data(), aes(x = Erstellungsdatum, fill = `Status.der.Fahrtanfrage`)) +
+    gg <- ggplot(filtered_requests(), aes(x = date, fill = `Status.der.Fahrtanfrage`)) +
       #geom_area(stat = "count") +
       geom_bar() +
       labs(title = "Anzahl der Fahrtanfragen pro Tag",
@@ -244,14 +348,54 @@ server <- function(input, output) {
       theme(legend.position = "top", legend.justification = "center",
             plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
             plot.subtitle = element_text(size = 16, hjust = 0.5)
-            )
+            ) +
+      scale_x_date(date_breaks = "1 week", date_labels = "%d.%m.")
+    
+    ggplotly(gg)
+  })
+  
+
+  
+  # Plot für ride requests und total passengers pro Woche
+  output$rideRequestsRelativeOverTime <- renderPlotly({
+    gg <- ggplot(filtered_requests(), aes(x = date, fill = `Status.der.Fahrtanfrage`)) +
+      geom_bar(position = "fill") +  # Gestapelte Balken mit normierten Werten
+      labs(title = "Anteil der Fahrtanfragen pro Tag nach Status",
+           subtitle = "für obige Filterauswahl",
+           x = "Datum",
+           y = "Anteil") +
+      theme_minimal() + 
+      theme(legend.position = "top", legend.justification = "center",
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
+            plot.subtitle = element_text(size = 16, hjust = 0.5)) + 
+      scale_x_date(date_breaks = "1 week", date_labels = "%d.%m.") +
+      geom_hline(yintercept = 0.05, linetype = "dashed", color = "red", alpha = 0.45) # Referenzlinie hinzufügen
+    
+    
+    ggplotly(gg)
+  })
+  
+  # Plot für ride requests und total passengers pro Woche
+  output$pooledRides <- renderPlotly({
+    gg <- ggplot(filtered_data(), aes(x = date, fill = `Geteilte.Fahrt`)) +
+      geom_bar() +
+      labs(title = "Anzahl geteilter Fahrten",
+           subtitle = "für obige Filterauswahl",
+           x = "Datum",
+           y = "Anteil") +
+      theme_minimal() + 
+      theme(legend.position = "top", legend.justification = "center",
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
+            plot.subtitle = element_text(size = 16, hjust = 0.5)) + 
+      scale_x_date(date_breaks = "1 week", date_labels = "%d.%m.")
+    
     
     ggplotly(gg)
   })
   
   'Passagiere am Tag'
   output$totalPassengersOverTime <- renderPlotly({
-   gg <- ggplot(grouped_data(), aes(x = Erstellungsdatum, y = TotalPassengers, fill = `Status.der.Fahrtanfrage`)) +
+   gg <- ggplot(grouped_data(), aes(x = date, y = TotalPassengers, fill = `Status.der.Fahrtanfrage`)) +
     geom_bar(stat = "identity") +  # Stacked Bar mit TotalPassengers
     labs(title = "Anzahl der Fahrgäste pro Tag",
          subtitle = "für obige Filterauswahl",
@@ -261,9 +405,11 @@ server <- function(input, output) {
     scale_fill_manual(values = c("Fahrtanfragen" = "red", "Completed" = "blue")) +  # Legende anpassen
     theme(legend.position = "right", legend.justification = "top",
           plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
-          plot.subtitle = element_text(size = 16, hjust = 0.5))
+          plot.subtitle = element_text(size = 16, hjust = 0.5)) + 
+     scale_x_date(date_breaks = "1 week", date_labels = "%d.%m.")
+   
 
-   gg <- ggplot(grouped_data(), aes(x = Erstellungsdatum, y = TotalPassengers, fill = `Status.der.Fahrtanfrage`)) +
+   gg <- ggplot(grouped_data(), aes(x = date, y = TotalPassengers, fill = `Status.der.Fahrtanfrage`)) +
      geom_bar(stat = "identity") +  # Stacked Bar mit TotalPassengers
      labs(title = "Anzahl der Fahrgäste pro Tag",
           subtitle = "für obige Filterauswahl",
@@ -299,10 +445,10 @@ server <- function(input, output) {
 
 
   output$passengerCountDistribution <- renderPlotly({
-    gg <- ggplot(passengerCount(), aes(x = as.factor(Erstellungsdatum), y = Frequency, fill = as.factor( Anzahl.der.Fahrgäste ))) +
+    gg <- ggplot(passengerCount(), aes(x = as.factor(date), y = Frequency, fill = as.factor( Anzahl.der.Fahrgäste ))) +
       geom_bar(stat = "identity") +
-      geom_line(data = avg_passengerCount(), aes(x = as.factor(Erstellungsdatum), y = avg, group = 1), color = "black", size = 1.5) + # Linie für den Durchschnitt hinzufügen
-      labs(title = "Verteilung der Anzahl Fahrgäste",
+      geom_line(data = avg_passengerCount(), aes(x = as.factor(date), y = avg, group = 1), color = "black", size = 1.5) + # Linie für den Durchschnitt hinzufügen
+      labs(title = "Verteilung der Gruppengröße",
            x = "Datum",
            y = "Häufigkeit",
            fill = "Anzahl der Fahrgäste") +
@@ -319,8 +465,8 @@ server <- function(input, output) {
   # Beispiel: Line Plot für durchschnittliche Distanzen pro Tag
   output$distances_walking <- renderPlotly({
     gg <- ggplot() +
-      geom_line(data = distances_einstieg_data(), aes(x = Erstellungsdatum, y = mean_distance_einstieg, color = "Einstieg"), linetype = "solid") +
-      geom_line(data = distances_ausstieg_data(), aes(x = Erstellungsdatum, y = mean_distance_ausstieg, color = "Ausstieg"), linetype = "dashed") +
+      geom_line(data = distances_einstieg_data(), aes(x = date, y = mean_distance_einstieg, color = "Einstieg"), linetype = "solid") +
+      geom_line(data = distances_ausstieg_data(), aes(x = date, y = mean_distance_ausstieg, color = "Ausstieg"), linetype = "dashed") +
       labs(title = "Durchschnittliche Laufdistanzen",
            subtitle="für obige Filterauswahl",
            x = "Datum",
@@ -340,7 +486,7 @@ server <- function(input, output) {
     # Linie für die Durchschnittliche zurückgelegte Entfernung
     fig <- fig %>% 
       add_trace(
-        x = traveled_distances_data()$Erstellungsdatum,
+        x = traveled_distances_data()$date,
         y = traveled_distances_data()$mean_traveled_distance,
         name = "Durchschnittliche Distanz",
         type = "scatter",
@@ -351,7 +497,7 @@ server <- function(input, output) {
     # Linie für die Durchschnittliche Reisezeit
     fig <- fig %>% 
       add_trace(
-        x = traveled_time_data()$Erstellungsdatum,
+        x = traveled_time_data()$date,
         y = traveled_time_data()$mean_traveled_time,
         name = "Durchschnittliche Zeit",
         type = "scatter",
@@ -381,34 +527,105 @@ server <- function(input, output) {
   })
   
   ####################################################################
+  ## Kundenzufriedenheit Reiter Plots
+  ####################################################################
+  
+  
+  # Berechnung des Durchschnitts von 'Fahrtbewertung..1.5.' exklusive 'NA' für jede Woche
+  customerRatingAvg <- reactive({
+    filtered_data() %>%
+      mutate(Rating = Fahrtbewertung..1.5.) %>% 
+      #filter(!is.na(Rating)) %>%
+      group_by(week = lubridate::week(time)) %>%
+      summarise(avg_rating = mean(Rating, na.rm = TRUE))
+  })
+  
+  ratingsPerWeek <- reactive({
+    filtered_data() %>%
+      mutate(week = lubridate::week(time)) %>%
+      group_by(week, `Fahrtbewertung..1.5.`) %>%
+      summarise(frequency = n())
+  })
+  
+  # Plot für die Kundenzufriedenheit
+  output$customerRating <- renderPlotly({
+  
+    
+    avg_plot <- ggplot(customerRatingAvg(), aes(x = week, y = avg_rating)) +
+      geom_line(color = "green") +
+      labs(title = "Durchschnittliche Fahrtbewertung pro Woche",
+           x = "Woche",
+           y = "Durchschnittliche Bewertung",
+           color = "Bewertung") +
+      theme_minimal() + 
+      theme(legend.position = "top", legend.justification = "center",
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+    
+  #  subplot(ggplotly(frequencies), ggplotly(avg_plot), nrows = 2)
+    ggplotly(avg_plot)
+  })
+  
+  output$ratingFrequencies <- renderPlotly({
+    frequencies <- ggplot(ratingsPerWeek(), aes(x = week, y = frequency, fill = factor(`Fahrtbewertung..1.5.`))) +
+      geom_bar(stat = "identity") +
+      labs(title = "Häufigkeit der Fahrtbewertungen pro Woche",
+           x = "Woche",
+           y = "Häufigkeit",
+           fill = "Bewertung") +
+      theme_minimal() + 
+      theme(legend.position = "top", legend.justification = "center",
+            plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+    
+    ggplotly(frequencies)
+    
+    
+  })
+  
+  ####################################################################
   ## Service Level Reiter Plots
   ####################################################################
-  # Line plot for 'Fahrzeug ID' per 'Erstellungsdatum'
+  # Line plot for 'Fahrzeug ID' per 'date'
   output$vehiclesOverTime <- renderPlotly({
     #grouped_vehicles()$`Fahrzeug.ID` <- as.factor(grouped_vehicles()$`Fahrzeug.ID`)
     #
-    #plot_ly(grouped_vehicles(), x = ~Erstellungsdatum, y = ~Count, color = ~`Fahrzeug.ID`, type = 'scatter', mode = 'markers') %>%
+    #plot_ly(grouped_vehicles(), x = ~date, y = ~Count, color = ~`Fahrzeug.ID`, type = 'scatter', mode = 'markers') %>%
     #  layout(title = 'Anzahl der Fahrzeuge pro Tag',
     #         xaxis = list(title = 'Datum', type = 'date', tickformat = '%Y-%m-%d', range = c(input$dateRange[1], input$dateRange[2])),
     #         yaxis = list(title = 'Anzahl'))
-    gg <- ggplot(vehiclesPerDay(), aes(x = Erstellungsdatum)) +
-      geom_line(aes(y = n)) +
+    gg <- ggplot(vehiclesPerDay(), aes(x = date)) +
+      geom_line(aes(y = n, color = "Fahrzeuge mit Auftrag")) +
+      geom_line(data = schichtfahrzeugeProTag(), aes(y = n , color = "Fahrzeuge mit Fahrerschicht")) +  # Hinzufügen der Linie von gg2
       labs(title = "Anzahl der eingesetzten Fzge (mit Auftrag) pro Tag",
            x = "Datum",
            y = "Anzahl") +
+      scale_color_manual(values = c("Fahrzeuge mit Auftrag" = "blue", "Fahrzeuge mit Fahrerschicht" = "red")) +
       theme_minimal() +
       theme(legend.position = "top", legend.justification = "center",
             plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
-            plot.subtitle = element_text(size = 16, hjust = 0.5))
+            plot.subtitle = element_text(size = 16, hjust = 0.5)) +
+      scale_x_date(date_breaks = "1 week", date_labels = "%d.%m.")
+      
+    
+    #gg2 <- ggplot(schichtfahrzeugeProTag(), aes(x = date)) +
+    #  geom_line(aes(y = n)) +
+    #  labs(title = "Anzahl der eingesetzten Fzge (mit Fahrerschicht) pro Tag",
+    #       x = "Datum",
+    #       y = "Anzahl") +
+    #  theme_minimal() +
+    #  theme(legend.position = "top", legend.justification = "center",
+    #        plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
+    #        plot.subtitle = element_text(size = 16, hjust = 0.5))
+    
+    #subplot(ggplotly(gg), ggplotly(gg2), nrows = 2)
     
     ggplotly(gg)
   })
   
   # Boxplot für die Differenz zwischen 'Angefragte.Einstiegszeit' und 'Tatsächliche.Einstiegszeit'
   output$einstieg_diff_angefragt <- renderPlotly({
-    gg <- ggplot(timeDifferenceData(), aes(x = as.factor(Erstellungsdatum), y = einstieg_diff_angefragt)) +
+    gg <- ggplot(timeDifferenceData(), aes(x = as.factor(date), y = einstieg_diff_angefragt)) +
       geom_boxplot() +
-      stat_summary(fun.y = "mean", geom = "point", shape = 18, size = 1, color = "red",
+      stat_summary(fun.y = "mean", geom = "point", shape = 18, size = 1, color = "blue",
                    aes(label = round(..y.., 2))) + # Runde auf zwei Dezimalstellen
       labs(title = "Boxplot der Differenz zwischen Angefragte und Tatsächliche Einstiegszeit",
            subtitle = "Positiv = Verspätung, Negativ = früher",
@@ -418,16 +635,17 @@ server <- function(input, output) {
       theme(axis.text.x = element_text(angle = 45, hjust = 1), # Rotate x-axis labels for better visibility
             plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
             plot.subtitle = element_text(size = 16)
-            )  
+            ) + 
+      geom_hline(yintercept = 20, linetype = "dashed", color = "red", alpha = 0.35) # Referenzlinie hinzufügen
     
     ggplotly(gg)
   })
   
   # Boxplot für die Differenz zwischen 'Angefragte.Einstiegszeit' und 'Tatsächliche.Einstiegszeit'
   output$einstieg_diff_geplant <- renderPlotly({
-    gg <- ggplot(timeDifferenceData(), aes(x = as.factor(Erstellungsdatum), y = einstieg_diff_geplant)) +
+    gg <- ggplot(timeDifferenceData(), aes(x = as.factor(date), y = einstieg_diff_geplant)) +
       geom_boxplot() +
-      stat_summary(fun.y = "mean", geom = "point", shape = 18, size = 1, color = "red",
+      stat_summary(fun.y = "mean", geom = "point", shape = 18, size = 1, color = "blue",
                    aes(label = round(..y.., 2))) + # Runde auf zwei Dezimalstellen
       labs(title = "Boxplot der Differenz zwischen ursprünglich geplanter und tatsächlicher Einstiegszeit",
            subtitle = "Positiv = Verspätung, Negativ = früher",
@@ -437,22 +655,23 @@ server <- function(input, output) {
       theme(axis.text.x = element_text(angle = 45, hjust = 1),   # Rotate x-axis labels for better visibility
             plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
             plot.subtitle = element_text(size = 16)
-            )
+            ) + 
+      geom_hline(yintercept = 10, linetype = "dashed", color = "red", alpha = 0.35) # Referenzlinie hinzufügen
     
     ggplotly(gg)
   })
   
-  #Spped
+  #Speed
   output$speed <- renderPlotly({
-    # Merge der Dataframes basierend auf dem Erstellungsdatum
-    merged_data <- merge(traveled_distances_data(), traveled_time_data(), by = "Erstellungsdatum", all = TRUE)
+    # Merge der Dataframes basierend auf dem date
+    merged_data <- merge(traveled_distances_data(), traveled_time_data(), by = "date", all = TRUE)
     
     # Berechnung des Quotienten
     merged_data$quotient <- 60 * merged_data$mean_traveled_distance / merged_data$mean_traveled_time
     
     # Plot mit dem Quotienten
     fig <- plot_ly(
-      x = merged_data$Erstellungsdatum,
+      x = merged_data$date,
       y = merged_data$quotient,
       type = "scatter",
       mode = "lines",

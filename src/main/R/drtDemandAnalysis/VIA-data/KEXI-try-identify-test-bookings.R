@@ -16,13 +16,51 @@ library(leaflet.extras) # for heatmap
 
 testdata <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_sample_2023_12_20/Fahrtanfragen-2023-12-20.csv"
 data_feb_14 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_14/Fahrtanfragen-2024-02-14.csv"
-data <- read.csv2(data_feb_14, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+data_jan_01_feb_27 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_27/Fahrtanfragen-2024-02-27.csv"
+
+
+data <- read.csv2(data_jan_01_feb_27, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 
 #Id s for test booking
 testingCustomerIds <- c(1, 43, 649, 3432, 3847, 3887, 12777)
-testingCustomerIds_extended <- c(1, 43, 649, 3432, 3847, 3887, 12777, 673, 4589, 7409, 7477, 9808, 9809, 10718, 13288)
+testingCustomerIds_extended <- c(1, 43, 649, 3432, 3847, 3887, 12777, 673, 4589, 7409, 7477, 9808, 9809, 10718, 13288) #10718 is a real customer #10031 too
+testingCustomerIds_extended <- c(1, 
+                                 43, 
+                                 649, 
+                                 673,
+                                 3432, 
+                                 3847, 
+                                 3887, 
+                                 4589, 
+                                 7409,
+                                 7477,
+                                 9808, 
+                                 9809, 
+                                 8320,
+                                 12777, 
+                                 13288
+)
+
 
 #prepare data
+data <- data %>% 
+  mutate(Erstellungszeit = ymd_hms(Erstellungszeit.der.Fahrtanfrage),
+         Erstellungsdatum = date(Erstellungsdatum.der.Fahrtanfrage),
+         Angefragte.Einstiegszeit = ymd_hms(Angefragte.Einstiegszeit),
+         Angefragte.Ausstiegszeit = ymd_hms(Angefragte.Ausstiegszeit),
+         Tatsächliche.Einstiegszeit = ymd_hms(Tatsächliche.Einstiegszeit),
+         Tatsächliche.Ausstiegszeit = ymd_hms(Tatsächliche.Ausstiegszeit),
+         Ursprünglich.geplante.Einstiegszeit = ymd_hms(Ursprünglich.geplante.Einstiegszeit),
+         Laufdistanz..Einstieg. = as.numeric(Laufdistanz..Einstieg.),
+         Laufdistanz..Ausstieg. = as.numeric(Laufdistanz..Ausstieg.),
+         Fahrtdistanz = as.numeric(Fahrtdistanz),
+         Fahrtdauer = as.numeric(Fahrtdauer),
+         Start.Breitengrad = as.numeric(Start.Breitengrad),
+         Start.Längengrad = as.numeric(Start.Längengrad),
+         Zielort.Breitengrad = as.numeric(Zielort.Breitengrad),
+         Zielort.Längengrad = as.numeric(Zielort.Längengrad),
+         isTestBooking = Fahrgast.ID %in% testingCustomerIds_extended
+  )
 data2 <- data %>% 
   mutate(Erstellungszeit = ymd_hms(Erstellungszeit.der.Fahrtanfrage),
          Erstellungsdatum = date(Erstellungsdatum.der.Fahrtanfrage),
@@ -42,6 +80,9 @@ data2 <- data %>%
          isTestBooking = Fahrgast.ID %in% testingCustomerIds_extended
   )
 
+
+data_noTests <- data %>% 
+  filter(isTestBooking == FALSE)
 
 data_noTests2 <- data2 %>% 
   filter(isTestBooking == FALSE)
@@ -184,7 +225,7 @@ test <- data_2024 %>%
 
 test
 
-test2 <- data %>% 
+test2 <- data_noTests %>% 
   filter(Anzahl.der.Fahrgäste == 6)
 
 
@@ -228,6 +269,6 @@ ggplotly(g)
 
 
 personTest <- data_noTests2 %>% 
-  filter(Fahrgast.ID == 2296)
+  filter(Fahrgast.ID == 12828)
 
 
