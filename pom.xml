@@ -6,10 +6,10 @@
 		<artifactId>matsim-all</artifactId>
 
 		<!-- PR-labelled release -->
-		<version>16.0-PR2878</version>
+		<version>16.0-PR3165</version>
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
-		<!--		<version>16.0-SNAPSHOT</matsim.version>-->
+<!--		<version>16.0-SNAPSHOT</version>-->
 	</parent>
 
 	<modelVersion>4.0.0</modelVersion>
@@ -88,13 +88,44 @@
 			</exclusions>
 		</dependency>
 
+<!--		<dependency>-->
+<!--			&lt;!&ndash; Include the JUnit testing library.  Not transitive. &ndash;&gt;-->
+<!--			<groupId>junit</groupId>-->
+<!--			<artifactId>junit</artifactId>-->
+<!--			<version>4.13.2</version>-->
+<!--			<scope>test</scope>-->
+<!--		</dependency>-->
+
+
+
 		<dependency>
-			<!-- Include the JUnit testing library.  Not transitive. -->
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.13.2</version>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-api</artifactId>
+			<version>5.8.2</version> <!-- Replace {version} with the appropriate version -->
 			<scope>test</scope>
 		</dependency>
+
+		<dependency>
+			<groupId>org.assertj</groupId>
+			<artifactId>assertj-core</artifactId>
+			<version>3.24.2</version>
+			<scope>test</scope>
+		</dependency>
+
+<!--		<dependency>-->
+<!--			<groupId>junit.jupiter</groupId>-->
+<!--			<artifactId>junit-jupiter-engine</artifactId>-->
+<!--			<version>5.2.0</version>-->
+<!--			<scope>test</scope>-->
+<!--		</dependency>-->
+<!--		<dependency>-->
+<!--			<groupId>org.junit.platform</groupId>-->
+<!--			<artifactId>junit-platform-runner</artifactId>-->
+<!--			<version>1.2.0</version>-->
+<!--			<scope>test</scope>-->
+<!--		</dependency>-->
+
+
 
 		<dependency>
 			<!--MATSim test infrastructure.  Not transitive.-->
@@ -123,6 +154,7 @@
 			<artifactId>freight</artifactId>
 			<version>${matsim.version}</version>
 		</dependency>
+
 
 		<dependency>
 			<groupId>com.github.matsim-org</groupId>
@@ -188,6 +220,12 @@
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
 			<version>2.13.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+			<version>RELEASE</version>
+			<scope>test</scope>
 		</dependency>
 
 	</dependencies>
@@ -348,6 +386,10 @@
 	</reporting>
 
 	<repositories>
+		<repository>
+			<id>central</id>
+			<url>https://repo.maven.apache.org/maven2</url>
+		</repository>
 		<!--Note that in general repositories are not transitive, so they need to be repeated at every level where needed.-->
 		<repository>
 			<!-- Geotools is not on Maven central -->
@@ -355,6 +397,7 @@
 			<name>Geotools repository</name>
 			<url>https://repo.osgeo.org/repository/release/</url>
 		</repository>
+
 		<repository>
 			<!-- Repository for MATSim (MATSim is not on Maven central, releases and snapshots) -->
 			<id>matsim</id>
