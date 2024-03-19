@@ -93,7 +93,7 @@ modes <- unique(TripDataframe[c("main_mode")])
 #   #ggsave(plotFile)
 #   png(plotFile, width = 1200, height = 800)
 #   plot1
-#   dev.off()
+#   
 #   if(interactiveMode){
 #     ggplotly(plot1)
 #   }
@@ -124,7 +124,7 @@ plotFile <-paste(outputDir,"/drt_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1100, height = 800)
 plot
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot)
 }
@@ -149,7 +149,7 @@ paste("printing plot to ", plotFile)
 #ggsave(plotFile)
 png(plotFile, width = 1200, height = 800)
 plot1
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot1)
 }
@@ -177,7 +177,7 @@ plotFile <-paste(outputDir,"/av_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1100, height = 800)
 plot
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot)
 }
@@ -202,7 +202,7 @@ paste("printing plot to ", plotFile)
 #ggsave(plotFile)
 png(plotFile, width = 1200, height = 800)
 plot1
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot1)
 }
@@ -230,7 +230,7 @@ plotFile <-paste(outputDir,"/car_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1100, height = 800)
 plot
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot)
 }
@@ -255,7 +255,7 @@ paste("printing plot to ", plotFile)
 #ggsave(plotFile)
 png(plotFile, width = 1200, height = 800)
 plot1
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot1)
 }
@@ -283,7 +283,7 @@ plotFile <-paste(outputDir,"/bike_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1100, height = 800)
 plot
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot)
 }
@@ -308,7 +308,7 @@ paste("printing plot to ", plotFile)
 #ggsave(plotFile)
 png(plotFile, width = 1200, height = 800)
 plot1
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot1)
 }
@@ -336,7 +336,7 @@ plotFile <-paste(outputDir,"/walk_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1100, height = 800)
 plot
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot)
 }
@@ -361,7 +361,7 @@ paste("printing plot to ", plotFile)
 #ggsave(plotFile)
 png(plotFile, width = 1200, height = 800)
 plot1
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot1)
 }
@@ -389,7 +389,7 @@ plotFile <-paste(outputDir,"/pt_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1100, height = 800)
 plot
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot)
 }
@@ -414,7 +414,7 @@ paste("printing plot to ", plotFile)
 #ggsave(plotFile)
 png(plotFile, width = 1200, height = 800)
 plot1
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot1)
 }
@@ -442,7 +442,7 @@ plotFile <-paste(outputDir,"/ride_trip_purposes.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1100, height = 800)
 plot
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot)
 }
@@ -467,7 +467,7 @@ paste("printing plot to ", plotFile)
 #ggsave(plotFile)
 png(plotFile, width = 1200, height = 800)
 plot1
-dev.off()
+
 if(interactiveMode){
   ggplotly(plot1)
 }
@@ -494,7 +494,7 @@ plotFile <-paste(outputDir,"/modes_per_trip_purpose.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1200, height = 800)
 p3
-dev.off()
+
 if(interactiveMode){
   ggplotly(p3)
 }
@@ -519,7 +519,7 @@ plotFile <-paste(outputDir,"/trip_purpose_per_mode_split.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1200, height = 800)
 p4
-dev.off()
+
 if(interactiveMode){
   ggplotly(p4)
 }
@@ -541,7 +541,7 @@ p5 <-ggplot(counts, aes(x=end_activity_type,y=count, fill=main_mode))+
 
 #figure <- p4 + inset_element(p5,left=0.5,bottom=0, top=0.5,right=0)
 #ggtitle("Trip purposes refernced to the traveling mode")
-dev.off()
+
 layout <- c(
   area(t = 1, l = 1, b = 5, r = 5),
   area(t = 5, l = 3, b = 5, r = 5)
@@ -553,7 +553,7 @@ plotFile <-paste(outputDir,"/trip_purpose_per_mode_all.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1200, height = 800)
 figure
-dev.off()
+
 if(interactiveMode){
   ggplotly(figure)
 }
@@ -577,7 +577,7 @@ plotFile <-paste(outputDir,"/modes_per_trip_purpose_stack.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1200, height = 800)
 p5
-dev.off()
+
 if(interactiveMode){
   ggplotly(p5)
 }
@@ -602,7 +602,7 @@ plotFile <-paste(outputDir,"/trip_purpose_per_mode_stack.png",sep="")
 paste("printing plot to ", plotFile)
 png(plotFile, width = 1200, height = 800)
 p2
-dev.off()
+
 if(interactiveMode){
   ggplotly(p2)
 }

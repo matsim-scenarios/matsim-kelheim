@@ -1,4 +1,4 @@
-require(matsim) #new version needed. currently, you need to install from personsOutput branch in order to have readPersonsTable available
+require(matsim) #new version needed.
 ##
 library(matsim)
 library(tidyverse)

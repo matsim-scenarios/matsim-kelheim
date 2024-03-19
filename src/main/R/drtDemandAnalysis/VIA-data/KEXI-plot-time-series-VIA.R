@@ -10,19 +10,30 @@ library(hrbrthemes)
 ### INPUT DEFINITIONS ###
 
 # set working directory
-setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
+#setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
+setwd("D:/Module/vsp/shared-svn/")
 
 # read data
-VIAdata2021 <- read.csv2("Via_data_2022-02-08/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
-VIAdata2022 <- read.csv2("Via_data_2022-10-10/Data_request_TUB_for_Kelheim-Actual_Data-VIA_Feb_to_Oct_2022_edited_cleaned.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+VIAdata2021 <- read.csv2("Via_data_2022-02-08/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
+VIAdata2022_1 <- read.csv2("Via_data_2022-10-10/Data_request_TUB_for_Kelheim-Actual_Data-VIA_Feb_to_Oct_2022_edited_cleaned.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
+VIAdata2022_2 <- read.csv2("Via_data_2023-01-17/Data_request_TUB_for_Kelheim-Actual_Data-Oct-Dec_2022-Data_TUB_for_Kelheim-Actual_Data-Oct_to_Dec_22_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
+VIAdata2023_1 <- read.csv2("Via_data_2023-04-19/Data_request_TUB_for_Kelheim-Actual_Data-Jan-Mar_2023-Kelheim-Actual_Data-Jan-Mar_2023_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
+VIAdata2023_2 <- read.csv2("Via_data_2023-07-10/Data_request_TUB_for_Kelheim-Actual_Data-Apr-Jul_2023-Kelheim-Actual_Data-Apr-Jul_23_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
+VIAdata2023_3 <- read.csv2("Via_data_2023-10-24/Data_request_TUB_for_Kelheim-Actual_Data-Jul-Oct_2023-Kelheim-Actual_Data-Jul-Oct_23_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", na.strings="")
 
-VIAdata2021 <- VIAdata2021 %>%
-  mutate(Reason.For.Travel = "DR")
 
-VIAdataAll <- union(VIAdata2021, VIAdata2022)
+VIAdataAll <- union(VIAdata2021, VIAdata2022_1)
+VIAdataAll <- union(VIAdataAll, VIAdata2022_2)
+VIAdataAll <- union(VIAdataAll, VIAdata2023_1)
+VIAdataAll <- union(VIAdataAll, VIAdata2023_2)
+VIAdataAll <- union(VIAdataAll, VIAdata2023_3) %>%
+  distinct(Request.ID, .keep_all = TRUE)
 
-datasets <- list(VIAdata2021, VIAdata2022, VIAdataAll)
-names <- c("VIAdata2021","VIAdata2022","VIAdataAll")
+VIAdataSince2022 <- VIAdataAll %>%
+  filter(year(Actual.Pickup.Time) >= year(ymd("2022-01-01")))
+
+datasets <- list(VIAdata2021, VIAdata2022_1, VIAdata2022_2, VIAdata2023_1, VIAdata2023_2,VIAdata2023_3, VIAdataSince2022, VIAdataAll)
+names <- c("VIA_data_202106_202201","VIA_data_202201_202210","VIA_data_202210_202212","VIA_data_202212_202303","VIA_data_202304_202307","VIA_data_202307_202310","VIAdataSince2022","VIAdataAll")
 i <- 1
 
 print("Starting to print different plots!")
@@ -31,18 +42,19 @@ print("Starting to print different plots!")
 # Therefore the rows will get joined (otherwise it will lead to errors)
 for(dataset in datasets) {
   dataset <- dataset %>%
-    unite(Requested.PU.time,Requested.DO.time,col="Requested.time",sep="")
+    unite(Requested.Pickup.Time,Requested.Dropoff.Time,col="Requested.Time",sep="",na.rm = TRUE) %>%
+    filter(Reason.For.Travel == "DR")
 
   # convert time columns + determine weekday for every request
   dataset <- dataset %>%
-    mutate(Ride.request.time = ymd_hms(Ride.request.time),
-           Requested.time = ymd_hms(Requested.time),
-           No.show.time = ymd_hms(No.show.time),
-           Actual.PU.time = ymd_hms(Actual.PU.time),
-           Actual.DO.time = ymd_hms(Actual.DO.time),
-           Cancellation.time = ymd_hms(Cancellation.time)
+    mutate(Request.Creation.Time = ymd_hms(Request.Creation.Time),
+           Requested.Time = ymd_hms(Requested.Time),
+           No.Show.Time = ymd_hms(No.Show.Time),
+           Actual.Pickup.Time = ymd_hms(Actual.Pickup.Time),
+           Actual.Dropoff.Time = ymd_hms(Actual.Dropoff.Time),
+           Cancellation.Time = ymd_hms(Cancellation.Time)
     ) %>%
-    mutate(weekday = wday(Ride.request.time, label = TRUE))
+    mutate(weekday = wday(Request.Creation.Time, label = TRUE))
 
   #####################################################################
   ####################################################
@@ -52,11 +64,11 @@ for(dataset in datasets) {
   ## PLOT ALL REQUESTS ##
 
   requests <- dataset %>%
-    select(Ride.request.time) %>%
-    mutate(date = date(Ride.request.time))
+    select(Request.Creation.Time) %>%
+    mutate(date = date(Request.Creation.Time))
 
   reqProTag <- requests %>%
-    group_by( date = date(Ride.request.time)) %>%
+    group_by( date = date(Request.Creation.Time)) %>%
     tally()
 
   ###########
@@ -65,7 +77,11 @@ for(dataset in datasets) {
     geom_line(mapping=aes(x=date, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=date, y=n), fill="#69b3a2", alpha=0.5) +
     labs(x="Tag",y="Requests", title="Zeitverlauf der Anfragen pro Tag (VIA)") +
-    scale_x_date(breaks = "3 month")
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold")) +
+    scale_x_date(breaks = "3 month") 
+    
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_requests_VIA.png")
@@ -82,7 +98,10 @@ for(dataset in datasets) {
   #plot avg nr of requests per weekday
   p <- ggplot(data=reqProWochentag) +
     geom_bar(mapping=aes(x=weekday, y=avg), stat="identity") +
-    labs(x="Wochentag",y="Durchschn. Anzahl Requests", title="Durchschn. Anzahl Requests pro Wochentag (VIA)")
+    labs(x="Wochentag",y="Durchschn. Anzahl Requests", title="Durchschn. Anzahl Requests pro Wochentag (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_requests_weekdays_VIA.png")
@@ -91,25 +110,9 @@ for(dataset in datasets) {
   p
 
 
-  #####################
-  #plot day time line of all requests
-  #rm <- requests %>%
-  #  mutate (minutes = minute(Fahrtwunsch.erstellt) + hour(Fahrtwunsch.erstellt) * 60) %>%
-  #  group_by(minutes) %>%
-  #  tally()
-
-  #p <- rm %>%
-  #  ggplot( aes(x=minutes/60, y=n)) +
-  #  ggtitle("Requests pro Minute") +
-  #  geom_area(fill="#69b3a2", alpha=0.5) +
-  #  geom_line(color="#69b3a2") +
-  #  ylab("nr of requests per minute") +
-  #  theme_ipsum()
-  #ggplotly(p)
-
   # 5min intervals
   requestsPerInterval <- requests %>%
-    mutate (interval = floor( (minute(Ride.request.time) + hour(Ride.request.time) * 60 ) /5) )  %>%
+    mutate (interval = floor( (minute(Request.Creation.Time) + hour(Request.Creation.Time) * 60 ) /5) )  %>%
     filter(!is.na(interval)) %>%
     group_by(interval) %>%
     tally()
@@ -117,7 +120,10 @@ for(dataset in datasets) {
   p <- ggplot(data=requestsPerInterval) +
     geom_line(mapping=aes(x=interval * 5/60, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=interval * 5/60, y=n), fill="#69b3a2", alpha=0.5) +
-    labs(x="Stunde", y="Anzahl Requests pro Intervall", title="Requests pro 5 Minuten-Intervall (VIA)")
+    labs(x="Stunde", y="Anzahl Requests pro Intervall", title="Requests pro 5 Minuten-Intervall (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_requests_daily_VIA.png")
@@ -129,33 +135,24 @@ for(dataset in datasets) {
   ####################################################
   ## PLOT COMPLETED RIDES ##
 
-  # filter and prepare data:  let us use Actual.PU.time as core time stamp
+  # filter and prepare data:  let us use Actual.Pickup.Time as core time stamp
   completedRides <- dataset %>%
-    filter(Status == "Completed") %>%
-    select(Actual.PU.time)
+    filter(Request.Status == "Completed") %>%
+    select(Actual.Pickup.Time)
 
   #group per day
   ridesProTag <- completedRides %>%
-    group_by(date = date(Actual.PU.time)) %>%
+    group_by(date = date(Actual.Pickup.Time)) %>%
     tally()
-
-  summer_holiday <- interval(ymd("2021-07-30"), ymd("2021-09-13"))
-  autumn_holiday <- interval(ymd("2021-11-01"), ymd("2021-11-05"))
-  holiday_bettag <- interval(ymd("2021-11-17"), ymd("2021-11-17"))
-  holidays_christmas <- interval(ymd("2021-12-24"), ymd("2022-01-08"))
-
-  daysToConsider <- ridesProTag %>%
-    filter(! date %within% summer_holiday,
-           ! date %within% autumn_holiday,
-           ! date %within% holiday_bettag,
-           ! date %within% holidays_christmas,
-    )
 
   # plot time line
   p <- ggplot(data=ridesProTag) +
     geom_line(mapping=aes(x=date, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=date, y=n), fill="#69b3a2", alpha=0.5) +
     labs(x="Tag", y="Fahrten", title="Zeitverlauf der Fahrten pro Tag (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=2),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold")) +
     scale_x_date(breaks = "3 month")
 
   plotFile = paste0("plots/",names[i],"/KEXI_rides_VIA.png")
@@ -194,7 +191,10 @@ for(dataset in datasets) {
   #plot avg nr of requests per weekday
   p <- ggplot(data=ridesProWochentag) +
     geom_bar(mapping=aes(x=weekday, y=avg), stat="identity") +
-    labs(x="Tag", y="Durchschn. Anzahl Fahrten", title="Durchschn. Anzahl Fahrten pro Wochentag (VIA)")
+    labs(x="Tag", y="Durchschn. Anzahl Fahrten", title="Durchschn. Anzahl Fahrten pro Wochentag (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_rides_weekdays_VIA.png")
@@ -205,15 +205,18 @@ for(dataset in datasets) {
   ################
   # PLOT Saturday RIDES
   saturdays <- completedRides %>%
-    mutate(weekday = wday(Actual.PU.time)) %>%
+    mutate(weekday = wday(Actual.Pickup.Time)) %>%
     filter(weekday == 7) %>%
-    group_by(date = date(Actual.PU.time)) %>%
+    group_by(date = date(Actual.Pickup.Time)) %>%
     tally()
 
   p <- ggplot(data=saturdays) +
     geom_line(mapping=aes(x=date, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=date, y=n), fill="#69b3a2", alpha=0.5) +
     labs(x="Tag",y="Fahrten", title="Zeitverlauf der Fahrten pro Samstag (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=2),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold")) +
     scale_x_date(breaks = "3 month")
 
   
@@ -239,19 +242,22 @@ for(dataset in datasets) {
   #ggplotly(p)
 
   ridesPerInterval <- completedRides %>%
-    mutate (interval = floor( (minute(Actual.PU.time) + hour(Actual.PU.time) * 60) / 5)  )  %>%
+    mutate (interval = floor( (minute(Actual.Pickup.Time) + hour(Actual.Pickup.Time) * 60) / 5)  )  %>%
     group_by(interval) %>%
     tally()
   # Write File for Dashboard for " Real Demand Time Distribution" plot
   ridesPerIntervals <- ridesPerInterval %>%
     mutate(interval5 = format(round(interval*5/60, 2), nsmall = 2))
   class.df <- data.frame(ridesPerIntervals$interval5,ridesPerIntervals$n, stringsAsFactors = FALSE)
-  write.csv2(class.df,paste0("KEXI_",names[i],"_rides_daily_VIA.csv"),quote=FALSE,row.names=FALSE)
+  # write.csv2(class.df,paste0("KEXI_",names[i],"_rides_daily_VIA.csv"),quote=FALSE,row.names=FALSE)
 
   p <- ggplot(data=ridesPerInterval) +
     geom_line(mapping=aes(x=interval*5/60, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=interval*5/60, y=n), fill="#69b3a2", alpha=0.5) +
-    labs(x="Stunde",y="Anzahl Fahrten", title="Fahrten pro 5-Minuten-Intervall (VIA)")
+    labs(x="Stunde",y="Anzahl Fahrten", title="Fahrten pro 5-Minuten-Intervall (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_rides_daily_VIA.png")
@@ -263,7 +269,7 @@ for(dataset in datasets) {
 
   #plot day time of saturdays
   saturdays_day <- completedRides %>%
-    mutate(weekday = wday(Actual.PU.time), interval = floor( (minute(Actual.PU.time) + hour(Actual.PU.time) * 60) / 5) ) %>%
+    mutate(weekday = wday(Actual.Pickup.Time), interval = floor( (minute(Actual.Pickup.Time) + hour(Actual.Pickup.Time) * 60) / 5) ) %>%
     filter(weekday == 7) %>%
     group_by(interval) %>%
     tally()
@@ -271,7 +277,10 @@ for(dataset in datasets) {
   p <- ggplot(data=saturdays_day) +
     geom_line(mapping=aes(x=interval*5/60, y=n), col="#69b3a2") +
     geom_area(mapping=aes(x=interval*5/60, y=n), fill="#69b3a2", alpha=0.5) +
-    labs(x="Stunde",y="Anzahl Fahrten", title="SA: Fahrten pro 5-Minuten-Intervall (VIA)")
+    labs(x="Stunde",y="Anzahl Fahrten", title="SA: Fahrten pro 5-Minuten-Intervall (VIA)") +
+    theme(plot.title = element_text(hjust=0.5, size=3.5, face="bold"), axis.text.x = element_text(size=4),
+          axis.title.x = element_text(size=4, face="bold"), axis.text.y = element_text(size=4),
+          axis.title.y = element_text(size=4, face="bold"))
 
   
   plotFile = paste0("plots/",names[i],"/KEXI_rides_saturdays_daily_VIA.png")
@@ -282,8 +291,8 @@ for(dataset in datasets) {
   #################################################################
 
   angefragtPerInterval <- dataset %>%
-    select(Requested.time) %>%
-    mutate (interval = floor( (minute(Requested.time) + hour(Requested.time) * 60) / 5)  )  %>%
+    select(Requested.Time) %>%
+    mutate (interval = floor( (minute(Requested.Time) + hour(Requested.Time) * 60) / 5)  )  %>%
     group_by(interval) %>%
     tally() %>%
     rename(nAngefragt = n)
@@ -308,8 +317,8 @@ for(dataset in datasets) {
 
 
   requests_timeDiffs <- dataset %>%
-    select(Ride.request.time, Requested.time) %>%
-    mutate(diff = seconds(Requested.time - Ride.request.time)) %>%
+    select(Request.Creation.Time, Requested.Time) %>%
+    mutate(diff = seconds(Requested.Time - Request.Creation.Time)) %>%
     filter(!is.na(diff))
 
   mean(requests_timeDiffs$diff) /3600
@@ -317,9 +326,9 @@ for(dataset in datasets) {
   hist(requests_timeDiffs$diff/3600)
 
   rides_timeDiffs <- dataset %>%
-    filter(Status == "Completed") %>%
-    select(Ride.request.time, Requested.time) %>%
-    mutate(diff = seconds(Requested.time - Ride.request.time)) %>%
+    filter(Request.Status == "Completed") %>%
+    select(Request.Creation.Time, Requested.Time) %>%
+    mutate(diff = seconds(Requested.Time - Request.Creation.Time)) %>%
     filter(!is.na(diff))
 
   mean(rides_timeDiffs$diff) /3600
@@ -327,7 +336,7 @@ for(dataset in datasets) {
   hist(rides_timeDiffs$diff/3600)
 
   p <- ggplot(data=requests_timeDiffs) +
-    geom_line(mapping=aes(x=Ride.request.time, y=Requested.time))
+    geom_line(mapping=aes(x=Request.Creation.Time, y=Requested.Time))
   ggplotly(p)
 
 

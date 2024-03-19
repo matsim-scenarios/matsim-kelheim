@@ -1,75 +1,158 @@
 library(lubridate)
 library(tidyverse)
 library(dplyr)
+Sys.setlocale("LC_TIME", "en_US.UTF-8")
 
 # set working directory
-setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
+#setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
+setwd("D:/Module/vsp/shared-svn/")
 
 # read data
-VIAdata2021 <- read.csv2("Via_data_2022-02-08/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
-VIAdata2022 <- read.csv2("Via_data_2022-10-10/Data_request_TUB_for_Kelheim-Actual_Data-VIA_Feb_to_Oct_2022_edited.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep=",")
+VIAdata2021 <- read.csv2("Via_data_2022-02-08/Data_request_TUB_for_Kelheim-Actual_Data-VIA_raw.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep=",", skip = 1)
+VIAdata2022_1 <- read.csv2("Via_data_2022-10-10/Data_request_TUB_for_Kelheim-Actual_Data-VIA_Feb_to_Oct_2022_raw.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep=",", skip = 1)
+VIAdata2022_2 <- read.csv2("Via_data_2023-01-17/Data_request_TUB_for_Kelheim-Actual_Data-Oct-Dec_2022-Data_TUB_for_Kelheim-Actual_Data-Oct_to_Dec_22.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep=",", skip = 1)
+VIAdata2023_1 <- read.csv2("Via_data_2023-04-19/Data_request_TUB_for_Kelheim-Actual_Data-Jan-Mar_2023-Kelheim-Actual_Data-Jan-Mar_2023.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep=",", skip = 1)
+VIAdata2023_2 <- read.csv2("Via_data_2023-07-10/Data_request_TUB_for_Kelheim-Actual_Data-Apr-Jul_2023-Kelheim-Actual_Data-Apr-Jul_23.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep=",", skip = 1)
+VIAdata2023_3 <- read.csv2("Via_data_2023-10-24/Data_request_TUB_for_Kelheim-Actual_Data-Jul-Oct-2023-Kelheim-Actual_Data_Jul-Oct(1)_raw.csv", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8", sep=",", skip = 1)
 
-#due to different columns names and some added columns we have to make the datasets compatible to each other
-overlap <-interval(ymd("2022-01-24"), ymd("2022-01-29"))
+# here it makes sense to switch to column names from 2022 data and newer as
+# column names for all files but the 2021 data are the same
+VIAdata2021 <- VIAdata2021 %>%
+  rename("Request.Creation.Time" = Ride.request.time,
+         "Request.Status" = Status,
+         "Booking.Method" = Booking.method,
+         "Number.of.Passengers" = Number.of.passengers,
+         "Requested.Pickup.Time" = Requested.PU.time,
+         "Requested.Dropoff.Time" = Requested.DO.time,
+         "Origin.Lat" = Origin.latitude,
+         "Origin.Lng" = Origin.Longitude,
+         "Destination.Lat" = Destination.latitude,
+         "Destination.Lng" = Destination.Longitude,
+         "Cancellation.Time" = Cancellation.time,
+         "No.Show.Time" = No.show.time,
+         "Actual.Pickup.Time" = Actual.PU.time,
+         "Actual.Dropoff.Time" = Actual.DO.time) %>%
+  mutate(Reason.For.Travel = "DR",
+         Request.Creation.Time = ymd_hms(Request.Creation.Time))
 
-VIAdata2022 <- VIAdata2022 %>%
-  rename("Ride.request.time" = Request.Creation.Time,
-         "Status" = Request.Status,
-         "Booking.method" = Booking.Method,
-  "Number.of.passengers" = Number.of.Passengers,
-         "Requested.PU.time" = Requested.Pickup.Time,
-         "Requested.DO.time" = Requested.Dropoff.Time,
-         "Origin.latitude" = Origin.Lat,
-         "Origin.Longitude" = Origin.Lng,
-         "Destination.latitude" = Destination.Lat,
-         "Destination.Longitude" = Destination.Lng,
-  "Cancellation.time" = Cancellation.Time,
-         "No.show.time" = No.Show.Time,
-         "Actual.PU.time" = Actual.Pickup.Time,
-         "Actual.DO.time" = Actual.Dropoff.Time) %>%
+VIAdata2022_1 <- VIAdata2022_1 %>%
   mutate(Ride.ID = NA,
          Reason.For.Travel = ifelse(Reason.For.Travel != "AV","DR","AV"),
-  Ride.request.time = ymd_hms(Ride.request.time)) %>%
-  filter(! date(Ride.request.time) %within% overlap)
+         Request.Creation.Time = ymd_hms(Request.Creation.Time))
 
-write.csv2(VIAdata2022, "Via_data_2022-10-10/Data_request_TUB_for_Kelheim-Actual_Data-VIA_Feb_to_Oct_2022_edited_cleaned.csv", quote = FALSE, row.names = FALSE)
+VIAdata2022_2 <- VIAdata2022_2 %>%
+  mutate(Ride.ID = NA,
+         Reason.For.Travel = ifelse(Reason.For.Travel != "AV","DR","AV"),
+         Request.Creation.Time = ymd_hms(Request.Creation.Time))
 
-VIAdata2021 <- VIAdata2021 %>%
-  mutate(Reason.For.Travel = "DR",
-         Ride.request.time = ymd_hms(Ride.request.time))
+VIAdata2023_1 <- VIAdata2023_1 %>%
+  mutate(Ride.ID = NA,
+         Reason.For.Travel = ifelse(Reason.For.Travel != "AV","DR","AV"),
+         Request.Creation.Time = ymd_hms(Request.Creation.Time))
 
-allData <- union(VIAdata2021, VIAdata2022)
+VIAdata2023_2 <- VIAdata2023_2 %>%
+  mutate(Ride.ID = NA,
+         Reason.For.Travel = ifelse(Reason.For.Travel != "AV","DR","AV"),
+         Request.Creation.Time = ymd_hms(Request.Creation.Time))
+
+#retrofit Reason.For.Travel column
+#this line can only be executed once, afterwards columns are renamed and removed
+VIAdata2023_3 <- VIAdata2023_3 %>%
+  rename("Anbietername" = X.1) %>%
+  mutate(Reason.For.Travel = case_when(
+                                      Anbietername == "RBO" ~ "DR",
+                                      Anbietername == "no vendor" ~ "AV",
+                                      TRUE ~ Reason.For.Travel
+                                  )) %>%
+  mutate(Ride.ID = NA,
+         Reason.For.Travel = ifelse(Reason.For.Travel != "AV","DR","AV"),
+         Request.Creation.Time = ymd_hms(Request.Creation.Time)) %>%
+  select(-X,-Anbietername)
+
+write.csv2(VIAdata2021, "Via_data_2022-02-08/Data_request_TUB_for_Kelheim-Actual_Data-VIA_edited.csv", quote = FALSE, row.names = FALSE)
+write.csv2(VIAdata2022_1, "Via_data_2022-10-10/Data_request_TUB_for_Kelheim-Actual_Data-VIA_Feb_to_Oct_2022_edited_cleaned.csv", quote = FALSE, row.names = FALSE)
+write.csv2(VIAdata2022_2, "Via_data_2023-01-17/Data_request_TUB_for_Kelheim-Actual_Data-Oct-Dec_2022-Data_TUB_for_Kelheim-Actual_Data-Oct_to_Dec_22_edited.csv", quote = FALSE, row.names = FALSE)
+write.csv2(VIAdata2023_1, "Via_data_2023-04-19/Data_request_TUB_for_Kelheim-Actual_Data-Jan-Mar_2023-Kelheim-Actual_Data-Jan-Mar_2023_edited.csv", quote = FALSE, row.names = FALSE)
+write.csv2(VIAdata2023_2, "Via_data_2023-07-10/Data_request_TUB_for_Kelheim-Actual_Data-Apr-Jul_2023-Kelheim-Actual_Data-Apr-Jul_23_edited.csv", quote = FALSE, row.names = FALSE)
+write.csv2(VIAdata2023_3, "Via_data_2023-10-24/Data_request_TUB_for_Kelheim-Actual_Data-Jul-Oct_2023-Kelheim-Actual_Data-Jul-Oct_23_edited.csv", quote = FALSE, row.names = FALSE)
+
+allData <- union(VIAdata2021, VIAdata2022_1)
+allData <- union(allData, VIAdata2022_2)
+allData <- union(allData, VIAdata2023_1)
+allData <- union(allData, VIAdata2023_2)
+allData <- union(allData, VIAdata2023_3) %>%
+  distinct(Request.ID, .keep_all = TRUE)
 
 #filter
 completedRides <- allData %>%
-  filter(Status == "Completed")
+  filter(Request.Status == "Completed")
 
 completedRides2021 <- VIAdata2021 %>%
-  filter(Status == "Completed")
+  filter(Request.Status == "Completed")
 
-completedRides2022 <- VIAdata2022 %>%
-  filter(Status == "Completed")
+completedRides2022_1 <- VIAdata2022_1 %>%
+  filter(Request.Status == "Completed")
 
-saturday_rides <- completedRides %>% 
-  mutate(Actual.PU.time = ymd_hms(Actual.PU.time)) %>%
-  mutate(weekday = wday(Actual.PU.time, label = TRUE)) %>%
-  filter(weekday == "Sa")
+completedRides2022_2 <- VIAdata2022_2 %>%
+  filter(Request.Status == "Completed")
+
+completedRides2023_1 <- VIAdata2023_1 %>%
+  filter(Request.Status == "Completed")
+
+completedRides2023_2 <- VIAdata2023_2 %>%
+  filter(Request.Status == "Completed")
+
+completedRides2023_3 <- VIAdata2023_3 %>%
+  filter(Request.Status == "Completed")
+
+saturday_rides <- completedRides %>%
+  mutate(Actual.Pickup.Time = ymd_hms(Actual.Pickup.Time)) %>%
+  mutate(weekday = wday(Actual.Pickup.Time, label = TRUE)) %>%
+  filter(weekday == "Sat")
 
 saturday_rides2021 <- completedRides2021 %>%
-  mutate(Actual.PU.time = ymd_hms(Actual.PU.time)) %>%
-  mutate(weekday = wday(Actual.PU.time, label = TRUE)) %>%
-  filter(weekday == "Sa")
+  mutate(Actual.Pickup.Time = ymd_hms(Actual.Pickup.Time)) %>%
+  mutate(weekday = wday(Actual.Pickup.Time, label = TRUE)) %>%
+  filter(weekday == "Sat")
 
-saturday_rides2022 <- completedRides2022 %>%
-  mutate(Actual.PU.time = ymd_hms(Actual.PU.time)) %>%
-  mutate(weekday = wday(Actual.PU.time, label = TRUE)) %>%
-  filter(weekday == "Sa")
+saturday_rides2022_1 <- completedRides2022_1 %>%
+  mutate(Actual.Pickup.Time = ymd_hms(Actual.Pickup.Time)) %>%
+  mutate(weekday = wday(Actual.Pickup.Time, label = TRUE)) %>%
+  filter(weekday == "Sat")
+
+saturday_rides2022_2 <- completedRides2022_2 %>%
+  mutate(Actual.Pickup.Time = ymd_hms(Actual.Pickup.Time)) %>%
+  mutate(weekday = wday(Actual.Pickup.Time, label = TRUE)) %>%
+  filter(weekday == "Sat")
+
+saturday_rides2023_1 <- completedRides2023_1 %>%
+  mutate(Actual.Pickup.Time = ymd_hms(Actual.Pickup.Time)) %>%
+  mutate(weekday = wday(Actual.Pickup.Time, label = TRUE)) %>%
+  filter(weekday == "Sat")
+
+saturday_rides2023_2 <- completedRides2023_2 %>%
+  mutate(Actual.Pickup.Time = ymd_hms(Actual.Pickup.Time)) %>%
+  mutate(weekday = wday(Actual.Pickup.Time, label = TRUE)) %>%
+  filter(weekday == "Sat")
+
+saturday_rides2023_3 <- completedRides2023_3 %>%
+  mutate(Actual.Pickup.Time = ymd_hms(Actual.Pickup.Time)) %>%
+  mutate(weekday = wday(Actual.Pickup.Time, label = TRUE)) %>%
+  filter(weekday == "Sat")
 
 #dump output
-write.csv2(completedRides, "VIA_Rides_202106_202210.csv", quote = FALSE, row.names = FALSE)
-write.csv2(saturday_rides, "VIA_Rides_Saturdays_202106_202210.csv", quote = FALSE, row.names = FALSE)
+write.csv2(completedRides, "VIA_Rides_202106_202303.csv", quote = FALSE, row.names = FALSE)
+write.csv2(saturday_rides, "VIA_Rides_Saturdays_202106_202303.csv", quote = FALSE, row.names = FALSE)
 write.csv2(completedRides2021, "VIA_Rides_202106_202201.csv", quote = FALSE, row.names = FALSE)
 write.csv2(saturday_rides2021, "VIA_Rides_Saturdays_202106_202201.csv", quote = FALSE, row.names = FALSE)
-write.csv2(completedRides2022, "VIA_Rides_202201_202210.csv", quote = FALSE, row.names = FALSE)
-write.csv2(saturday_rides2022, "VIA_Rides_Saturdays_202201_202210.csv", quote = FALSE, row.names = FALSE)
+write.csv2(completedRides2022_1, "VIA_Rides_202201_202210.csv", quote = FALSE, row.names = FALSE)
+write.csv2(saturday_rides2022_1, "VIA_Rides_Saturdays_202201_202210.csv", quote = FALSE, row.names = FALSE)
+write.csv2(completedRides2022_2, "VIA_Rides_202210_202212.csv", quote = FALSE, row.names = FALSE)
+write.csv2(saturday_rides2022_2, "VIA_Rides_Saturdays_202210_202212.csv", quote = FALSE, row.names = FALSE)
+write.csv2(completedRides2023_1, "VIA_Rides_202212_202303.csv", quote = FALSE, row.names = FALSE)
+write.csv2(saturday_rides2023_1, "VIA_Rides_Saturdays_202212_202303.csv", quote = FALSE, row.names = FALSE)
+write.csv2(completedRides2023_2, "VIA_Rides_202304_202307.csv", quote = FALSE, row.names = FALSE)
+write.csv2(saturday_rides2023_2, "VIA_Rides_Saturdays_202304_202307.csv", quote = FALSE, row.names = FALSE)
+write.csv2(completedRides2023_3, "VIA_Rides_202307_202310.csv", quote = FALSE, row.names = FALSE)
+write.csv2(saturday_rides2023_3, "VIA_Rides_Saturdays_202307_202310.csv", quote = FALSE, row.names = FALSE)
 
