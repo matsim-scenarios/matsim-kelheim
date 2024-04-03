@@ -27,15 +27,10 @@ public class RunKelheimIntegrationTest {
 	@RegisterExtension
 	MatsimTestUtils utils = new MatsimTestUtils();
 
-	private static final String URL = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/leipzig/leipzig-v1.2/input/";
-	private static final String exampleShp = "input/v1.3/drtServiceArea/Leipzig_stadt.shp";
-
 	@Test
 	public final void runExamplePopulationTest() {
 
 		String output = utils.getOutputDirectory();
-
-
 
 		Config config = ConfigUtils.loadConfig("input/test.config.xml");
 
@@ -48,30 +43,37 @@ public class RunKelheimIntegrationTest {
 		ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class).defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
 
 
-		MATSimApplication.execute(RunKelheimScenario.class, config, "run", "--1pct", "--slow-speed-area", exampleShp,
-				"--slow-speed-relative-change", "0.5","--drt-area", exampleShp, "--post-processing", "disabled"
-		);
+		MATSimApplication.execute(RunKelheimScenario.class, config,
+				"run", "--1pct");
 
-		//EventsUtils.createEventsFingerprint("kelheim-test-junit/kelheim.output_events.xml.gz","RunKelheimIntegrationTest_events.fp.zst");
+//		EventsUtils.createEventsFingerprint(utils.getOutputDirectory()+"kelheim.output_events.xml.gz",utils.getInputDirectory() + "runExamplePopulationTest_events.fp.zst");
 
-		assertThat(EventsUtils.createAndCompareEventsFingerprint(
-				new File(output, "kelheim.output_events.xml.gz"),
-				(utils.getInputDirectory()+"RunKelheimIntegrationTest_events.fp.zst")
-		)).isEqualTo(ComparisonResult.FILES_ARE_EQUAL);
+		EventsUtils.assertEqualEventsFingerprint(new File(output, "kelheim.output_events.xml.gz"),
+				utils.getInputDirectory()+"runExamplePopulationTest_events.fp.zst");
+
 
 
 	}
 
 	@Test
 	public final void runDrtExamplePopulationTest() {
+		String output = utils.getOutputDirectory();
+
 		Config config = ConfigUtils.loadConfig("input/test.with-drt.config.xml");
 		config.controller().setLastIteration(1);
 		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
+		config.controller().setOutputDirectory(output);
 
 		ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class).defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
 
 		MATSimApplication.execute(RunKelheimScenario.class, config,
-			"run", "--1pct", "--with-drt");
+				"run", "--1pct", "--with-drt");
+
+//		EventsUtils.createEventsFingerprint(utils.getOutputDirectory()+"kelheim.output_events.xml.gz",utils.getInputDirectory() + "runDrtExamplePopulationTest_events.fp.zst");
+
+
+		EventsUtils.assertEqualEventsFingerprint(new File(output, "kelheim.output_events.xml.gz"),
+				utils.getInputDirectory()+"runDrtExamplePopulationTest_events.fp.zst");
 	}
 
 }
