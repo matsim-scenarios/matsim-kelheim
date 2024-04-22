@@ -13,7 +13,10 @@ library(leaflet.extras) # for heatmap
 
 
 #### read data.
-##### you have to download the data in Excel format and then export to csv !!with semi-colon as separator!! because the addresses have commata in them and then commata does not work as delimiter!!
+
+
+##### you have to download the demand data in Excel format and then export to csv !!with semi-colon as separator!! because the addresses have commata in them and then commata does not work as delimiter!!
+##### for the driver shift data, you can/should directly download in csv format !!
 
 #input files
 testdata <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_sample_2023_12_20/Fahrtanfragen-2023-12-20.csv"
@@ -21,35 +24,40 @@ data_feb_14 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_14
 data_jan_01_feb_27 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_27/Fahrtanfragen-2024-02-27.csv"
 data_jan_01_feb_27_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_27/Fahrerschichten-2024-02-27.csv"
 
-#parse data
-data <- read.csv2(data_jan_01_feb_27, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+data_jan_01_apr_08 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_08/Fahrtanfragen-2024-04-08.csv"
+data_jan_01_apr_08_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_08/Fahrerschichten-2024-04-08.csv"
 
+#parse data
+data <- read.csv2(data_jan_01_apr_08, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+data_fahrerschichten  <- read.csv2(data_jan_01_apr_08_fahrerschichten, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
+  mutate(time = ymd_hms(Datum),
+         date = date(time))
 
 ### prepare data
 
 ## filter out test bookings
-
 #10718 is a real customer
 #10031 too
-testingCustomerIds_extended <- c(1, 
-                                 43, 
-                                 649, 
-                                 673,
-                                 3432, 
-                                 3847, 
-                                 3887, 
-                                 4589, 
-                                 7409,
-                                 7477,
-                                 9808, 
-                                 9809, 
-                                 8320,
-                                 12777, 
-                                 13288
+testingCustomerIds_extended <- c(1,  # Testrider
+                                 43, # Stefan
+                                 649,# Salah
+                                 673,# Markus
+                                 3432,# ??
+                                 3847, # CS Test
+                                 3887, # Jonathan
+                                 4589, # Gerlinde
+                                 7409, # Jalal
+                                 7477, # Bus31
+                                 9808, # Marina
+                                 9809, # Günter
+                                 8320, # Bus28
+                                 12777, # Salah
+                                 13288, #Bus47
+                                 13498  #kam von Jan Eller
 )
 
 
-#pepare data tyopes
+#pepare data types
 data <- data %>% 
   mutate(
          Erstellungszeit = ymd_hms(Erstellungszeit.der.Fahrtanfrage),
@@ -73,10 +81,6 @@ data <- data %>%
 #for some reason, doing this with an ifelse clause does not work, so making sure time is not N/A in a separate step
 data <- data %>% 
   mutate(time = if_else(is.na(Angefragte.Einstiegszeit), Angefragte.Ausstiegszeit, Angefragte.Einstiegszeit),
-         date = date(time))
-
-data_fahrerschichten  <- read.csv2(data_jan_01_feb_27_fahrerschichten, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
-  mutate(time = ymd_hms(Datum),
          date = date(time))
 
 
