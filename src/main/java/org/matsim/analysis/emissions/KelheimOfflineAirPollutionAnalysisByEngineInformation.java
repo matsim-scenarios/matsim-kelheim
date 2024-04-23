@@ -31,7 +31,6 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.api.core.v01.network.Node;
 import org.matsim.application.ApplicationUtils;
 import org.matsim.application.CommandSpec;
 import org.matsim.application.MATSimAppCommand;
@@ -84,7 +83,7 @@ import java.util.stream.Collectors;
 		"emissionNetwork.xml.gz"
 	}
 )
-class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimAppCommand {
+public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimAppCommand {
 
 	private static final Logger log = LogManager.getLogger(KelheimOfflineAirPollutionAnalysisByEngineInformation.class);
 
@@ -187,10 +186,23 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 //		log.info("Closing events file...");
 //		emissionEventWriter.closeFile();
 
-		writeLinkOutput(linkEmissionAnalysisFile, linkEmissionPerMAnalysisFile, scenario, emissionsEventHandler);
+		//we only output values for a subnetwork, if shp is defined. this speeds up vizes.
+		Network filteredNetwork;
+		if (shp.isDefined()) {
+			ShpOptions.Index index = shp.createIndex(ProjectionUtils.getCRS(scenario.getNetwork()), "_");
+
+			NetworkFilterManager manager = new NetworkFilterManager(scenario.getNetwork(), config.network());
+			manager.addLinkFilter(l -> index.contains(l.getCoord()));
+
+			filteredNetwork = manager.applyFilters();
+		} else {
+			filteredNetwork = scenario.getNetwork();
+		}
+
+		writeLinkOutput(linkEmissionAnalysisFile, linkEmissionPerMAnalysisFile, filteredNetwork, emissionsEventHandler);
 		writeVehicleInfo(scenario, vehicleTypeFile);
-		writeTotal(scenario.getNetwork(), emissionsEventHandler);
-		writeRaster(scenario.getNetwork(), config, emissionsEventHandler);
+		writeTotal(filteredNetwork, emissionsEventHandler);
+		writeRaster(filteredNetwork, config, emissionsEventHandler);
 
 		int totalVehicles = scenario.getVehicles().getVehicles().size();
 		log.info("Total number of vehicles: " + totalVehicles);
@@ -209,7 +221,7 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	 */
 	private Config prepareConfig() {
 		Config config = ConfigUtils.createConfig();
-		config.vehicles().setVehiclesFile(ApplicationUtils.matchInput("vehicles", input.getRunDirectory()).toAbsolutePath().toString());
+		config.vehicles().setVehiclesFile(ApplicationUtils.matchInput("allVehicles.xml.gz", input.getRunDirectory()).toAbsolutePath().toString());
 		config.network().setInputFile(ApplicationUtils.matchInput("network", input.getRunDirectory()).toAbsolutePath().toString());
 		config.transit().setTransitScheduleFile(ApplicationUtils.matchInput("transitSchedule", input.getRunDirectory()).toAbsolutePath().toString());
 		config.transit().setVehiclesFile(ApplicationUtils.matchInput("transitVehicles", input.getRunDirectory()).toAbsolutePath().toString());
@@ -250,26 +262,6 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 		}
 		roadTypeMapping.addHbefaMappings(scenario.getNetwork());
 
-		if (shp.isDefined()) {
-			//ugly but the fastest way forward now -- ts, april '24
-
-			ShpOptions.Index index = shp.createIndex(ProjectionUtils.getCRS(scenario.getNetwork()), "_");
-
-			NetworkFilterManager manager = new NetworkFilterManager(scenario.getNetwork(), scenario.getConfig().network());
-			manager.addLinkFilter(l -> index.contains(l.getCoord()));
-
-			Network filteredNetwork = manager.applyFilters();
-			for (Id<Link> linkId : scenario.getNetwork().getLinks().keySet()) {
-				if (! filteredNetwork.getLinks().containsKey(linkId)) {
-					scenario.getNetwork().getLinks().remove(linkId);
-				}
-			}
-			for (Id<Node> nodeId : scenario.getNetwork().getNodes().keySet()) {
-				if (! filteredNetwork.getNodes().containsKey(nodeId)) {
-					scenario.getNetwork().getNodes().remove(nodeId);
-				}
-			}
-		}
 	}
 
 
@@ -304,11 +296,11 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	 * dumps the output.
 	 * @param linkEmissionAnalysisFile path including file name and ending (csv) for the output file containing absolute emission values per link
 	 * @param linkEmissionPerMAnalysisFile path including file name and ending (csv) for the output file containing emission values per meter, per link
-	 * @param scenario the analyzed scenario
+	 * @param network the network for which utput is createdS
 	 * @param emissionsEventHandler handler holding the emission data (from events-processing)
 	 * @throws IOException if output can't be written
 	 */
-	private void writeLinkOutput(String linkEmissionAnalysisFile, String linkEmissionPerMAnalysisFile, Scenario scenario, EmissionsOnLinkEventHandler emissionsEventHandler) throws IOException {
+	private void writeLinkOutput(String linkEmissionAnalysisFile, String linkEmissionPerMAnalysisFile, Network network, EmissionsOnLinkEventHandler emissionsEventHandler) throws IOException {
 
 		log.info("Emission analysis completed.");
 
@@ -340,6 +332,11 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 			Map<Id<Link>, Map<Pollutant, Double>> link2pollutants = emissionsEventHandler.getLink2pollutants();
 
 			for (Id<Link> linkId : link2pollutants.keySet()) {
+
+				// Link might be filtered
+				if (!network.getLinks().containsKey(linkId))
+					continue;
+
 				absolutWriter.write(linkId.toString());
 				perMeterWriter.write(linkId.toString());
 
@@ -351,7 +348,7 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 					absolutWriter.write(";" + nf.format(emissionValue));
 
 					double emissionPerM = Double.NaN;
-					Link link = scenario.getNetwork().getLinks().get(linkId);
+					Link link = network.getLinks().get(linkId);
 					if (link != null) {
 						emissionPerM = emissionValue / link.getLength();
 					}
