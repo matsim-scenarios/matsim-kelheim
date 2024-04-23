@@ -20,14 +20,29 @@
 
 package org.matsim.analysis.emissions;
 
+import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.network.Node;
+import org.matsim.application.ApplicationUtils;
+import org.matsim.application.CommandSpec;
 import org.matsim.application.MATSimAppCommand;
+import org.matsim.application.options.InputOptions;
+import org.matsim.application.options.OutputOptions;
+import org.matsim.application.options.SampleOptions;
+import org.matsim.application.options.ShpOptions;
 import org.matsim.contrib.emissions.*;
 import org.matsim.contrib.emissions.analysis.EmissionsOnLinkEventHandler;
+import org.matsim.contrib.emissions.analysis.FastEmissionGridAnalyzer;
+import org.matsim.contrib.emissions.analysis.Raster;
 import org.matsim.contrib.emissions.utils.EmissionsConfigGroup;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
@@ -36,26 +51,39 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Injector;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
-import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.network.NetworkUtils;
+import org.matsim.core.network.filter.NetworkFilterManager;
+import org.matsim.core.scenario.ProjectionUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.vehicles.*;
 import picocli.CommandLine;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * processes MATSim output leveraging the emission contrib.<br>
- * needs input tables from/according to HBEFA.<br>
- * produces output tables (csv files) that contain emission values per link (per meter) as well as emission events.
- *
- */
+@CommandLine.Command(
+	name = "kelheim-air-pollution",
+	description = "processes MATSim output leveraging the emission contrib.\n" +
+		"Needs input tables from/according to HBEFA.\n" +
+		"Produces output tables (csv files) that contain emission values per link (per meter) as well as emission events.",
+	mixinStandardHelpOptions = true, showDefaultValues = true
+)
+@CommandSpec(requireRunDirectory = true,
+	requireEvents = true,
+	requireNetwork = true,
+	produces = {
+		"emissions_total.csv", "emissions_grid_per_day.xyt.csv", "emissions_per_link.csv",
+		"emissions_per_link_per_m.csv",
+		"emissions_grid_per_hour.xyt.csv",
+		"emissions_vehicle_info.csv",
+		"emissionNetwork.xml.gz"
+	}
+)
 class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimAppCommand {
 
 	private static final Logger log = LogManager.getLogger(KelheimOfflineAirPollutionAnalysisByEngineInformation.class);
@@ -67,20 +95,32 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	private static final String HBEFA_FILE_COLD_AVERAGE = HBEFA_2020_PATH + "r9230ru2n209r30u2fn0c9rn20n2rujkhkjhoewt84202.enc" ;
 	private static final String HBEFA_FILE_WARM_AVERAGE = HBEFA_2020_PATH + "7eff8f308633df1b8ac4d06d05180dd0c5fdf577.enc";
 
-	@CommandLine.Option(names = "--runDir", description = "Path to MATSim output directory containing network, events, ....", required = true)
-	private String runDirectory;
-	@CommandLine.Option(names = "--runId", description = "runId of the corresponding MATSim run to analyzed", required = true)
-	private String runId;
-	@CommandLine.Option(names = "--output", description = "output directory (must not pre-exist)", required = true)
-	private String analysisOutputDirectory;
+	@CommandLine.Mixin
+	private final InputOptions input = InputOptions.ofCommand(KelheimOfflineAirPollutionAnalysisByEngineInformation.class);
+	@CommandLine.Mixin
+	private final OutputOptions output = OutputOptions.ofCommand(KelheimOfflineAirPollutionAnalysisByEngineInformation.class);
+	@CommandLine.Mixin
+	private final ShpOptions shp = new ShpOptions();
+	@CommandLine.Mixin
+	private SampleOptions sample;
+	@CommandLine.Option(names = "--grid-size", description = "Grid size in meter", defaultValue = "100")
+	private double gridSize;
+
+
+//	@CommandLine.Option(names = "--runDir", description = "Path to MATSim output directory containing network, events, ....", required = true)
+//	private String runDirectory;
+//	@CommandLine.Option(names = "--runId", description = "runId of the corresponding MATSim run to analyzed", required = true)
+//	private String runId;
+//	@CommandLine.Option(names = "--output", description = "output directory (must not pre-exist)", required = true)
+//	private String analysisOutputDirectory;
 
 	//dump out all pollutants. to include only a subset of pollutants, adjust!
 	static List<Pollutant> pollutants2Output = Arrays.asList(Pollutant.values());
 
 	@Override
 	public Integer call() throws Exception {
-		if (!runDirectory.endsWith("/")) runDirectory = runDirectory + "/";
-		if (!analysisOutputDirectory.endsWith("/")) analysisOutputDirectory = analysisOutputDirectory + "/";
+//		if (!runDirectory.endsWith("/")) runDirectory = runDirectory + "/";
+//		if (!analysisOutputDirectory.endsWith("/")) analysisOutputDirectory = analysisOutputDirectory + "/";
 
 		Config config = prepareConfig();
 		Scenario scenario = ScenarioUtils.loadScenario(config);
@@ -106,18 +146,17 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 		// the following is copied from the example and supplemented...
 		//------------------------------------------------------------------------------
 
-		File folder = new File(analysisOutputDirectory);
-		folder.mkdirs();
+//		File folder = new File(analysisOutputDirectory);
+//		folder.mkdirs();
 
-		String outputNetworkFile = analysisOutputDirectory + runId + ".emissionNetwork.xml.gz";
-		NetworkUtils.writeNetwork(scenario.getNetwork(), outputNetworkFile);
+		NetworkUtils.writeNetwork(scenario.getNetwork(), output.getPath( "emissionNetwork.xml.gz").toString());
 
-		final String eventsFile = runDirectory + runId + ".output_events.xml.gz";
+		final String eventsFile = input.getEventsPath();
 
-		final String emissionEventOutputFile = analysisOutputDirectory + runId + ".emission.events.offline.xml.gz";
-		final String linkEmissionAnalysisFile = analysisOutputDirectory + runId + ".emissionsPerLink.csv";
-		final String linkEmissionPerMAnalysisFile = analysisOutputDirectory + runId + ".emissionsPerLinkPerM.csv";
-		final String vehicleTypeFile = analysisOutputDirectory + runId + ".emissionVehicleInformation.csv";
+//		final String emissionEventOutputFile = output.getPath(".emission.events.offline.xml.gz";
+		final String linkEmissionAnalysisFile = output.getPath("emissions_per_link.csv").toString();
+		final String linkEmissionPerMAnalysisFile = output.getPath("emissions_per_link_per_m.csv").toString();
+		final String vehicleTypeFile = output.getPath("emissions_vehicle_info.csv").toString();
 
 
 		EventsManager eventsManager = EventsUtils.createEventsManager();
@@ -133,8 +172,8 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 		com.google.inject.Injector injector = Injector.createInjector(config, module);
 		EmissionModule emissionModule = injector.getInstance(EmissionModule.class);
 
-		EventWriterXML emissionEventWriter = new EventWriterXML(emissionEventOutputFile);
-		emissionModule.getEmissionEventsManager().addHandler(emissionEventWriter);
+//		EventWriterXML emissionEventWriter = new EventWriterXML(emissionEventOutputFile);
+//		emissionModule.getEmissionEventsManager().addHandler(emissionEventWriter);
 
 		EmissionsOnLinkEventHandler emissionsEventHandler = new EmissionsOnLinkEventHandler(3600);
 		eventsManager.addHandler(emissionsEventHandler);
@@ -145,10 +184,13 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 		log.info("Finish processing...");
 		eventsManager.finishProcessing();
 
-		log.info("Closing events file...");
-		emissionEventWriter.closeFile();
+//		log.info("Closing events file...");
+//		emissionEventWriter.closeFile();
 
-		writeOutput(linkEmissionAnalysisFile, linkEmissionPerMAnalysisFile, vehicleTypeFile, scenario, emissionsEventHandler);
+		writeLinkOutput(linkEmissionAnalysisFile, linkEmissionPerMAnalysisFile, scenario, emissionsEventHandler);
+		writeVehicleInfo(scenario, vehicleTypeFile);
+		writeTotal(scenario.getNetwork(), emissionsEventHandler);
+		writeRaster(scenario.getNetwork(), config, emissionsEventHandler);
 
 		int totalVehicles = scenario.getVehicles().getVehicles().size();
 		log.info("Total number of vehicles: " + totalVehicles);
@@ -167,10 +209,10 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	 */
 	private Config prepareConfig() {
 		Config config = ConfigUtils.createConfig();
-		config.vehicles().setVehiclesFile( runDirectory + runId + ".output_allVehicles.xml.gz");
-		config.network().setInputFile( runDirectory +runId + ".output_network.xml.gz");
-		config.transit().setTransitScheduleFile( runDirectory +runId + ".output_transitSchedule.xml.gz");
-		config.transit().setVehiclesFile( runDirectory + runId + ".output_transitVehicles.xml.gz");
+		config.vehicles().setVehiclesFile(ApplicationUtils.matchInput("vehicles", input.getRunDirectory()).toAbsolutePath().toString());
+		config.network().setInputFile(ApplicationUtils.matchInput("network", input.getRunDirectory()).toAbsolutePath().toString());
+		config.transit().setTransitScheduleFile(ApplicationUtils.matchInput("transitSchedule", input.getRunDirectory()).toAbsolutePath().toString());
+		config.transit().setVehiclesFile(ApplicationUtils.matchInput("transitVehicles", input.getRunDirectory()).toAbsolutePath().toString());
 		config.global().setCoordinateSystem("EPSG:25832");
 		config.plans().setInputFile(null);
 		config.parallelEventHandling().setNumberOfThreads(null);
@@ -207,7 +249,29 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 			}
 		}
 		roadTypeMapping.addHbefaMappings(scenario.getNetwork());
+
+		if (shp.isDefined()) {
+			//ugly but the fastest way forward now -- ts, april '24
+
+			ShpOptions.Index index = shp.createIndex(ProjectionUtils.getCRS(scenario.getNetwork()), "_");
+
+			NetworkFilterManager manager = new NetworkFilterManager(scenario.getNetwork(), scenario.getConfig().network());
+			manager.addLinkFilter(l -> index.contains(l.getCoord()));
+
+			Network filteredNetwork = manager.applyFilters();
+			for (Id<Link> linkId : scenario.getNetwork().getLinks().keySet()) {
+				if (! filteredNetwork.getLinks().containsKey(linkId)) {
+					scenario.getNetwork().getLinks().remove(linkId);
+				}
+			}
+			for (Id<Node> nodeId : scenario.getNetwork().getNodes().keySet()) {
+				if (! filteredNetwork.getNodes().containsKey(nodeId)) {
+					scenario.getNetwork().getNodes().remove(nodeId);
+				}
+			}
+		}
 	}
+
 
 	/**
 	 * we set all vehicles to average except for KEXI vehicles, i.e. drt. Drt vehicles are set to electric light commercial vehicles.
@@ -240,12 +304,11 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 	 * dumps the output.
 	 * @param linkEmissionAnalysisFile path including file name and ending (csv) for the output file containing absolute emission values per link
 	 * @param linkEmissionPerMAnalysisFile path including file name and ending (csv) for the output file containing emission values per meter, per link
-	 * @param vehicleTypeFileStr  including file name and ending (xml) for the output vehicle file
 	 * @param scenario the analyzed scenario
 	 * @param emissionsEventHandler handler holding the emission data (from events-processing)
 	 * @throws IOException if output can't be written
 	 */
-	private void writeOutput(String linkEmissionAnalysisFile, String linkEmissionPerMAnalysisFile, String vehicleTypeFileStr, Scenario scenario, EmissionsOnLinkEventHandler emissionsEventHandler) throws IOException {
+	private void writeLinkOutput(String linkEmissionAnalysisFile, String linkEmissionPerMAnalysisFile, Scenario scenario, EmissionsOnLinkEventHandler emissionsEventHandler) throws IOException {
 
 		log.info("Emission analysis completed.");
 
@@ -306,29 +369,116 @@ class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MATSimApp
 			log.info("Output written to " + linkEmissionPerMAnalysisFile);
 		}
 
-		{
-			//dump used vehicle types. in our (Kelheim) case not really needed as we did not change anything. But generally useful.
-			File vehicleTypeFile = new File(vehicleTypeFileStr);
+	}
 
-			BufferedWriter vehicleTypeWriter = new BufferedWriter(new FileWriter(vehicleTypeFile));
+	private static void writeVehicleInfo(Scenario scenario, String vehicleTypeFileStr) throws IOException {
+		//dump used vehicle types. in our (Kelheim) case not really needed as we did not change anything. But generally useful.
+		File vehicleTypeFile = new File(vehicleTypeFileStr);
 
-			vehicleTypeWriter.write("vehicleId;vehicleType;emissionsConcept");
-			vehicleTypeWriter.newLine();
+		BufferedWriter vehicleTypeWriter = new BufferedWriter(new FileWriter(vehicleTypeFile));
 
-			for (Vehicle vehicle : scenario.getVehicles().getVehicles().values()) {
-				String emissionsConcept = "null";
-				if (vehicle.getType().getEngineInformation() != null && VehicleUtils.getHbefaEmissionsConcept(vehicle.getType().getEngineInformation()) != null) {
-					emissionsConcept = VehicleUtils.getHbefaEmissionsConcept(vehicle.getType().getEngineInformation());
-				}
+		vehicleTypeWriter.write("vehicleId;vehicleType;emissionsConcept");
+		vehicleTypeWriter.newLine();
 
-				vehicleTypeWriter.write(vehicle.getId() + ";" + vehicle.getType().getId().toString() + ";" + emissionsConcept);
-				vehicleTypeWriter.newLine();
+		for (Vehicle vehicle : scenario.getVehicles().getVehicles().values()) {
+			String emissionsConcept = "null";
+			if (vehicle.getType().getEngineInformation() != null && VehicleUtils.getHbefaEmissionsConcept(vehicle.getType().getEngineInformation()) != null) {
+				emissionsConcept = VehicleUtils.getHbefaEmissionsConcept(vehicle.getType().getEngineInformation());
 			}
 
-			vehicleTypeWriter.close();
-			log.info("Output written to " + vehicleTypeFileStr);
+			vehicleTypeWriter.write(vehicle.getId() + ";" + vehicle.getType().getId().toString() + ";" + emissionsConcept);
+			vehicleTypeWriter.newLine();
+		}
+
+		vehicleTypeWriter.close();
+		log.info("Output written to " + vehicleTypeFileStr);
+	}
+
+	private void writeTotal(Network network, EmissionsOnLinkEventHandler emissionsEventHandler) {
+
+		Object2DoubleMap<Pollutant> sum = new Object2DoubleLinkedOpenHashMap<>();
+
+		DecimalFormat simple = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+		simple.setMaximumFractionDigits(2);
+		simple.setMaximumIntegerDigits(5);
+
+		DecimalFormat scientific = new DecimalFormat("0.###E0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+
+		for (Map.Entry<Id<Link>, Map<Pollutant, Double>> e : emissionsEventHandler.getLink2pollutants().entrySet()) {
+
+			if (!network.getLinks().containsKey(e.getKey()))
+				continue;
+			for (Map.Entry<Pollutant, Double> p : e.getValue().entrySet()) {
+				sum.mergeDouble(p.getKey(), p.getValue(), Double::sum);
+			}
+		}
+
+		try (CSVPrinter total = new CSVPrinter(Files.newBufferedWriter(output.getPath("emissions_total.csv")), CSVFormat.DEFAULT)) {
+
+			total.printRecord("Pollutant", "kg");
+			for (Pollutant p : Pollutant.values()) {
+				double val = (sum.getDouble(p) / sample.getSample()) / 1000;
+				total.printRecord(p, val < 100_000 && val > 100 ? simple.format(val) : scientific.format(val));
+			}
+
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
 	}
 
+	/**
+	 * Creates the data for the XY-Time plot. The time is fixed and the data is summarized over the run.
+	 * Currently only the CO2_Total Values is printed because Simwrapper can handle only one value.
+	 */
+	private void writeRaster(Network network, Config config, EmissionsOnLinkEventHandler emissionsEventHandler) {
+
+		Map<Pollutant, Raster> rasterMap = FastEmissionGridAnalyzer.processHandlerEmissions(emissionsEventHandler.getLink2pollutants(), network, gridSize, 20);
+
+		List<Integer> xLength = rasterMap.values().stream().map(Raster::getXLength).distinct().toList();
+		List<Integer> yLength = rasterMap.values().stream().map(Raster::getYLength).distinct().toList();
+
+		Raster raster = rasterMap.values().stream().findFirst().orElseThrow();
+
+		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("emissions_grid_per_day.xyt.csv")),
+			CSVFormat.DEFAULT.builder().setCommentMarker('#').build())) {
+
+			String crs = ProjectionUtils.getCRS(network);
+			if (crs == null)
+				crs = config.network().getInputCRS();
+			if (crs == null)
+				crs = config.global().getCoordinateSystem();
+
+			// print coordinate system
+			printer.printComment(crs);
+
+			// print header
+			printer.print("time");
+			printer.print("x");
+			printer.print("y");
+
+			printer.print("value");
+
+			printer.println();
+
+			for (int xi = 0; xi < xLength.get(0); xi++) {
+				for (int yi = 0; yi < yLength.get(0); yi++) {
+
+					Coord coord = raster.getCoordForIndex(xi, yi);
+
+					printer.print(0.0);
+					printer.print(coord.getX());
+					printer.print(coord.getY());
+
+					double value = rasterMap.get(Pollutant.CO2_TOTAL).getValueByIndex(xi, yi);
+					printer.print(value);
+
+					printer.println();
+				}
+			}
+
+		} catch (IOException e) {
+			log.error("Error writing results", e);
+		}
+	}
 
 }
