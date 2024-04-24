@@ -27,9 +27,14 @@ data_jan_01_feb_27_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/K
 data_jan_01_apr_08 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_08/Fahrtanfragen-2024-04-08.csv"
 data_jan_01_apr_08_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_08/Fahrerschichten-2024-04-08.csv"
 
+data_jan_01_apr_24 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrtanfragen-2024-04-24.csv"
+data_jan_01_apr_24_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrerschichten-2024-04-24.csv"
+
 #parse data
-data <- read.csv2(data_jan_01_apr_08, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
-data_fahrerschichten  <- read.csv2(data_jan_01_apr_08_fahrerschichten, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
+
+# fuer den datensatz vom april 24 geht das wohl doch mit dem komma als trennzeichen -- datensatz hatte Jan Eller heruntergeladen
+data <- read.csv2(data_jan_01_apr_24, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+data_fahrerschichten  <- read.csv2(data_jan_01_apr_24_fahrerschichten, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
   mutate(time = ymd_hms(Datum),
          date = date(time))
 
@@ -264,7 +269,8 @@ server <- function(input, output) {
     filtered_data() %>%
       group_by(date, `Status.der.Fahrtanfrage`) %>%
       summarise(Fahrtanfragen = n(),
-                TotalPassengers = sum(`Anzahl.der.Fahrgäste`))
+                TotalPassengers = sum(`Anzahl.der.Fahrgäste`)) %>% 
+      ungroup
   })
   
   passengerCount <- reactive({
@@ -399,18 +405,18 @@ server <- function(input, output) {
   
   'Passagiere am Tag'
   output$totalPassengersOverTime <- renderPlotly({
-   gg <- ggplot(grouped_data(), aes(x = date, y = TotalPassengers, fill = `Status.der.Fahrtanfrage`)) +
-    geom_bar(stat = "identity") +  # Stacked Bar mit TotalPassengers
-    labs(title = "Anzahl der Fahrgäste pro Tag",
-         subtitle = "für obige Filterauswahl",
-         x = "Datum",
-         y = "Anzahl") +
-    theme_minimal() +
-    scale_fill_manual(values = c("Fahrtanfragen" = "red", "Completed" = "blue")) +  # Legende anpassen
-    theme(legend.position = "right", legend.justification = "top",
-          plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
-          plot.subtitle = element_text(size = 16, hjust = 0.5)) + 
-     scale_x_date(date_breaks = "1 week", date_labels = "%d.%m.")
+   #gg <- ggplot(grouped_data(), aes(x = date, y = TotalPassengers, fill = `Status.der.Fahrtanfrage`)) +
+  #  geom_bar(stat = "identity") +  # Stacked Bar mit TotalPassengers
+  #  labs(title = "Anzahl der Fahrgäste pro Tag",
+  #       subtitle = "für obige Filterauswahl",
+  #       x = "Datum",
+  #       y = "Anzahl") +
+  #  theme_minimal() +
+  #  scale_fill_manual(values = c("Fahrtanfragen" = "red", "Completed" = "blue")) +  # Legende anpassen
+  #  theme(legend.position = "right", legend.justification = "top",
+  #        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+  #        plot.subtitle = element_text(size = 16, hjust = 0.5)) + 
+  #   scale_x_date(date_breaks = "1 week", date_labels = "%d.%m.")
    
 
    gg <- ggplot(grouped_data(), aes(x = date, y = TotalPassengers, fill = `Status.der.Fahrtanfrage`)) +
@@ -423,7 +429,8 @@ server <- function(input, output) {
      scale_fill_manual(values = c("Fahrtanfragen" = "red", "Completed" = "blue")) +  # Legende anpassen
      theme(legend.position = "right", legend.justification = "top",
            plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
-           plot.subtitle = element_text(size = 16, hjust = 0.5))
+           plot.subtitle = element_text(size = 16, hjust = 0.5)) + 
+     scale_x_date(date_breaks = "1 week", date_labels = "%d.%m.")
 
     ggplotly(gg)
   })
