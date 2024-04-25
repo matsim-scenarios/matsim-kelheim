@@ -103,7 +103,6 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 	@CommandLine.Mixin
 	private final OutputOptions output = OutputOptions.ofCommand(KelheimOfflineAirPollutionAnalysisByEngineInformation.class);
 	@CommandLine.Mixin
-	//TODO delete
 	private final ShpOptions shp = new ShpOptions();
 	@CommandLine.Mixin
 	private SampleOptions sample;
