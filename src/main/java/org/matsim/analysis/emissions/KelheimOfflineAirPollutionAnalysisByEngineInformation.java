@@ -50,7 +50,6 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.controler.Injector;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.network.NetworkUtils;
@@ -111,20 +110,11 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 	private double gridSize;
 
 
-//	@CommandLine.Option(names = "--runDir", description = "Path to MATSim output directory containing network, events, ....", required = true)
-//	private String runDirectory;
-//	@CommandLine.Option(names = "--runId", description = "runId of the corresponding MATSim run to analyzed", required = true)
-//	private String runId;
-//	@CommandLine.Option(names = "--output", description = "output directory (must not pre-exist)", required = true)
-//	private String analysisOutputDirectory;
-
 	//dump out all pollutants. to include only a subset of pollutants, adjust!
 	static List<Pollutant> pollutants2Output = Arrays.asList(Pollutant.values());
 
 	@Override
 	public Integer call() throws Exception {
-//		if (!runDirectory.endsWith("/")) runDirectory = runDirectory + "/";
-//		if (!analysisOutputDirectory.endsWith("/")) analysisOutputDirectory = analysisOutputDirectory + "/";
 
 		Config config = prepareConfig();
 		Scenario scenario = ScenarioUtils.loadScenario(config);
@@ -150,14 +140,11 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 		// the following is copied from the example and supplemented...
 		//------------------------------------------------------------------------------
 
-//		File folder = new File(analysisOutputDirectory);
-//		folder.mkdirs();
 
 		NetworkUtils.writeNetwork(scenario.getNetwork(), output.getPath( "emissionNetwork.xml.gz").toString());
 
 		final String eventsFile = input.getEventsPath();
 
-//		final String emissionEventOutputFile = output.getPath(".emission.events.offline.xml.gz";
 		final String linkEmissionAnalysisFile = output.getPath("emissions_per_link.csv").toString();
 		final String linkEmissionPerMAnalysisFile = output.getPath("emissions_per_link_per_m.csv").toString();
 		final String vehicleTypeFile = output.getPath("emissions_vehicle_info.csv").toString();
@@ -173,12 +160,6 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 			}
 		};
 
-		com.google.inject.Injector injector = Injector.createInjector(config, module);
-		EmissionModule emissionModule = injector.getInstance(EmissionModule.class);
-
-//		EventWriterXML emissionEventWriter = new EventWriterXML(emissionEventOutputFile);
-//		emissionModule.getEmissionEventsManager().addHandler(emissionEventWriter);
-
 		EmissionsOnLinkEventHandler emissionsEventHandler = new EmissionsOnLinkEventHandler(3600);
 		eventsManager.addHandler(emissionsEventHandler);
 		eventsManager.initProcessing();
@@ -187,9 +168,6 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 		log.info("Done reading the events file.");
 		log.info("Finish processing...");
 		eventsManager.finishProcessing();
-
-//		log.info("Closing events file...");
-//		emissionEventWriter.closeFile();
 
 		//we only output values for a subnetwork, if shp is defined. this speeds up vizes.
 		Network filteredNetwork;
