@@ -26,6 +26,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.BasicLocation;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -38,7 +39,9 @@ import org.matsim.application.options.InputOptions;
 import org.matsim.application.options.OutputOptions;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.options.ShpOptions;
+import org.matsim.contrib.analysis.time.TimeBinMap;
 import org.matsim.contrib.emissions.*;
+import org.matsim.contrib.emissions.analysis.EmissionsByPollutant;
 import org.matsim.contrib.emissions.analysis.EmissionsOnLinkEventHandler;
 import org.matsim.contrib.emissions.analysis.FastEmissionGridAnalyzer;
 import org.matsim.contrib.emissions.analysis.Raster;
@@ -54,6 +57,7 @@ import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.filter.NetworkFilterManager;
 import org.matsim.core.scenario.ProjectionUtils;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.vehicles.*;
 import picocli.CommandLine;
 
@@ -78,7 +82,7 @@ import java.util.stream.Collectors;
 	produces = {
 		"emissions_total.csv", "emissions_grid_per_day.xyt.csv", "emissions_per_link.csv",
 		"emissions_per_link_per_m.csv",
-		"emissions_grid_per_hour.xyt.csv",
+		"emissions_grid_per_hour.csv",
 		"emissions_vehicle_info.csv",
 		"emissionNetwork.xml.gz"
 	}
@@ -99,10 +103,11 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 	@CommandLine.Mixin
 	private final OutputOptions output = OutputOptions.ofCommand(KelheimOfflineAirPollutionAnalysisByEngineInformation.class);
 	@CommandLine.Mixin
+	//TODO delete
 	private final ShpOptions shp = new ShpOptions();
 	@CommandLine.Mixin
 	private SampleOptions sample;
-	@CommandLine.Option(names = "--grid-size", description = "Grid size in meter", defaultValue = "100")
+	@CommandLine.Option(names = "--grid-size", description = "Grid size in meter", defaultValue = "250")
 	private double gridSize;
 
 
@@ -199,10 +204,18 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 			filteredNetwork = scenario.getNetwork();
 		}
 
-		writeLinkOutput(linkEmissionAnalysisFile, linkEmissionPerMAnalysisFile, filteredNetwork, emissionsEventHandler);
-		writeVehicleInfo(scenario, vehicleTypeFile);
+		log.info("write basic output");
 		writeTotal(filteredNetwork, emissionsEventHandler);
-		writeRaster(filteredNetwork, config, emissionsEventHandler);
+		writeVehicleInfo(scenario, vehicleTypeFile);
+		log.info("write link output");
+		writeLinkOutput(linkEmissionAnalysisFile, linkEmissionPerMAnalysisFile, filteredNetwork, emissionsEventHandler);
+
+
+		log.info("write daily raster");
+		writeRaster(scenario.getNetwork(), filteredNetwork, config, emissionsEventHandler);
+		log.info("write hourly raster");
+		writeTimeDependentRaster(scenario.getNetwork(), filteredNetwork, config, emissionsEventHandler);
+
 
 		int totalVehicles = scenario.getVehicles().getVehicles().size();
 		log.info("Total number of vehicles: " + totalVehicles);
@@ -427,19 +440,22 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 	 * Creates the data for the XY-Time plot. The time is fixed and the data is summarized over the run.
 	 * Currently only the CO2_Total Values is printed because Simwrapper can handle only one value.
 	 */
-	private void writeRaster(Network network, Config config, EmissionsOnLinkEventHandler emissionsEventHandler) {
+	//ts, april 24:
+	// this method produces (x,y,t) for the full network = entire germany, which is too big to be loaded into simwrapper.
+	//we can not feed a filtered network, because otherwise exceptions are thrown because the rastering methods find links which are not in the filtered network
+	//so we need to do some stupid filtering afterwards, which means that we produce and calculate more data than we dump out....
+	private void writeRaster(Network fullNetwork, Network filteredNetwork, Config config, EmissionsOnLinkEventHandler emissionsEventHandler) {
 
-		Map<Pollutant, Raster> rasterMap = FastEmissionGridAnalyzer.processHandlerEmissions(emissionsEventHandler.getLink2pollutants(), network, gridSize, 20);
 
-		List<Integer> xLength = rasterMap.values().stream().map(Raster::getXLength).distinct().toList();
-		List<Integer> yLength = rasterMap.values().stream().map(Raster::getYLength).distinct().toList();
+
+		Map<Pollutant, Raster> rasterMap = FastEmissionGridAnalyzer.processHandlerEmissions(emissionsEventHandler.getLink2pollutants(), fullNetwork, gridSize, 20);
 
 		Raster raster = rasterMap.values().stream().findFirst().orElseThrow();
 
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("emissions_grid_per_day.xyt.csv")),
 			CSVFormat.DEFAULT.builder().setCommentMarker('#').build())) {
 
-			String crs = ProjectionUtils.getCRS(network);
+			String crs = ProjectionUtils.getCRS(fullNetwork);
 			if (crs == null)
 				crs = config.network().getInputCRS();
 			if (crs == null)
@@ -457,8 +473,21 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 
 			printer.println();
 
-			for (int xi = 0; xi < xLength.get(0); xi++) {
-				for (int yi = 0; yi < yLength.get(0); yi++) {
+			Set<Coord> coords = filteredNetwork.getNodes().values().stream()
+				.map(BasicLocation::getCoord)
+				.collect(Collectors.toSet());
+			Double minX = coords.stream().map(coord -> coord.getX())
+				.min(Double::compare).orElse(Double.NEGATIVE_INFINITY);
+			Double maxX = coords.stream().map(coord -> coord.getX())
+				.max(Double::compare).orElse(Double.POSITIVE_INFINITY);
+			Double minY = coords.stream().map(coord -> coord.getY())
+				.min(Double::compare).orElse(Double.NEGATIVE_INFINITY);
+			Double maxY = coords.stream().map(coord -> coord.getY())
+				.max(Double::compare).orElse(Double.POSITIVE_INFINITY);
+
+			//we only want to print raster data for the bounding box of the filtered network
+			for (int xi = raster.getXIndex(minX); xi <= raster.getXIndex(maxX); xi++) {
+				for (int yi = raster.getYIndex(minY); yi < raster.getYIndex(maxY); yi++) {
 
 					Coord coord = raster.getCoordForIndex(xi, yi);
 
@@ -476,6 +505,90 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 		} catch (IOException e) {
 			log.error("Error writing results", e);
 		}
+	}
+
+	//ts, april 24:
+	// this method produces (x,y,t) for the full network = entire germany, which is too big to be loaded into simwrapper.
+	//we can not feed a filtered network, because otherwise exceptions are thrown because the rastering methods find links which are not in the filtered network
+	//so we need to do some stupid filtering afterwards, which means that we produce and calculate more data than we dump out....
+	private void writeTimeDependentRaster(Network fullNetwork, Network filteredNetwork, Config config, EmissionsOnLinkEventHandler emissionsEventHandler) {
+
+		//later we print C02_total only. so we pass corresponding data into the rasterization - in order to save resources (i had RAM problems before)
+		Set<Pollutant> otherPollutants = new HashSet<>(pollutants2Output);
+		otherPollutants.remove(Pollutant.CO2_TOTAL);
+		TimeBinMap<Map<Id<Link>, EmissionsByPollutant>> handlerTimeBinMap = emissionsEventHandler.getTimeBins();
+		for (TimeBinMap.TimeBin<Map<Id<Link>, EmissionsByPollutant>> perLink : handlerTimeBinMap.getTimeBins()) {
+			Double time = perLink.getStartTime();
+			for (Map.Entry<Id<Link>, EmissionsByPollutant> emissionsByPollutantEntry : perLink.getValue().entrySet()) {
+				otherPollutants.forEach(pollutant -> emissionsByPollutantEntry.getValue().getEmissions().remove(pollutant));
+				}
+			}
+
+		TimeBinMap<Map<Pollutant, Raster>> timeBinMap = FastEmissionGridAnalyzer.processHandlerEmissionsPerTimeBin(handlerTimeBinMap, fullNetwork, gridSize, 20);
+
+		Map<Pollutant, Raster> firstBin = timeBinMap.getTimeBin(timeBinMap.getStartTime()).getValue();
+
+		Raster raster = firstBin.values().stream().findFirst().orElseThrow();
+
+		try (CSVPrinter printer = new CSVPrinter(IOUtils.getBufferedWriter(output.getPath("emissions_grid_per_hour.csv").toString()),
+			CSVFormat.DEFAULT.builder().setCommentMarker('#').build())) {
+
+			String crs = ProjectionUtils.getCRS(fullNetwork);
+			if (crs == null)
+				crs = config.network().getInputCRS();
+			if (crs == null)
+				crs = config.global().getCoordinateSystem();
+
+			// print coordinate system
+			printer.printComment(crs);
+
+			// print header
+			printer.print("time");
+			printer.print("x");
+			printer.print("y");
+
+			printer.print("value");
+
+			printer.println();
+
+			Set<Coord> coords = filteredNetwork.getNodes().values().stream()
+				.map(BasicLocation::getCoord)
+				.collect(Collectors.toSet());
+			Double minX = coords.stream().map(coord -> coord.getX())
+				.min(Double::compare).orElse(Double.NEGATIVE_INFINITY);
+			Double maxX = coords.stream().map(coord -> coord.getX())
+				.max(Double::compare).orElse(Double.POSITIVE_INFINITY);
+			Double minY = coords.stream().map(coord -> coord.getY())
+				.min(Double::compare).orElse(Double.NEGATIVE_INFINITY);
+			Double maxY = coords.stream().map(coord -> coord.getY())
+				.max(Double::compare).orElse(Double.POSITIVE_INFINITY);
+
+			//we only want to print raster data for the bounding box of the filtered network
+			for (int xi = raster.getXIndex(minX); xi <= raster.getXIndex(maxX); xi++) {
+				for (int yi = raster.getYIndex(minY); yi < raster.getYIndex(maxY); yi++) {
+					for (TimeBinMap.TimeBin<Map<Pollutant, Raster>> timeBin : timeBinMap.getTimeBins()) {
+
+						Coord coord = raster.getCoordForIndex(xi, yi);
+						double value = timeBin.getValue().get(Pollutant.CO2_TOTAL).getValueByIndex(xi, yi);
+
+//						if (value == 0)
+//							continue;
+
+						printer.print(timeBin.getStartTime());
+						printer.print(coord.getX());
+						printer.print(coord.getY());
+
+						printer.print(value);
+
+						printer.println();
+					}
+				}
+			}
+
+		} catch (IOException e) {
+			log.error("Error writing results", e);
+		}
+
 	}
 
 }
