@@ -20,6 +20,7 @@
 
 package org.matsim.analysis.emissions;
 
+import org.matsim.application.analysis.emissions.AirPollutionAnalysis;
 import org.matsim.application.prepare.network.CreateGeoJsonNetwork;
 import org.matsim.simwrapper.Dashboard;
 import org.matsim.simwrapper.Header;
@@ -47,7 +48,7 @@ public class KelheimEmissionsDashboard implements Dashboard{
 		layout.row("links")
 			.el(Table.class, (viz, data) -> {
 				viz.title = "Emissions";
-				viz.description = "by pollutant";
+				viz.description = "by pollutant. Total values are scaled from the simulation sample size to 100%.";
 				viz.dataset = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_total.csv", new String[0]);
 				viz.enableFilter = false;
 				viz.showAllRows = true;
@@ -55,13 +56,15 @@ public class KelheimEmissionsDashboard implements Dashboard{
 			})
 			.el(Links.class, (viz, data) -> {
 				viz.title = "Emissions per Link per Meter";
-				viz.description = "Displays the emissions for each link per meter.";
+				viz.description = "Displays the emissions for each link per meter. Be aware that emission values are provided in the simulation sample size!";
 				viz.height = 12.0;
 				viz.datasets.csvFile = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_per_link_per_m.csv", new String[0]);
 				viz.network = data.compute(CreateGeoJsonNetwork.class, "network.geojson", new String[0]);
 				viz.display.color.columnName = "CO2_TOTAL [g/m]";
 				viz.display.color.dataset = "csvFile";
-				viz.display.width.scaleFactor = 1;
+				//TODO how to set color ramp??
+//				viz.display.color.setColorRamp(Plotly.ColorScheme.RdBu, 5, true);
+				viz.display.width.scaleFactor = 100;
 				viz.display.width.columnName = "CO2_TOTAL [g/m]";
 				viz.display.width.dataset = "csvFile";
 				viz.center = data.context().getCenter();
@@ -73,5 +76,12 @@ public class KelheimEmissionsDashboard implements Dashboard{
 			viz.height = 12.0;
 			viz.file = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_grid_per_day.xyt.csv", new String[0]);
 		});
+		layout.row("third")
+			.el(XYTime.class, (viz, data) -> {
+				viz.title = "CO₂ Emissions";
+				viz.description = "per hour";
+				viz.height = 12.;
+				viz.file = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_grid_per_hour.csv");
+			});
 	}
 }
