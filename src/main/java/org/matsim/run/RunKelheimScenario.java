@@ -159,7 +159,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		// Relative to config
 		sw.defaultParams().shp = "../shp/dilutionArea.shp";
-		sw.defaultParams().mapCenter = "11.89,48.91";
+		sw.defaultParams().mapCenter = "11.89223,48.91265";
 		sw.defaultParams().mapZoomLevel = 11d;
 		sw.defaultParams().sampleSize = sample.getSample();
 
