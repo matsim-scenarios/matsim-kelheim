@@ -81,7 +81,7 @@ final class CreateEmissionDashboard implements MATSimAppCommand {
 			simwrapperCfg.defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
 			simwrapperCfg.defaultParams().mapCenter = "48.91265,11.89223";
 
-			if(baseRun != null){
+			if (baseRun != null){
 				sw.addDashboard(new KelheimEmissionsDashboard(baseRun));
 			} else {
 				sw.addDashboard(new KelheimEmissionsDashboard());
