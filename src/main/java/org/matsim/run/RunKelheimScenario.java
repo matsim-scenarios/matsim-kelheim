@@ -113,6 +113,12 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--plans", defaultValue = "", description = "Use different input plans")
 	private String planOrigin;
 
+	@CommandLine.Option(names = "--base-fare", defaultValue = "2.0", description = "Base fare of KEXI trip")
+	private double baseFare;
+
+	@CommandLine.Option(names = "--surcharge", defaultValue = "1.0", description = "Surcharge of KEXI trip from / to train station")
+	private double surcharge;
+
 	public RunKelheimScenario(@Nullable Config config) {
 		super(config);
 	}
@@ -337,7 +343,7 @@ public class RunKelheimScenario extends MATSimApplication {
 					maxSpeed));
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
+				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, baseFare, surcharge));
 			}
 
 			//controler.addOverridingModule(new DrtEstimatorModule());
