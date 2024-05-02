@@ -1,0 +1,15 @@
+Road Type,Congestion Index,Total lane km,Cap. Utilization,Avg. Speed [km/h]
+all,0.914,4261.209,0.0,52.333
+living_street,0.9,15.127,0.0,9.732
+motorway,0.993,178.284,0.0,138.053
+motorway_link,0.997,11.825,0.0,62.363
+primary,0.926,151.906,0.0,60.634
+primary_link,0.906,1.47,0.0,55.103
+residential,0.899,1562.684,0.0,42.206
+secondary,0.932,401.037,0.0,63.184
+secondary_link,0.911,3.763,0.0,55.107
+service,0.9,176.346,0.0,18.066
+tertiary,0.916,679.661,0.0,53.969
+trunk,0.987,98.3,0.0,107.312
+trunk_link,0.896,9.867,0.0,46.319
+unclassified,0.905,970.94,0.0,47.213

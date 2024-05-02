@@ -1,0 +1,45 @@
+header:
+  title: Stuck Agents
+  description: Analyze agents that are 'stuck' i.e. could not finish their daily plan.
+layout:
+  first:
+  - type: tile
+    height: 0.1
+    dataset: analysis/population/stuck_agents.csv
+  second:
+  - type: plotly
+    title: Stuck Agents
+    description: per Mode
+    datasets:
+      dataset: analysis/population/stuck_agents_per_mode.csv
+    traces:
+    - values: $dataset.Agents
+      labels: $dataset.Mode
+      type: pie
+      sort: false
+  - type: csv
+    title: Stuck Agents
+    description: per Mode
+    dataset: analysis/population/stuck_agents_per_mode.csv
+  third:
+  - type: bar
+    title: Stuck Agents
+    description: per hour
+    dataset: analysis/population/stuck_agents_per_hour.csv
+    x: hour
+    columns:
+    - pt
+    - walk
+    useLastRow: false
+    xAxisName: Hour
+    yAxisName: '# Stuck'
+    stacked: true
+  - type: csv
+    title: Stuck Agents
+    description: per hour
+    dataset: analysis/population/stuck_agents_per_hour.csv
+  four:
+  - type: csv
+    title: Stuck Agents
+    description: per Link (Top 20)
+    dataset: analysis/population/stuck_agents_per_link.csv

@@ -1,0 +1,166 @@
+header:
+  title: Trips
+  description: General information about modal share and trip distributions.
+layout:
+  first:
+  - type: plotly
+    title: Modal split
+    datasets:
+      dataset:
+        file: analysis/population/mode_share.csv
+        constant:
+          source: Simulated
+        aggregate:
+          target: share
+          groupBy:
+          - main_mode
+          func: SUM
+      kelheimmodeshare:
+        file: analysis/resources/kelheim_mode_share.csv
+        constant:
+          source: Reference
+        aggregate:
+          target: share
+          groupBy:
+          - main_mode
+          func: SUM
+    traces:
+    - x: $dataset.share
+      "y": $dataset.source
+      orientation: h
+      type: bar
+      name: $dataset.main_mode
+    layout:
+      barmode: stack
+    mergeDatasets: true
+  - type: plotly
+    title: Trip distance distribution
+    datasets:
+      dataset:
+        file: analysis/population/mode_share.csv
+        aggregate:
+          target: share
+          groupBy:
+          - dist_group
+          func: SUM
+      kelheimmodeshare:
+        file: analysis/resources/kelheim_mode_share.csv
+        aggregate:
+          target: share
+          groupBy:
+          - dist_group
+          func: SUM
+    traces:
+    - x: $dataset.dist_group
+      "y": $dataset.share
+      orientation: v
+      type: bar
+      name: Simulated
+      original_name: Simulated
+    - x: $kelheimmodeshare.dist_group
+      "y": $kelheimmodeshare.share
+      orientation: v
+      type: bar
+      name: Reference
+      original_name: Reference
+    colorRamp: Viridis
+  second:
+  - type: csv
+    title: Mode Statistics
+    description: "by main mode, over whole trip (including access & egress)"
+    dataset: analysis/population/trip_stats.csv
+    showAllRows: true
+  - type: plotly
+    title: Modal distance distribution
+    datasets:
+      dataset:
+        file: analysis/population/mode_share_per_dist.csv
+        constant:
+          source: Sim
+      kelheimmodeshareperdist:
+        file: analysis/resources/kelheim_mode_share_per_dist.csv
+        constant:
+          source: Ref
+    traces:
+    - x: $dataset.dist_group
+      "y": $dataset.share
+      orientation: v
+      type: bar
+      name: $dataset.main_mode
+    layout:
+      xaxis:
+        title: Distance group
+        color: '#444'
+        type: '-'
+      barmode: stack
+      yaxis:
+        title: Share
+        color: '#444'
+        type: '-'
+    mergeDatasets: true
+    multiIndex:
+      dist_group: source
+  third:
+  - type: csv
+    title: Population statistics
+    description: over simulated persons (not scaled by sample size)
+    dataset: analysis/population/population_trip_stats.csv
+    showAllRows: true
+  - type: plotly
+    title: Mode usage
+    description: Share of persons using a main mode at least once per day.
+    datasets:
+      dataset: analysis/population/mode_users.csv
+    traces:
+    - x: $dataset.main_mode
+      "y": $dataset.user
+      orientation: v
+      type: bar
+      name: $dataset.main_mode
+    width: 2.0
+  departures:
+  - type: plotly
+    title: Departures
+    description: by hour and purpose
+    datasets:
+      dataset: analysis/population/trip_purposes_by_hour.csv
+    traces:
+    - x: $dataset.h
+      "y": $dataset.departure
+      orientation: v
+      type: bar
+      name: $dataset.purpose
+      colorRamp: Spectral
+    layout:
+      xaxis:
+        title: Hour
+        color: '#444'
+        type: '-'
+      barmode: stack
+      yaxis:
+        title: Share
+        color: '#444'
+        type: '-'
+  arrivals:
+  - type: plotly
+    title: Arrivals
+    description: by hour and purpose
+    datasets:
+      dataset: analysis/population/trip_purposes_by_hour.csv
+    traces:
+    - x: $dataset.h
+      "y": $dataset.arrival
+      orientation: v
+      type: bar
+      name: $dataset.purpose
+      colorRamp: Spectral
+    layout:
+      xaxis:
+        title: Hour
+        color: '#444'
+        type: '-'
+      barmode: stack
+      yaxis:
+        title: Share
+        color: '#444'
+        type: '-'

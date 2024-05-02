@@ -1,0 +1,6 @@
+Info,bike,car,ride,walk,pt
+Number of trips,447,2195,1002,617,109
+Total time traveled [h],355,712,180,160,89
+Total distance traveled [km],4007,32574,8974,608,2124
+Avg. speed [km/h],11.30,45.76,49.79,3.80,23.97
+Avg. distance per trip [km],8.96,14.84,8.96,0.99,19.49

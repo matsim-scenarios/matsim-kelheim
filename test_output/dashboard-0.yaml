@@ -1,0 +1,116 @@
+header:
+  title: Overview
+  description: General overview of the MATSim run.
+layout:
+  first:
+  - type: csv
+    title: Run Info
+    width: 1.0
+    dataset: analysis/general/run_info.csv
+    showAllRows: true
+  - type: map
+    title: Simulated traffic volume
+    height: 7.5
+    width: 2.0
+    center:
+    - 11.89
+    - 48.91
+    zoom: 11.0
+    display:
+      lineWidth:
+        dataset: traffic
+        columnName: simulated_traffic_volume
+        join: link_id
+        scaleFactor: 20000.0
+      lineColor:
+        dataset: traffic
+        columnName: simulated_traffic_volume
+        join: link_id
+        colorRamp:
+          ramp: RdYlBu
+          steps: 5
+          reverse: true
+      fill: {}
+      fillHeight: {}
+      radius: {}
+    shapes:
+      file: analysis/network/network.geojson
+      join: id
+    datasets:
+      traffic: analysis/traffic/traffic_stats_by_link_daily.csv
+  warnings:
+  - type: text
+    height: 0.1
+    file: analysis/general/status.md
+  config:
+  - type: xml
+    height: 6.0
+    width: 2.0
+    file: '*.output_config.xml'
+    unfoldLevel: 1
+  - type: pie
+    title: Mode Share
+    description: at final Iteration
+    dataset: '*.modestats.csv'
+    useLastRow: true
+    ignoreColumns:
+    - iteration
+  second:
+  - type: line
+    title: Score
+    description: per Iteration
+    dataset: '*.scorestats.csv'
+    x: ITERATION
+    columns:
+    - avg_executed
+    - avg_worst
+    - avg_best
+    useLastRow: false
+    xAxisName: Iteration
+    yAxisName: Score
+  third:
+  - type: area
+    title: Mode Share Progression
+    description: per Iteration
+    width: 2.0
+    dataset: '*.modestats.csv'
+    x: Iteration
+    useLastRow: false
+    xAxisName: Iteration
+    yAxisName: Share
+  perf:
+  - type: bar
+    title: Runtime
+    dataset: analysis/general/runtime_stats.csv
+    x: Iteration
+    columns:
+    - seconds
+    useLastRow: false
+    xAxisName: Iteration
+    yAxisName: "Runtime [s]"
+  - type: plotly
+    title: Memory Usage
+    datasets:
+      dataset:
+        file: analysis/general/memory_stats.csv
+        pivot:
+          namesTo: names
+          valuesTo: values
+          exclude:
+          - time
+    traces:
+    - x: $dataset.time
+      "y": $dataset.values
+      orientation: v
+      type: bar
+      name: $dataset.names
+    layout:
+      xaxis:
+        title: Time
+        color: '#444'
+        type: '-'
+      barmode: stack
+      yaxis:
+        title: MB
+        color: '#444'
+        type: '-'

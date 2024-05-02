@@ -1,0 +1,49 @@
+header:
+  title: Car Traffic
+  description: Traffic related analyses.
+layout:
+  index_by_hour:
+  - type: plotly
+    title: Network congestion index
+    description: by hour
+    datasets:
+      dataset: analysis/traffic/traffic_stats_by_road_type_and_hour.csv
+    traces:
+    - fill: none
+      "y": $dataset.congestion_index
+      x: $dataset.hour
+      mode: lines
+      whiskerwidth: 0.0
+      type: scatter
+      name: $dataset.road_type
+      colorRamp: Spectral
+    layout:
+      xaxis:
+        title: Hour
+        color: '#444'
+        type: '-'
+      barmode: overlay
+      yaxis:
+        title: Index
+        color: '#444'
+        type: '-'
+  - type: csv
+    title: Traffic stats per road type
+    description: daily
+    dataset: analysis/traffic/traffic_stats_by_road_type_daily.csv
+    enableFilter: false
+    showAllRows: true
+  map:
+  - type: links
+    height: 12.0
+    network: analysis/network/network.geojson
+    datasets:
+      csvBase: analysis/traffic/traffic_stats_by_link_daily.csv
+    center:
+    - 11.89
+    - 48.91
+    display:
+      color:
+        columnName: avg_speed
+      width:
+        columnName: avg_speed
