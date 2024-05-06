@@ -24,7 +24,7 @@ import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.application.MATSimAppCommand;
-import org.matsim.contrib.zone.ZonalSystems;
+import org.matsim.contrib.common.zones.ZoneSystemUtils;
 import org.matsim.core.config.groups.NetworkConfigGroup;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.filter.NetworkFilterManager;
@@ -62,7 +62,7 @@ public class GenerateKelheimAnalysisNetwork implements MATSimAppCommand {
 		Network network = NetworkUtils.readNetwork(networkFile);
 
 		Set<Node> nodesWithinArea = new HashSet<>(
-				ZonalSystems.selectNodesWithinArea(network.getNodes().values(), ShpGeometryUtils.loadPreparedGeometries(IOUtils.resolveFileOrResource(shapeFile))));
+				ZoneSystemUtils.selectNodesWithinArea(network.getNodes().values(), ShpGeometryUtils.loadPreparedGeometries(IOUtils.resolveFileOrResource(shapeFile))));
 
 		NetworkFilterManager networkFilterManager = new NetworkFilterManager(network, new NetworkConfigGroup());
 		networkFilterManager.addLinkFilter(

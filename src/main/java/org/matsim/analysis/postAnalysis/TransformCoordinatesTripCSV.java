@@ -44,7 +44,9 @@ final class TransformCoordinatesTripCSV {
 	public static void main(String[] args) {
 		String path = "C:/Users/Tilmann/tubCloud/VSP_WiMi/Projekte/KelRide/2023-10-results-exchange-VIA/AV-speed-mps-5/SAR2023-AV5/seed-5-SAR2023";
 
-		Iterator<File> files = FileUtils.iterateFiles(new File(path), new WildcardFileFilter(Arrays.asList("*trips*", "*legs*")), null);
+		WildcardFileFilter.Builder builder = WildcardFileFilter.builder().setWildcards(Arrays.asList("*trips*", "*legs*"));
+
+		Iterator<File> files = FileUtils.iterateFiles(new File(path), builder.get(), null);
 		files.forEachRemaining(file -> process(file));
 
 	}
@@ -58,13 +60,15 @@ final class TransformCoordinatesTripCSV {
 
 		CoordinateTransformation transformer = TransformationFactory.getCoordinateTransformation("EPSG:25832", TransformationFactory.WGS84);
 
+		CSVFormat.Builder format = CSVFormat.DEFAULT.builder().setDelimiter(';');
+
 		try {
 			CSVParser reader = new CSVParser(IOUtils.getBufferedReader(input.getAbsolutePath()),
-				CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader());
+				format.setHeader().setSkipHeaderRecord(true).build());
 			String[] header = reader.getHeaderNames().toArray(new String[0]);
 
 			CSVPrinter writer = new CSVPrinter(IOUtils.getBufferedWriter(output),
-				CSVFormat.DEFAULT.withDelimiter(';').withHeader(header));
+				format.setHeader(header).build());
 
 			Map<String, Integer> headerMap = reader.getHeaderMap();
 

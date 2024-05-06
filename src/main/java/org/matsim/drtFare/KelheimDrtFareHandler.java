@@ -18,7 +18,7 @@ import org.matsim.contrib.dvrp.passenger.PassengerRequestRejectedEvent;
 import org.matsim.contrib.dvrp.passenger.PassengerRequestRejectedEventHandler;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.utils.geometry.geotools.MGC;
-import org.matsim.core.utils.gis.ShapeFileReader;
+import org.matsim.core.utils.gis.GeoFileReader;
 import org.opengis.feature.simple.SimpleFeature;
 
 import java.net.MalformedURLException;
@@ -139,9 +139,9 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
 				} catch (MalformedURLException e) {
 					log.error(e);
 				}
-				features = ShapeFileReader.getAllFeatures(shapeFileAsURL);
+				features = GeoFileReader.getAllFeatures(shapeFileAsURL);
 			} else {
-				features = ShapeFileReader.getAllFeatures(pathToShapeFile);
+				features = GeoFileReader.getAllFeatures(pathToShapeFile);
 			}
 			return features;
 		} else {

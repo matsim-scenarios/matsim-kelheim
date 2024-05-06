@@ -6,7 +6,7 @@
 		<artifactId>matsim-all</artifactId>
 
 		<!-- PR-labelled release -->
-		<version>16.0-PR2878</version>
+		<version>2025.0-PR3254</version>
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
 		<!--		<version>16.0-SNAPSHOT</matsim.version>-->
@@ -187,7 +187,7 @@
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
-			<version>2.13.0</version>
+			<version>2.16.1</version>
 		</dependency>
 
 	</dependencies>
