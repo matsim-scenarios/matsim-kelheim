@@ -214,6 +214,9 @@ public class RunKelheimScenario extends MATSimApplication {
 		// y = ax + b --> b value, for long trips
 		distanceBasedPtFareParams.setLongDistanceTripIntercept(30);
 
+		//enable plan inheritance analysis
+		config.planInheritance().setEnabled(true);
+
 		if (iterations != -1)
 			addRunOption(config, "iter", iterations);
 
