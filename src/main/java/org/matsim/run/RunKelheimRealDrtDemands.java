@@ -18,16 +18,15 @@ import org.matsim.core.config.groups.RoutingConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
-import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.drtFare.KelheimDrtFareModule;
+import org.matsim.run.rebalancing.WaitingPointsBasedRebalanceModule;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
 
 
 @CommandLine.Command(
-		name = "run-real-demand",
-		description = "Run the DRT real demands (drt-only plans)"
+	name = "run-real-demand",
+	description = "Run the DRT real demands (drt-only plans)"
 )
 public class RunKelheimRealDrtDemands implements MATSimAppCommand {
 	private static final Logger log = LogManager.getLogger(RunKelheimRealDrtDemands.class);
@@ -44,6 +43,9 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
 	@CommandLine.Option(names = "--av-fare", description = "AV fare (euro per trips)", defaultValue = "2.0")
 	private double avFare;
 
+	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy", defaultValue = "")
+	private String waitingPointsPath;
+
 	public static void main(String[] args) {
 		new RunKelheimRealDrtDemands().execute(args);
 	}
@@ -56,7 +58,7 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
 		}
 		for (String date : datesToRun) {
 			Config config = ConfigUtils.loadConfig(configFile, new MultiModeDrtConfigGroup(), new DvrpConfigGroup());
-			config.plans().setInputFile("./real-drt-demands/" + date + "-drt.plans.xml");
+			config.plans().setInputFile("./real-drt-demands/ioki/" + date + "-drt.plans.xml");
 			log.info("Setting input plans file to: " + config.plans().getInputFile());
 
 			String outputDirectory = Path.of(config.controller().getOutputDirectory()).getParent().toString() + "/" + date;
@@ -70,10 +72,10 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
 				config.network().setChangeEventsInputFile(networkChangeEventsFile);
 			}
 			config.controller()
-					.setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
+				.setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 
 			Scenario scenario = DrtControlerCreator.createScenarioWithDrtRouteFactory(config);
-			ScenarioUtils.loadScenario(scenario);
+//			ScenarioUtils.loadScenario(scenario);
 			Network network = scenario.getNetwork();
 
 			// Adding DRT modules
@@ -83,7 +85,10 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(MultiModeDrtConfigGroup.get(config)));
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, 2.0, 1.0));
+//				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, 2.0, 1.0));
+				if (!waitingPointsPath.equals("")) {
+					controler.addOverridingModule(new WaitingPointsBasedRebalanceModule(drtCfg, waitingPointsPath));
+				}
 			}
 			controler.run();
 		}
