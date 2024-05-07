@@ -9,34 +9,39 @@ library(lubridate)
 library(plotly)
 library(leaflet)
 library(leaflet.extras) # for heatmap
+library(zoo) #for moving averages
 
 
 
 #### read data.
 
 
-##### you have to download the demand data in Excel format and then export to csv !!with semi-colon as separator!! because the addresses have commata in them and then commata does not work as delimiter!!
+##### you have to download the demand data in Excel format and then export to csv !!with semi-colon as separator!!
+##### Because the addresses have commata in them and then commata might not work as delimiter!!
 ##### for the driver shift data, you can/should directly download in csv format !!
+# fuer den datensatz vom april 24 geht das wohl doch mit dem komma als trennzeichen -- datensatz hatte Jan Eller heruntergeladen
+
 
 #input files
-testdata <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_sample_2023_12_20/Fahrtanfragen-2023-12-20.csv"
-data_feb_14 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_14/Fahrtanfragen-2024-02-14.csv"
-data_jan_01_feb_27 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_27/Fahrtanfragen-2024-02-27.csv"
-data_jan_01_feb_27_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_02_27/Fahrerschichten-2024-02-27.csv"
-
-data_jan_01_apr_08 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_08/Fahrtanfragen-2024-04-08.csv"
-data_jan_01_apr_08_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_08/Fahrerschichten-2024-04-08.csv"
 
 data_jan_01_apr_24 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrtanfragen-2024-04-24.csv"
 data_jan_01_apr_24_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrerschichten-2024-04-24.csv"
 
-#parse data
+requests_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_06/Fahrtanfragen-2024-05-06.csv"
+shifts_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_06/Fahrerschichten-2024-05-06.csv"
 
-# fuer den datensatz vom april 24 geht das wohl doch mit dem komma als trennzeichen -- datensatz hatte Jan Eller heruntergeladen
-data <- read.csv2(data_jan_01_apr_24, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
-data_fahrerschichten  <- read.csv2(data_jan_01_apr_24_fahrerschichten, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
-  mutate(time = ymd_hms(Datum),
-         date = date(time))
+#parse data
+data <- read.csv2(requests_file, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+#data_fahrerschichten  <- read.csv2(shifts_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
+#  mutate(time = ymd_hms(Datum),
+#         date = date(time))
+
+data_fahrerschichten <- read.csv2(shifts_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
+  mutate(Start = ymd_hms(Schichtstart),
+         Ende = ymd_hms(Schichtende),
+         Dauer_h = as.numeric(Ende - Start, units="hours"),
+         Tag = date(Start))
+
 
 ### prepare data
 
@@ -86,7 +91,8 @@ data <- data %>%
 #for some reason, doing this with an ifelse clause does not work, so making sure time is not N/A in a separate step
 data <- data %>% 
   mutate(time = if_else(is.na(Angefragte.Einstiegszeit), Angefragte.Ausstiegszeit, Angefragte.Einstiegszeit),
-         date = date(time))
+         date = date(time),
+         isWeekend = wday(date) >= 6)
 
 
 ## TODO:
@@ -127,7 +133,9 @@ ui <- fluidPage(
                          choices = unique(data$isTestBooking),
                          selected = "FALSE",
                          multiple = TRUE)
-      )
+      ),
+      column(3,
+             checkboxInput("filterWeekend", "Filter Wochenende", FALSE))
     ),
     tabPanel(
       "O1: Auslastung",
@@ -201,7 +209,8 @@ server <- function(input, output) {
   filtered_data <- reactive({
     req(input$dateRange,
         #input$statusFilter, 
-        input$anbieterFilter, input$testbookingFilter)
+        input$anbieterFilter,
+        input$testbookingFilter)
     data %>%
       filter(time >= input$dateRange[1] & time <= input$dateRange[2],
              #Status.der.Fahrtanfrage %in% input$statusFilter,
@@ -215,8 +224,8 @@ server <- function(input, output) {
   
   filtered_fahrerschichten <- reactive({
     req(input$dateRange)
-    data %>%
-      filter(time >= input$dateRange[1] & time <= input$dateRange[2])
+    data_fahrerschichten %>%
+      filter(Start >= input$dateRange[1] & Ende <= input$dateRange[2])
   })
   
   
@@ -300,32 +309,31 @@ server <- function(input, output) {
                 TotalPassengers = sum(`Anzahl.der.Fahrgäste`))
   })
 
-  vehiclesPerDay <- reactive({
-    filtered_data() %>%
-      filter(!is.na(Fahrzeug.ID)) %>%  # Filtere fehlende Werte
-      group_by(date, `Fahrzeug.ID`) %>%
-      summarise(ii=1) %>% 
-      group_by(date) %>% 
-      summarise(n = sum(ii))
+  dailyServiceHours <- reactive({
+    # 9am - 4 pm
+    totalServiceHoursPerDay = 7
+    dailyServiceHours <- filtered_fahrerschichten() %>%
+        group_by(Tag) %>% 
+        summarise(Summe_Schichtdauer_h = sum(Dauer_h),
+                  Mittl_Fahrzeugverfuegbarkeit_h = Summe_Schichtdauer_h / totalServiceHoursPerDay)
+      
+    # Calculate the 7-day moving average
+    dailyServiceHours <- dailyServiceHours %>%
+      mutate(Moving_Average_h = rollmean(Mittl_Fahrzeugverfuegbarkeit_h, k = 7, align = "right", fill = NA))
+      
   })
   
-  schichtfahrzeugeProTag <- reactive({
-    filtered_fahrerschichten() %>%
-      #filter(!is.na(Fahrzeug.ID)) %>%  # Filtere fehlende Werte
-      group_by(date, `Fahrzeug.ID`) %>%
-      summarise(ii=1) %>% 
-      group_by(date) %>% 
-      summarise(n = sum(ii))
-  })
   
   # Berechnung der durchschnittlichen Anzahl Fahrzeuge pro Tag
   output$vehicleStatsPerDay <- renderText({
-    avg_vehicles <- mean(vehiclesPerDay()$n)
-    min_vehicles <- min(vehiclesPerDay()$n)
-    max_vehicles <- max(vehiclesPerDay()$n)
-    paste("Anzahl zugewiesene Fahrzeuge pro Tag. Durchschnitt: ", round(avg_vehicles, 2),
-          "Minimum: ", min_vehicles,
-          "Maximum: ", max_vehicles)
+    avg_vehicles <- mean(dailyServiceHours()$Mittl_Fahrzeugverfuegbarkeit_h)
+    min_vehicles <- min(dailyServiceHours()$Mittl_Fahrzeugverfuegbarkeit_h)
+    max_vehicles <- max(dailyServiceHours()$Mittl_Fahrzeugverfuegbarkeit_h)
+    avg_mov_avg <- mean(dailyServiceHours()$Moving_Average_h, na.rm = TRUE)
+    paste("Anzahl aktiver Fahrerschichten pro Tag: ", round(avg_vehicles, 2),
+          "Minimum: ", round(min_vehicles,2),
+          "Maximum: ", round(max_vehicles,2),
+          "Mittelwert des gleitenden 7-Tages-Mittelwertes: ", round(avg_mov_avg, 2))
   })
   
   ####################################################################
@@ -597,39 +605,54 @@ server <- function(input, output) {
   ####################################################################
   # Line plot for 'Fahrzeug ID' per 'date'
   output$vehiclesOverTime <- renderPlotly({
-    #grouped_vehicles()$`Fahrzeug.ID` <- as.factor(grouped_vehicles()$`Fahrzeug.ID`)
-    #
-    #plot_ly(grouped_vehicles(), x = ~date, y = ~Count, color = ~`Fahrzeug.ID`, type = 'scatter', mode = 'markers') %>%
-    #  layout(title = 'Anzahl der Fahrzeuge pro Tag',
-    #         xaxis = list(title = 'Datum', type = 'date', tickformat = '%Y-%m-%d', range = c(input$dateRange[1], input$dateRange[2])),
-    #         yaxis = list(title = 'Anzahl'))
-    gg <- ggplot(vehiclesPerDay(), aes(x = date)) +
-      geom_line(aes(y = n, color = "Fahrzeuge mit Auftrag")) +
-      geom_line(data = schichtfahrzeugeProTag(), aes(y = n , color = "Fahrzeuge mit Fahrerschicht")) +  # Hinzufügen der Linie von gg2
-      labs(title = "Anzahl der eingesetzten Fzge (mit Auftrag) pro Tag",
-           x = "Datum",
-           y = "Anzahl") +
-      scale_color_manual(values = c("Fahrzeuge mit Auftrag" = "blue", "Fahrzeuge mit Fahrerschicht" = "red")) +
-      theme_minimal() +
-      theme(legend.position = "top", legend.justification = "center",
-            plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
-            plot.subtitle = element_text(size = 16, hjust = 0.5)) +
-      scale_x_date(date_breaks = "1 week", date_labels = "%d.%m.")
-      
+    dailyServiceHours <- dailyServiceHours()
+    # Berechne die Werte für maximalen, minimalen und Median aller Werte von Moving_Average_h
+    max_val <- max(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
+    min_val <- min(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
+    median_val <- median(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
     
-    #gg2 <- ggplot(schichtfahrzeugeProTag(), aes(x = date)) +
-    #  geom_line(aes(y = n)) +
-    #  labs(title = "Anzahl der eingesetzten Fzge (mit Fahrerschicht) pro Tag",
-    #       x = "Datum",
-    #       y = "Anzahl") +
-    #  theme_minimal() +
-    #  theme(legend.position = "top", legend.justification = "center",
-    #        plot.title = element_text(size = 14, face = "bold", hjust = 0.5), 
-    #        plot.subtitle = element_text(size = 16, hjust = 0.5))
+    #Finde den Index des maximalen, minimalen und Medianwerts des Moving_Average_h
+    max_val <- max(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
+    max_date <- dailyServiceHours$Tag[which.max(dailyServiceHours$Moving_Average_h)]
+    min_val <- min(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
+    min_date <- dailyServiceHours$Tag[which.min(dailyServiceHours$Moving_Average_h)]
+    median_val <- median(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
+    median_date <- dailyServiceHours$Tag[which(dailyServiceHours$Moving_Average_h == median_val)]
     
-    #subplot(ggplotly(gg), ggplotly(gg2), nrows = 2)
+    # Erstellen des ggplot
+    p <- ggplot(dailyServiceHours, aes(x = Tag)) +
+      geom_line(aes(y = Mittl_Fahrzeugverfuegbarkeit_h, color = "Mittlere Fahrzeugverfuegbarkeit pro Tag"), size = 1) +
+      geom_line(aes(y = Moving_Average_h, color = "7-Tages-Schnitt gleitend"), size = 1, linetype = "dashed") +
+      geom_text(data = tibble(x = max_date, y = max_val, label = paste("Max:", round(max_val, 2))),
+                aes(x = x, y = y, label = label), vjust = -0.5, hjust = 0) +
+      geom_text(data = tibble(x = min_date, y = min_val, label = paste("Min:", round(min_val, 2))),
+                aes(x = x, y = y, label = label), vjust = 1.5, hjust = 0) +
+      geom_text(data = tibble(x = median_date, y = median_val, label = paste("Median:", round(median_val, 2))),
+                aes(x = x, y = y, label = label), vjust = -0.5, hjust = 0) +
+      #geom_label(data = tibble(x = max_date, y = max_val, label = paste("Max:", round(max_val, 2))),
+      #           aes(x = x, y = y, label = label), vjust = -0.5, hjust = 0, fill = "grey90", color="red") +
+      #geom_label(data = tibble(x = min_date, y = min_val, label = paste("Min:", round(min_val, 2))),
+      #           aes(x = x, y = y, label = label), vjust = 1.5, hjust = 0, fill = "grey90", color="red") +
+      #geom_label(data = tibble(x = median_date, y = median_val, label = paste("Median:", round(median_val, 2))),
+      #           aes(x = x, y = y, label = label), vjust = -0.5, hjust = 0, fill = "grey90", color="red") +
+      labs(x = "Datum", y = "Fahrzeuge", title = "Mittlere Anzahl verfügbarer Fahrzeuge pro Tag") +
+      scale_color_manual(values = c("Mittlere Fahrzeugverfuegbarkeit pro Tag" = "black", 
+                                    "7-Tages-Schnitt gleitend" = "red")) +
+      theme_minimal()
     
-    ggplotly(gg)
+    #p <- plotly::ggplotly(p) %>%
+    #  plotly::add_trace(x = max_date, y = max_val, text = paste("Max:", round(max_val, 2)),
+    #                    type = "scatter", mode = "text", textfont = list(color = "red"),
+    #                    hoverinfo = "none", showlegend = FALSE) %>%
+    #  plotly::add_trace(x = min_date, y = min_val, text = paste("Min:", round(min_val, 2)),
+    #                    type = "scatter", mode = "text", textfont = list(color = "red"),
+    #                    hoverinfo = "none", showlegend = FALSE) %>%
+    #  plotly::add_trace(x = median_date, y = median_val, text = paste("Median:", round(median_val, 2)),
+    #                    type = "scatter", mode = "text", textfont = list(color = "red"),
+    #                    hoverinfo = "none", showlegend = FALSE)
+    
+    return(p)
+    
   })
   
   # Boxplot für die Differenz zwischen 'Angefragte.Einstiegszeit' und 'Tatsächliche.Einstiegszeit'
