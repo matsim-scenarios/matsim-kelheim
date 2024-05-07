@@ -41,10 +41,10 @@ import org.matsim.facilities.ActivityOption;
 /**
  * @author nagel
  */
-final public class RunAccessibility {
+final public class RunAccessibilityKelheim {
 	// do not change name of class; matsim book refers to it.  kai, dec'14
 
-	private static final Logger LOG = LogManager.getLogger(RunAccessibility.class);
+	private static final Logger LOG = LogManager.getLogger(RunAccessibilityKelheim.class);
 
 
 	// use contribs/accessibility/examples/RunAccessibilityExample/config.xml
@@ -62,11 +62,19 @@ final public class RunAccessibility {
 //		config.plans().setInputFile(null);
 
 		AccessibilityConfigGroup accConfig = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class ) ;
-		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
-		accConfig.setShapeFileCellBasedAccessibility("/Users/jakob/Downloads/solid_gitter/solid_gitter.shp");
+//		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
+//		accConfig.setShapeFileCellBasedAccessibility("/Users/jakob/Downloads/solid_gitter/solid_gitter.shp");
+		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);
+		accConfig.setBoundingBoxBottom(5377867.28);
+		accConfig.setBoundingBoxTop(5437403.93);
+		accConfig.setBoundingBoxLeft(669291.71);
+		accConfig.setBoundingBoxRight(736909.25);
 		accConfig.setTileSize_m(500);
 		accConfig.setTimeOfDay(14 * 60 * 60.);
 		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, true);
+		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true);
+		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true);
+
 
 
 		Scenario scenario = ScenarioUtils.loadScenario( config ) ;
@@ -75,7 +83,7 @@ final public class RunAccessibility {
 
 		// add facilities
 		ActivityFacilitiesFactory af = scenario.getActivityFacilities().getFactory();
-		ActivityFacility fac1 = af.createActivityFacility(Id.create("xxx", ActivityFacility.class), new Coord(710934.0800000001,5422522.85));
+		ActivityFacility fac1 = af.createActivityFacility(Id.create("xxx", ActivityFacility.class), new Coord(715041.71, 5420617.28));
 		ActivityOption ao = af.createActivityOption("shop");
 		fac1.addActivityOption(ao);
 		scenario.getActivityFacilities().addActivityFacility(fac1);

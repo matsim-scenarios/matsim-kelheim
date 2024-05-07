@@ -164,7 +164,7 @@ public class RunKelheimScenario extends MATSimApplication {
 		sw.defaultParams().shp = "../shp/dilutionArea.shp";
 		sw.defaultParams().mapCenter = "11.89,48.91";
 		sw.defaultParams().mapZoomLevel = 11d;
-		sw.defaultParams().sampleSize = sample.getSample();
+		sw.sampleSize = sample.getSample();
 
 		if (intermodal) {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
