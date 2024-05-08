@@ -27,7 +27,6 @@ import org.matsim.simwrapper.Layout;
 import org.matsim.simwrapper.viz.GridMap;
 import org.matsim.simwrapper.viz.Links;
 import org.matsim.simwrapper.viz.Table;
-import org.matsim.simwrapper.viz.XYTime;
 
 /**
  * this is basically equivalent to the standard emissions dashboard

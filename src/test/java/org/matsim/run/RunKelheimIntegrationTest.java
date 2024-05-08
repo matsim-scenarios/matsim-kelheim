@@ -9,6 +9,9 @@ import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.testcases.MatsimTestUtils;
 
+/**
+ * integration test.
+ */
 public class RunKelheimIntegrationTest {
 	@Rule
 	public MatsimTestUtils utils = new MatsimTestUtils();
