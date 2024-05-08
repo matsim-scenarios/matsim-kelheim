@@ -54,6 +54,7 @@ import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
+import org.matsim.run.rebalancing.WaitingPointsBasedRebalanceModule;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.SimWrapperModule;
 import org.matsim.vehicles.VehicleType;
@@ -118,6 +119,10 @@ public class RunKelheimScenario extends MATSimApplication {
 
 	@CommandLine.Option(names = "--surcharge", defaultValue = "1.0", description = "Surcharge of KEXI trip from / to train station")
 	private double surcharge;
+
+	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy", defaultValue = "")
+	private String waitingPointsPath;
+
 
 	public RunKelheimScenario(@Nullable Config config) {
 		super(config);
@@ -344,6 +349,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, baseFare, surcharge));
+				if (!waitingPointsPath.equals("") && drtCfg.mode.equals("av")) {
+					controler.addOverridingModule(new WaitingPointsBasedRebalanceModule(drtCfg, waitingPointsPath));
+				}
 			}
 
 			//controler.addOverridingModule(new DrtEstimatorModule());
