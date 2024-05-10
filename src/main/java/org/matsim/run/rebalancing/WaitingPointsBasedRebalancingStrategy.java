@@ -15,7 +15,6 @@ import org.matsim.contrib.dvrp.fleet.Fleet;
 import org.matsim.contrib.dvrp.schedule.Schedule;
 import org.matsim.contrib.dvrp.schedule.Schedules;
 import org.matsim.contrib.dvrp.schedule.StayTask;
-import org.matsim.contrib.dvrp.schedule.Task;
 import org.matsim.core.utils.geometry.CoordUtils;
 
 import java.io.IOException;
@@ -70,14 +69,10 @@ public class WaitingPointsBasedRebalancingStrategy implements RebalancingStrateg
 			for (DvrpVehicle v : fleet.getVehicles().values()) {
 				Schedule s = v.getSchedule();
 				StayTask stayTask = (StayTask) Schedules.getLastTask(s);
-				if (stayTask.getStatus() == Task.TaskStatus.PLANNED
-					&& stayTask.getBeginTime() < time + params.maxTimeBeforeIdle
-					&& v.getServiceEndTime() > time + params.minServiceTime) {
-					Link finalStayTaskLink = stayTask.getLink();
-					vehicleLocationMap.put(v.getId(), finalStayTaskLink.getId());
-					if (waitingPointsOccupancyMap.containsKey(finalStayTaskLink.getId())) {
-						waitingPointsOccupancyMap.get(finalStayTaskLink.getId()).increment();
-					}
+				Link finalStayTaskLink = stayTask.getLink();
+				vehicleLocationMap.put(v.getId(), finalStayTaskLink.getId());
+				if (waitingPointsOccupancyMap.containsKey(finalStayTaskLink.getId())) {
+					waitingPointsOccupancyMap.get(finalStayTaskLink.getId()).increment();
 				}
 			}
 
@@ -106,7 +101,7 @@ public class WaitingPointsBasedRebalancingStrategy implements RebalancingStrateg
 		Link nearestWaitingPoint = null;
 
 		for (Id<Link> waitingPoint : waitingPointsOccupancyMap.keySet()) {
-			if (waitingPointsOccupancyMap.get(currentLinkId).intValue() < waitingPointsCapcityMap.get(currentLinkId)) {
+			if (waitingPointsOccupancyMap.get(waitingPoint).intValue() < waitingPointsCapcityMap.get(waitingPoint)) {
 				double distance = CoordUtils.calcEuclideanDistance(network.getLinks().get(currentLinkId).getToNode().getCoord(),
 					network.getLinks().get(waitingPoint).getToNode().getCoord());
 				if (distance < shortestDistance) {

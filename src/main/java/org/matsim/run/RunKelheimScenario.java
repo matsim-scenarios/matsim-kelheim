@@ -30,12 +30,15 @@ import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
 import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
+import org.matsim.contrib.drt.optimizer.rebalancing.NoRebalancingStrategy;
+import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingStrategy;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.DrtConfigs;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtModule;
+import org.matsim.contrib.dvrp.run.AbstractDvrpModeModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
@@ -54,7 +57,7 @@ import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
-import org.matsim.run.rebalancing.WaitingPointsBasedRebalanceModule;
+import org.matsim.run.rebalancing.WaitingPointsBasedRebalancingModule;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.SimWrapperModule;
 import org.matsim.vehicles.VehicleType;
@@ -350,7 +353,15 @@ public class RunKelheimScenario extends MATSimApplication {
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, baseFare, surcharge));
 				if (!waitingPointsPath.equals("") && drtCfg.mode.equals("av")) {
-					controler.addOverridingModule(new WaitingPointsBasedRebalanceModule(drtCfg, waitingPointsPath));
+					controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
+				} else {
+					// No rebalancing strategy
+					controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.mode) {
+						@Override
+						public void install() {
+							bindModal(RebalancingStrategy.class).to(NoRebalancingStrategy.class).asEagerSingleton();
+						}
+					});
 				}
 			}
 

@@ -35,12 +35,12 @@ import java.io.IOException;
 /**
  * @author Chengqi Lu
  */
-public class WaitingPointsBasedRebalanceModule extends AbstractDvrpModeModule {
+public class WaitingPointsBasedRebalancingModule extends AbstractDvrpModeModule {
 	private static final Logger log = LogManager.getLogger(WaitingPointsBasedRebalancingStrategy.class);
 	private final DrtConfigGroup drtCfg;
 	private final String waitingPointsPath;
 
-	public WaitingPointsBasedRebalanceModule(DrtConfigGroup drtCfg, String waitingPointsPath) {
+	public WaitingPointsBasedRebalancingModule(DrtConfigGroup drtCfg, String waitingPointsPath) {
 		super(drtCfg.getMode());
 		this.drtCfg = drtCfg;
 		this.waitingPointsPath = waitingPointsPath;
@@ -55,14 +55,14 @@ public class WaitingPointsBasedRebalanceModule extends AbstractDvrpModeModule {
 			@Override
 			protected void configureQSim() {
 				bindModal(WaitingPointsBasedRebalancingStrategy.class).toProvider(modalProvider(
-						getter -> {
-							try {
-								return new WaitingPointsBasedRebalancingStrategy(getter.getModal(Network.class),
-										waitingPointsPath, generalParams, getter.getModal(Fleet.class));
-							} catch (IOException e) {
-								throw new RuntimeException(e);
-							}
-						})).asEagerSingleton();
+					getter -> {
+						try {
+							return new WaitingPointsBasedRebalancingStrategy(getter.getModal(Network.class),
+								waitingPointsPath, generalParams, getter.getModal(Fleet.class));
+						} catch (IOException e) {
+							throw new RuntimeException(e);
+						}
+					})).asEagerSingleton();
 
 				// binding event handler
 				bindModal(RebalancingStrategy.class).to(modalKey(WaitingPointsBasedRebalancingStrategy.class));

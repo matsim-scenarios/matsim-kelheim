@@ -18,12 +18,15 @@ import org.matsim.core.config.groups.RoutingConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
-import org.matsim.run.rebalancing.WaitingPointsBasedRebalanceModule;
+import org.matsim.run.rebalancing.WaitingPointsBasedRebalancingModule;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
 
-
+/**
+ * This class is outdated. We need to prepare the data source from before running this.
+ */
+@Deprecated
 @CommandLine.Command(
 	name = "run-real-demand",
 	description = "Run the DRT real demands (drt-only plans)"
@@ -87,7 +90,7 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 //				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, 2.0, 1.0));
 				if (!waitingPointsPath.equals("")) {
-					controler.addOverridingModule(new WaitingPointsBasedRebalanceModule(drtCfg, waitingPointsPath));
+					controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
 				}
 			}
 			controler.run();
