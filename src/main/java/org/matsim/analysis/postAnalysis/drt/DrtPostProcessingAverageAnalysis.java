@@ -8,7 +8,6 @@ import org.matsim.application.options.CsvOptions;
 import org.matsim.application.options.InputOptions;
 import org.matsim.application.options.OutputOptions;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.simwrapper.SimWrapper;
 import picocli.CommandLine;
 import tech.tablesaw.api.ColumnType;
 import tech.tablesaw.api.Row;
@@ -26,7 +25,11 @@ import static org.matsim.application.ApplicationUtils.globFile;
 @CommandLine.Command(name = "average-drt", description = "Calculates average drt stats based on several sim runs with different random seeds.")
 @CommandSpec(
 	requires = {"runs", "mode"},
-	produces = {"avg_demand_stats.csv", "avg_supply_stats.csv"}
+	produces = {"rides_per_veh_avg_demand_stats.csv", "avg_wait_time_avg_demand_stats.csv", "requests_avg_demand_stats.csv", "avg_total_travel_time_avg_demand_stats.csv",
+		"rides_avg_demand_stats.csv", "avg_direct_distance_[km]_avg_demand_stats.csv", "rejections_avg_demand_stats.csv", "95th_percentile_wait_time_avg_demand_stats.csv",
+		"avg_in-vehicle_time_avg_demand_stats.csv", "avg_ride_distance_[km]_avg_demand_stats.csv", "rejection_rate_avg_demand_stats.csv",
+		"avg_fare_[MoneyUnit]_avg_demand_stats.csv", "total_service_hours_avg_supply_stats.csv", "pooling_ratio_avg_supply_stats.csv", "detour_ratio_avg_supply_stats.csv",
+		"total_vehicle_mileage_[km]_avg_supply_stats.csv", "empty_ratio_avg_supply_stats.csv", "number_of_stops_avg_supply_stats.csv", "total_pax_distance_[km]_avg_supply_stats.csv", "vehicles_avg_supply_stats.csv"}
 )
 public class DrtPostProcessingAverageAnalysis implements MATSimAppCommand {
 
@@ -41,6 +44,7 @@ public class DrtPostProcessingAverageAnalysis implements MATSimAppCommand {
 	private final Map<String, List<Double>> supplyStats = new HashMap<>();
 	private final Map<String, Double[]> demandAvgs = new HashMap<>();
 	private final Map<String, Double[]> supplyAvgs = new HashMap<>();
+	Map<String, List<String>> params = new HashMap<>();
 
 	private final CsvOptions csv = new CsvOptions();
 
@@ -109,23 +113,38 @@ public class DrtPostProcessingAverageAnalysis implements MATSimAppCommand {
 		fillAvgMap(demandStats, demandAvgs);
 		fillAvgMap(supplyStats, supplyAvgs);
 
-		writeFile("avg_demand_stats.csv", demandAvgs);
-		writeFile("avg_supply_stats.csv", supplyAvgs);
+		params.put("avg_demand_stats.csv", List.of("rides_per_veh", "avg_wait_time", "requests", "avg_total_travel_time", "rides", "avg_direct_distance_[km]",
+			"rejections", "95th_percentile_wait_time", "avg_in-vehicle_time", "avg_ride_distance_[km]", "rejection_rate", "avg_fare_[MoneyUnit]"));
+		params.put("avg_supply_stats.csv", List.of("total_service_hours", "pooling_ratio", "detour_ratio", "total_vehicle_mileage_[km]", "empty_ratio", "number_of_stops",
+			"total_pax_distance_[km]", "vehicles"));
+
+		for (Map.Entry<String, List<String>> e : params.entrySet()) {
+			for (String param : params.get(e.getKey())) {
+				if (e.getKey().contains("demand")) {
+					writeFile(e.getKey(), demandAvgs, param);
+				} else {
+					writeFile(e.getKey(), supplyAvgs, param);
+				}
+			}
+		}
 
 		return 0;
 	}
 
-	private void writeFile(String fileName, Map<String, Double[]> values) throws IOException {
-		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath(fileName)), CSVFormat.DEFAULT)) {
+	private void writeFile(String fileName, Map<String, Double[]> values, String param) throws IOException {
+		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath(param + "_" + fileName)), CSVFormat.DEFAULT)) {
 
 			printer.printRecord("info", value);
 
 			for (Map.Entry<String, Double[]> e : values.entrySet()) {
-				printer.printRecord("mean-" + e.getKey(), e.getValue()[0]);
-				printer.printRecord("median-" + e.getKey(), e.getValue()[1]);
-				printer.printRecord("sd-" + e.getKey(), e.getValue()[2]);
-				printer.printRecord("min-" + e.getKey(), e.getValue()[3]);
-				printer.printRecord("max-" + e.getKey(), e.getValue()[4]);
+				String transformed = e.getKey().toLowerCase().replace(".", "").replace(" ", "_");
+				if (transformed.contains(param)) {
+					printer.printRecord("mean-" + e.getKey(), e.getValue()[0]);
+					printer.printRecord("median-" + e.getKey(), e.getValue()[1]);
+					printer.printRecord("sd-" + e.getKey(), e.getValue()[2]);
+					printer.printRecord("min-" + e.getKey(), e.getValue()[3]);
+					printer.printRecord("max-" + e.getKey(), e.getValue()[4]);
+				}
 			}
 		}
 	}
