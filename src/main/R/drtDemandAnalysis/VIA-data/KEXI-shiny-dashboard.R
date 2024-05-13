@@ -15,23 +15,16 @@ library(zoo) #for moving averages
 
 #### read data.
 
-
-##### you have to download the demand data in Excel format and then export to csv !!with semi-colon as separator!!
-##### Because the addresses have commata in them and then commata might not work as delimiter!!
-##### for the driver shift data, you can/should directly download in csv format !!
-# fuer den datensatz vom april 24 geht das wohl doch mit dem komma als trennzeichen -- datensatz hatte Jan Eller heruntergeladen
-
-
 #input files
 
 data_jan_01_apr_24 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrtanfragen-2024-04-24.csv"
 data_jan_01_apr_24_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrerschichten-2024-04-24.csv"
 
-requests_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_06/Fahrtanfragen-2024-05-06.csv"
-shifts_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_06/Fahrerschichten-2024-05-06.csv"
+requests_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_13/Fahrtanfragen-2024-05-13.csv"
+shifts_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_13/Fahrerschichten-2024-05-13.csv"
 
 #parse data
-data <- read.csv2(requests_file, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+data <- read.csv2(requests_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 #data_fahrerschichten  <- read.csv2(shifts_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
 #  mutate(time = ymd_hms(Datum),
 #         date = date(time))
@@ -63,6 +56,7 @@ testingCustomerIds_extended <- c(1,  # Testrider
                                  8320, # Bus28
                                  12777, # Salah
                                  13288, #Bus47
+                                 #13497,  #Taba S. (kelride1@landkreis-kelheim.de)
                                  13498  #kam von Jan Eller
 )
 
@@ -147,8 +141,9 @@ ui <- fluidPage(
               #plotlyOutput("rideRequestsOverTime"),
               plotlyOutput("passengerCountDistribution"),
               plotlyOutput("pooledRides"),
-              leafletOutput("map", height = 600) # Karte für Standorte der Fahrten
-           
+              leafletOutput("originMap", height = 600), # Karte für Standorte der Fahrten
+              leafletOutput("destinationMap", height = 600), # Karte für Standorte der Fahrten
+              leafletOutput("lineMap", height = 600) # Karte für Standorte der Fahrten
           )
         )      
     ),
@@ -311,7 +306,7 @@ server <- function(input, output) {
 
   dailyServiceHours <- reactive({
     # 9am - 4 pm
-    totalServiceHoursPerDay = 7
+    totalServiceHoursPerDay <- 7
     dailyServiceHours <- filtered_fahrerschichten() %>%
         group_by(Tag) %>% 
         summarise(Summe_Schichtdauer_h = sum(Dauer_h),
@@ -340,18 +335,76 @@ server <- function(input, output) {
   ## Nachfrage Reiter Plots
   ####################################################################
   
-  # Karte für Standorte der Fahrten
-  output$map <- renderLeaflet({
+  # Karte für Start der Fahrten
+  output$originMap <- renderLeaflet({
     leaflet() %>%
       addTiles() %>%
-      addHeatmap(data = filtered_data(), 
+      addControl(html = '<div style="text-align:center;"><h3>Startorte</h3></div>',
+                 position = "topleft") %>%
+      addHeatmap(data = filtered_data(),
                  lat = ~Start.Breitengrad, 
                  lng = ~Start.Längengrad,
                  blur = 20, max = 1,
                  radius = 10, intensity = 2, 
                  gradient = heat.colors(10)) %>%   
       addMarkers(lng = filtered_data()$Start.Längengrad, lat = filtered_data()$Start.Breitengrad,
-                 popup = paste("Startadresse:", filtered_data()$Startadresse))
+                 popup = paste("Startadresse:", filtered_data()$Startadresse, " Datum: ", filtered_data()$date, " Pax: ", filtered_data()$Anzahl.der.Fahrgäste)
+                 #icon = makeIcon(iconUrl = "http://leafletjs.com/examples/custom-icons/leaf-red.png")
+                 )# %>%
+      #addCircleMarkers(
+      #  lng = filtered_data()$Zielort.Längengrad, lat = filtered_data()$Zielort.Breitengrad,
+      #  popup = paste("Zieladresse:", filtered_data()$Zieladresse),
+      #  #label = ~ address,
+      #  fillColor = "goldenrod",
+      #  fillOpacity = 0.1,
+      #  stroke = F
+      #)
+  })
+  # Karte für Start der Fahrten
+  output$destinationMap <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%
+      addControl(html = '<div style="text-align:center;"><h3>Zielorte</h3></div>',
+                 position = "topleft") %>%
+      addHeatmap(data = filtered_data(),
+                 lat = ~Zielort.Breitengrad,
+                 lng = ~Zielort.Längengrad,
+                 blur = 20, max = 1,
+                 radius = 10, intensity = 2,
+                 gradient = heat.colors(10)) %>%
+      addMarkers(lng = filtered_data()$Zielort.Längengrad, lat = filtered_data()$Zielort.Breitengrad,
+                 popup = paste("Zieladresse:", filtered_data()$Zieladresse)
+                 #icon = makeIcon(iconUrl = "http://leafletjs.com/examples/custom-icons/leaf-red.png")
+      )# %>%
+    #addCircleMarkers(
+    #  lng = filtered_data()$Zielort.Längengrad, lat = filtered_data()$Zielort.Breitengrad,
+    #  popup = paste("Zieladresse:", filtered_data()$Zieladresse),
+    #  #label = ~ address,
+    #  fillColor = "goldenrod",
+    #  fillOpacity = 0.1,
+    #  stroke = F
+    #)
+  })
+  # Karte für Start der Fahrten
+  output$lineMap <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%
+      addControl(html = '<div style="text-align:center;"><h3>Verbindungen</h3></div>',
+                 position = "topleft") %>%
+      #addMarkers(data = filtered_data(),
+      #           lng = ~Start.Längengrad, lat = ~Start.Breitengrad,
+      #           popup = ~paste("Startadresse:", Startadresse),
+      #           icon = makeIcon(iconUrl = "http://leafletjs.com/examples/custom-icons/leaf-red.png")) %>%
+      #addMarkers(data = filtered_data(),
+      #           lng = ~Zielort.Längengrad, lat = ~Zielort.Breitengrad,
+      #           popup = ~paste("Zieladresse:", Zieladresse),
+      #           icon = makeIcon(iconUrl = "http://leafletjs.com/examples/custom-icons/leaf-green.png")) %>%
+      addProviderTiles("CartoDB.Positron") %>%
+      addPolylines(data = filtered_data(),
+                   lng = c(filtered_data()$Start.Längengrad, filtered_data()$Zielort.Längengrad),
+                   lat = c(filtered_data()$Start.Breitengrad, filtered_data()$Zielort.Breitengrad),
+                   color = "blue", # Farbe der Linie
+                   weight = ~Anzahl.der.Fahrgäste)     # Breite der Linie
   })
 
   output$rideRequestsOverTime <- renderPlotly({
@@ -606,11 +659,7 @@ server <- function(input, output) {
   # Line plot for 'Fahrzeug ID' per 'date'
   output$vehiclesOverTime <- renderPlotly({
     dailyServiceHours <- dailyServiceHours()
-    # Berechne die Werte für maximalen, minimalen und Median aller Werte von Moving_Average_h
-    max_val <- max(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
-    min_val <- min(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
-    median_val <- median(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
-    
+
     #Finde den Index des maximalen, minimalen und Medianwerts des Moving_Average_h
     max_val <- max(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
     max_date <- dailyServiceHours$Tag[which.max(dailyServiceHours$Moving_Average_h)]
@@ -618,40 +667,80 @@ server <- function(input, output) {
     min_date <- dailyServiceHours$Tag[which.min(dailyServiceHours$Moving_Average_h)]
     median_val <- median(dailyServiceHours$Moving_Average_h, na.rm = TRUE)
     median_date <- dailyServiceHours$Tag[which(dailyServiceHours$Moving_Average_h == median_val)]
+
+    fig <- plot_ly()
+
+    # Balken für Nachfrage / Passgiere pro Tag
+    fig <- fig %>%
+      add_trace(
+        x = grouped_data()$date,
+        y = grouped_data()$TotalPassengers,
+        name = "Passagiere pro Tag",
+        type = "scatter",
+        mode = "markers",
+        yaxis = "y2",
+        marker = list(color = "blue", opacity = 0.5)
+      )
     
-    # Erstellen des ggplot
-    p <- ggplot(dailyServiceHours, aes(x = Tag)) +
-      geom_line(aes(y = Mittl_Fahrzeugverfuegbarkeit_h, color = "Mittlere Fahrzeugverfuegbarkeit pro Tag"), size = 1) +
-      geom_line(aes(y = Moving_Average_h, color = "7-Tages-Schnitt gleitend"), size = 1, linetype = "dashed") +
-      geom_text(data = tibble(x = max_date, y = max_val, label = paste("Max:", round(max_val, 2))),
-                aes(x = x, y = y, label = label), vjust = -0.5, hjust = 0) +
-      geom_text(data = tibble(x = min_date, y = min_val, label = paste("Min:", round(min_val, 2))),
-                aes(x = x, y = y, label = label), vjust = 1.5, hjust = 0) +
-      geom_text(data = tibble(x = median_date, y = median_val, label = paste("Median:", round(median_val, 2))),
-                aes(x = x, y = y, label = label), vjust = -0.5, hjust = 0) +
-      #geom_label(data = tibble(x = max_date, y = max_val, label = paste("Max:", round(max_val, 2))),
-      #           aes(x = x, y = y, label = label), vjust = -0.5, hjust = 0, fill = "grey90", color="red") +
-      #geom_label(data = tibble(x = min_date, y = min_val, label = paste("Min:", round(min_val, 2))),
-      #           aes(x = x, y = y, label = label), vjust = 1.5, hjust = 0, fill = "grey90", color="red") +
-      #geom_label(data = tibble(x = median_date, y = median_val, label = paste("Median:", round(median_val, 2))),
-      #           aes(x = x, y = y, label = label), vjust = -0.5, hjust = 0, fill = "grey90", color="red") +
-      labs(x = "Datum", y = "Fahrzeuge", title = "Mittlere Anzahl verfügbarer Fahrzeuge pro Tag") +
-      scale_color_manual(values = c("Mittlere Fahrzeugverfuegbarkeit pro Tag" = "black", 
-                                    "7-Tages-Schnitt gleitend" = "red")) +
-      theme_minimal()
-    
-    #p <- plotly::ggplotly(p) %>%
-    #  plotly::add_trace(x = max_date, y = max_val, text = paste("Max:", round(max_val, 2)),
-    #                    type = "scatter", mode = "text", textfont = list(color = "red"),
-    #                    hoverinfo = "none", showlegend = FALSE) %>%
-    #  plotly::add_trace(x = min_date, y = min_val, text = paste("Min:", round(min_val, 2)),
-    #                    type = "scatter", mode = "text", textfont = list(color = "red"),
-    #                    hoverinfo = "none", showlegend = FALSE) %>%
-    #  plotly::add_trace(x = median_date, y = median_val, text = paste("Median:", round(median_val, 2)),
-    #                    type = "scatter", mode = "text", textfont = list(color = "red"),
-    #                    hoverinfo = "none", showlegend = FALSE)
-    
-    return(p)
+      # Linie für die Durchschnittliche Fahrzeugverfügbarkeit
+      fig <- fig %>%
+        add_trace(
+          x = dailyServiceHours$Tag,
+          y = dailyServiceHours$Mittl_Fahrzeugverfuegbarkeit_h,
+          name = "Mittlere Fahrzeugverfuegbarkeit pro Tag",
+          type = "scatter",
+          mode = "markers",
+          yaxis = "y1",
+          marker = list(color = "black")
+        )
+
+      # Linie für den gleitenden 7-Tages-Schnitt der mittleren Fahrzeugverfügbarkeit
+      fig <- fig %>%
+        add_trace(
+          x = dailyServiceHours$Tag,
+          y = dailyServiceHours$Moving_Average_h,
+          name = "7-Tages-Schnitt gleitend",
+          type = "scatter",
+          mode = "lines",
+          line = list(color = "gray", dash = "dash"),
+          yaxis = "y1"
+        )
+
+      # Labels für Minimum, Median und Maximum
+      fig <- fig %>%
+        add_annotations(
+          x = c(min_date, median_date, max_date),  # X-Positionen der Labels
+          y = c(min_val, median_val, max_val),     # Y-Positionen der Labels
+          text = c("Minimum", "Median", "Maximum"),  # Text der Labels
+          showarrow = TRUE,  # Pfeil zeigen
+          arrowhead = 4,     # Pfeilart
+          ax = 20,           # Pfeilrichtung
+          ay = -30,           # Pfeilrichtung
+          font = list(color = "gray")  # Farbe des Texts
+        )
+
+      # Layout-Anpassungen
+      fig <- fig %>%
+        layout(
+          title = list(
+            text = "Mittlere Anzahl verfügbarer Fahrzeuge pro Tag",
+            font = list(size = 14, color = "black", family = "Arial", weight = "bold"),
+            x = 0.5  # Zentriert den Titel
+          ),
+          xaxis = list(title = "Datum"),
+          yaxis = list(title = "Mittlere Fahrzeugverfuegbarkeit pro Tag", side = "left"),
+          yaxis2 = list(title = "Passagiere pro Tag",
+                        overlaying = "y",
+                        side = "right",
+                        color = "blue")#,
+          #plot.subtitle = list(
+          #  text = "Ihr Untertitel hier",
+          #  font = list(size = 16, color = "grey", family = "Arial"),
+          #  x = 0.5  # Zentriert den Untertitel
+          #)
+        )
+
+      fig
     
   })
   
