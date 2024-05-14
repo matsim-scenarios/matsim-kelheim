@@ -19,6 +19,7 @@
 package org.matsim.run;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,9 +35,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy.OverwriteFileSetting;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.facilities.ActivityFacilitiesFactory;
-import org.matsim.facilities.ActivityFacility;
-import org.matsim.facilities.ActivityOption;
+import org.matsim.facilities.*;
 
 /**
  * @author nagel
@@ -56,35 +55,94 @@ final public class RunAccessibilityKelheim {
 //			throw new RuntimeException("No config.xml file provided. The config file needs to reference a network file and a facilities file.") ;
 //		}
 //		Config config = ConfigUtils.loadConfig("input/v3.1/kelheim-v3.1-config.xml");
-		Config config = ConfigUtils.loadConfig("input/acc-config.xml");
-		config.controller().setOverwriteFileSetting(OverwriteFileSetting.deleteDirectoryIfExists);
-//		config.controller().setLastIteration(0);
-//		config.plans().setInputFile(null);
+//		Config config = ConfigUtils.loadConfig("input/acc-config.xml");
+		// this config only contains activity & mode params
+		Config config = ConfigUtils.loadConfig("input/v3.0-release/output-KEXI-adequate-vehicles/seed-1-adequate-vehicles/kexi-seed1-adequate-vehicles.output_config-jr-edit.xml");
 
+//		Config config = ConfigUtils.createConfig();
+
+		config.global().setCoordinateSystem("EPSG:25832");
+
+
+		config.controller().setOverwriteFileSetting(OverwriteFileSetting.deleteDirectoryIfExists);
+		config.controller().setLastIteration(0);
+
+
+		config.network().setInputFile("kexi-seed1-adequate-vehicles.output_network.xml.gz");
+
+		config.plans().setInputFile("kexi-seed1-adequate-vehicles.output_plans.xml.gz");
+
+		config.transit().setTransitScheduleFile("kexi-seed1-adequate-vehicles.output_transitSchedule.xml.gz");
+
+		// Because of following error: java.lang.RuntimeException: java.util.concurrent.ExecutionException: java.lang.RuntimeException: java.lang.RuntimeException: you cannot use the randomzing travel disutility without person.  If you need this without a person, set sigma to zero. If you are loading a scenario from a config, set the routingRandomness in the plansCalcRoute config group to zero.
+		config.routing().setRoutingRandomness(0);
+
+//		// SCORING
+//		{
+//			// Car
+//			ScoringConfigGroup.ModeParams carParams = new ScoringConfigGroup.ModeParams("car");
+//			carParams.setMarginalUtilityOfTraveling(0.0);
+//			config.scoring().addModeParams(carParams);
+//
+//			// DRT
+//			ScoringConfigGroup.ModeParams drtParams = new ScoringConfigGroup.ModeParams("drt");
+//			drtParams.setMarginalUtilityOfTraveling(0.0);
+//			config.scoring().addModeParams(drtParams);
+//
+//			// pt
+//			ScoringConfigGroup.ModeParams ptParams = new ScoringConfigGroup.ModeParams("pt");
+//			ptParams.setMarginalUtilityOfTraveling(0.0);
+//			config.scoring().addModeParams(ptParams);
+//
+//			// walk
+//			ScoringConfigGroup.ModeParams walkParams = new ScoringConfigGroup.ModeParams("walk");
+//			walkParams.setMarginalUtilityOfTraveling(0.0);
+//			config.scoring().addModeParams(walkParams);
+//
+//			// bike
+//			ScoringConfigGroup.ModeParams bikeParams = new ScoringConfigGroup.ModeParams("bike");
+//			bikeParams.setMarginalUtilityOfTraveling(-3.0);
+//			config.scoring().addModeParams(bikeParams);
+//		}
+
+
+		// Accessibility Config Group:
 		AccessibilityConfigGroup accConfig = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class ) ;
 //		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
 //		accConfig.setShapeFileCellBasedAccessibility("/Users/jakob/Downloads/solid_gitter/solid_gitter.shp");
+
+		//train station 715041.71, 5420617.28
+		double trainStationX = 715041.71;
+		double trainStationY = 5420617.28;
+		double tileSize = 250;
+		double num_rows = 10;
+
 		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);
-		accConfig.setBoundingBoxBottom(5377867.28);
-		accConfig.setBoundingBoxTop(5437403.93);
-		accConfig.setBoundingBoxLeft(669291.71);
-		accConfig.setBoundingBoxRight(736909.25);
-		accConfig.setTileSize_m(500);
+		accConfig.setBoundingBoxLeft(trainStationX - num_rows*tileSize - tileSize/2);
+		accConfig.setBoundingBoxRight(trainStationX + num_rows*tileSize + tileSize/2);
+		accConfig.setBoundingBoxBottom(trainStationY - num_rows*tileSize - tileSize/2);
+		accConfig.setBoundingBoxTop(trainStationY + num_rows*tileSize + tileSize/2);
+		accConfig.setTileSize_m((int) tileSize);
 		accConfig.setTimeOfDay(14 * 60 * 60.);
-		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, true);
-		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true);
+		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, true); // works
+		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // works
+//		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // doesn't work!!!
+		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
+//		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.walk, true); //TODO: walk doesn't work, maybe since it is a teleported mode?
 		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true);
+
+
+		//TODO: implement closest accessibility type
+//		accConfig.setAccessibilityMeasureType(AccessibilityConfigGroup.AccessibilityMeasureType.closest);
 
 
 
 		Scenario scenario = ScenarioUtils.loadScenario( config ) ;
-//		scenario.getPopulation().getPersons().clear();
-
-
-		// add facilities
 		ActivityFacilitiesFactory af = scenario.getActivityFacilities().getFactory();
-		ActivityFacility fac1 = af.createActivityFacility(Id.create("xxx", ActivityFacility.class), new Coord(715041.71, 5420617.28));
-		ActivityOption ao = af.createActivityOption("shop");
+
+		// add opportunity facility
+		ActivityFacility fac1 = af.createActivityFacility(Id.create("xxx", ActivityFacility.class), new Coord(trainStationX, trainStationY));
+		ActivityOption ao = af.createActivityOption("train station");
 		fac1.addActivityOption(ao);
 		scenario.getActivityFacilities().addActivityFacility(fac1);
 		run(scenario);
