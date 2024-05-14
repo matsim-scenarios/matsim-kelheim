@@ -2,6 +2,7 @@ package org.matsim.dashboard;
 
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.application.MATSimAppCommand;
+import org.matsim.simwrapper.Dashboard;
 import org.matsim.simwrapper.SimWrapper;
 import picocli.CommandLine;
 
@@ -52,11 +53,14 @@ public class CreateAverageDashboards implements MATSimAppCommand {
 			.filter(d -> d.getAbsolutePath().contains(TransportMode.drt))
 			.forEach(f -> modes.add(f.getAbsolutePath().substring(f.getAbsolutePath().lastIndexOf("\\") + 1)));
 
+		SimWrapper sw = SimWrapper.create();
+
 		for (String m : modes) {
-//			TODO: how to write output files to drt / drt-av folder rather than overwrite existing ones
-//			TODO: same for dashbord, how to write a second dashboard for av instead of overwriting the existing one
-			SimWrapper sw = SimWrapper.create();
-			sw.addDashboard(new AverageDrtDashboard(foldersSeeded, m, noRuns));
+			Dashboard.Customizable d = Dashboard.customize(new AverageDrtDashboard(foldersSeeded, m, noRuns))
+				.context(m);
+
+			sw.addDashboard(d);
+//			TODO: rather call generate method with append true than the standard one bc we are in post processing
 			sw.generate(Path.of(inputPath));
 			sw.run(Path.of(inputPath));
 		}
