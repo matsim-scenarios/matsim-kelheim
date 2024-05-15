@@ -56,55 +56,31 @@ final public class RunAccessibilityKelheim {
 //		}
 //		Config config = ConfigUtils.loadConfig("input/v3.1/kelheim-v3.1-config.xml");
 //		Config config = ConfigUtils.loadConfig("input/acc-config.xml");
-		// this config only contains activity & mode params
+		// this config only contains activity & mode params ; other input files need to be specified.
 		Config config = ConfigUtils.loadConfig("input/v3.0-release/output-KEXI-adequate-vehicles/seed-1-adequate-vehicles/kexi-seed1-adequate-vehicles.output_config-jr-edit.xml");
+				config.network().setInputFile("kexi-seed1-adequate-vehicles.output_network.xml.gz");
+
+		config.plans().setInputFile("kexi-seed1-adequate-vehicles.output_plans.xml.gz");
+
+		config.transit().setTransitScheduleFile("kexi-seed1-adequate-vehicles.output_transitSchedule.xml.gz");
+
+		config.global().setCoordinateSystem("EPSG:25832");
+
+		// Now we try loading the full output config from a kelheim run.
+//		Config config = ConfigUtils.loadConfig("input/v3.0-release/output-KEXI-adequate-vehicles/seed-1-adequate-vehicles/kexi-seed1-adequate-vehicles.output_config.xml");
 
 //		Config config = ConfigUtils.createConfig();
 
-		config.global().setCoordinateSystem("EPSG:25832");
 
 
 		config.controller().setOverwriteFileSetting(OverwriteFileSetting.deleteDirectoryIfExists);
 		config.controller().setLastIteration(0);
 
 
-		config.network().setInputFile("kexi-seed1-adequate-vehicles.output_network.xml.gz");
 
-		config.plans().setInputFile("kexi-seed1-adequate-vehicles.output_plans.xml.gz");
-
-		config.transit().setTransitScheduleFile("kexi-seed1-adequate-vehicles.output_transitSchedule.xml.gz");
 
 		// Because of following error: java.lang.RuntimeException: java.util.concurrent.ExecutionException: java.lang.RuntimeException: java.lang.RuntimeException: you cannot use the randomzing travel disutility without person.  If you need this without a person, set sigma to zero. If you are loading a scenario from a config, set the routingRandomness in the plansCalcRoute config group to zero.
 		config.routing().setRoutingRandomness(0);
-
-//		// SCORING
-//		{
-//			// Car
-//			ScoringConfigGroup.ModeParams carParams = new ScoringConfigGroup.ModeParams("car");
-//			carParams.setMarginalUtilityOfTraveling(0.0);
-//			config.scoring().addModeParams(carParams);
-//
-//			// DRT
-//			ScoringConfigGroup.ModeParams drtParams = new ScoringConfigGroup.ModeParams("drt");
-//			drtParams.setMarginalUtilityOfTraveling(0.0);
-//			config.scoring().addModeParams(drtParams);
-//
-//			// pt
-//			ScoringConfigGroup.ModeParams ptParams = new ScoringConfigGroup.ModeParams("pt");
-//			ptParams.setMarginalUtilityOfTraveling(0.0);
-//			config.scoring().addModeParams(ptParams);
-//
-//			// walk
-//			ScoringConfigGroup.ModeParams walkParams = new ScoringConfigGroup.ModeParams("walk");
-//			walkParams.setMarginalUtilityOfTraveling(0.0);
-//			config.scoring().addModeParams(walkParams);
-//
-//			// bike
-//			ScoringConfigGroup.ModeParams bikeParams = new ScoringConfigGroup.ModeParams("bike");
-//			bikeParams.setMarginalUtilityOfTraveling(-3.0);
-//			config.scoring().addModeParams(bikeParams);
-//		}
-
 
 		// Accessibility Config Group:
 		AccessibilityConfigGroup accConfig = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class ) ;
@@ -124,12 +100,12 @@ final public class RunAccessibilityKelheim {
 		accConfig.setBoundingBoxTop(trainStationY + num_rows*tileSize + tileSize/2);
 		accConfig.setTileSize_m((int) tileSize);
 		accConfig.setTimeOfDay(14 * 60 * 60.);
-		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, true); // works
-		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // works
+		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
+		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
 //		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // doesn't work!!!
 		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
 //		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.walk, true); //TODO: walk doesn't work, maybe since it is a teleported mode?
-		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true);
+//		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true);
 
 
 		//TODO: implement closest accessibility type
