@@ -16,7 +16,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.run.rebalancing;
+package org.matsim.rebalancing;
 
 import jakarta.validation.constraints.NotNull;
 import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingParams;

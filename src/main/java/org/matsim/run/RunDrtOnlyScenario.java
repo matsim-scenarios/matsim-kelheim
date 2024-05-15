@@ -12,7 +12,7 @@ import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
-import org.matsim.run.rebalancing.WaitingPointsBasedRebalancingModule;
+import org.matsim.rebalancing.WaitingPointsBasedRebalancingModule;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -25,7 +25,11 @@ public class RunDrtOnlyScenario implements MATSimAppCommand {
 	@CommandLine.Option(names = "--config", description = "config path", required = true)
 	private String configPath;
 
-	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy", defaultValue = "")
+	@CommandLine.Option(names = "--rebalancing", description = "enable waiting point based rebalancing strategy or not", defaultValue = "false")
+	private boolean rebalancing;
+
+	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy. If unspecified, the starting" +
+		"points of the fleet will be set as waiting points", defaultValue = "")
 	private String waitingPointsPath;
 
 	public static void main(String[] args) throws IOException {
@@ -39,9 +43,10 @@ public class RunDrtOnlyScenario implements MATSimAppCommand {
 		Controler controler = DrtControlerCreator.createControler(config, false);
 		MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
 		for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-			if (!waitingPointsPath.equals("")) {
+			if (rebalancing) {
 				controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
 			} else {
+				// No rebalancing strategy
 				controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.mode) {
 					@Override
 					public void install() {

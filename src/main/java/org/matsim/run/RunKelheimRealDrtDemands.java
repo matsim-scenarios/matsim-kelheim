@@ -5,7 +5,6 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
-import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.DrtControlerCreator;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtModule;
@@ -18,7 +17,6 @@ import org.matsim.core.config.groups.RoutingConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
-import org.matsim.run.rebalancing.WaitingPointsBasedRebalancingModule;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
@@ -87,12 +85,9 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
 			controler.addOverridingModule(new DvrpModule());
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(MultiModeDrtConfigGroup.get(config)));
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
-			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
+//			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 //				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, 2.0, 1.0));
-				if (!waitingPointsPath.equals("")) {
-					controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
-				}
-			}
+//			}
 			controler.run();
 		}
 		return 0;
