@@ -21,6 +21,8 @@ public class CreateAverageDashboards implements MATSimAppCommand {
 	private String inputPath;
 	@CommandLine.Option(names = "--no-runs", defaultValue = "5", description = "Number of simulation runs to be averaged.")
 	private Integer noRuns;
+	@CommandLine.Option(names = "--base-run", description = "Path to directory base run.", defaultValue = "/net/ils/matsim-kelheim/v3.0-release/output-base/25pct")
+	private String pathToBaseRun;
 
 	public static void main(String[] args) {
 		new CreateAverageDashboards().execute(args);
@@ -60,10 +62,13 @@ public class CreateAverageDashboards implements MATSimAppCommand {
 				.context(m);
 
 			sw.addDashboard(d);
-//			TODO: rather call generate method with append true than the standard one bc we are in post processing
-			sw.generate(Path.of(inputPath));
-			sw.run(Path.of(inputPath));
 		}
+
+		sw.addDashboard(Dashboard.customize(new AverageKelheimEmissionsDashboard(foldersSeeded, noRuns, pathToBaseRun)).context("emissions"));
+
+//		TODO: rather call generate method with append true than the standard one bc we are in post processing
+		sw.generate(Path.of(inputPath), true);
+		sw.run(Path.of(inputPath));
 
 
 
