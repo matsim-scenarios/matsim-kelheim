@@ -83,7 +83,7 @@ public class RunKelheimRealDrtDemands implements MATSimAppCommand {
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(MultiModeDrtConfigGroup.get(config)));
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
+				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, 2.0, 1.0));
 			}
 			controler.run();
 		}
