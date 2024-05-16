@@ -170,6 +170,7 @@ ui <- fluidPage(
         column(12,
           plotlyOutput("vehiclesOverTime"),
           textOutput("vehicleStatsPerDay"),
+          plotlyOutput("vehiclesOverTimeNorm"),
           
           plotlyOutput("rideRequestsRelativeOverTime"),
           plotlyOutput("rideRequestsOverTime"),
@@ -679,7 +680,7 @@ server <- function(input, output) {
         type = "scatter",
         mode = "markers",
         yaxis = "y2",
-        marker = list(color = "blue", opacity = 0.5)
+        marker = list(color = "red", opacity = 1)
       )
     
       # Linie für die Durchschnittliche Fahrzeugverfügbarkeit
@@ -688,10 +689,10 @@ server <- function(input, output) {
           x = dailyServiceHours$Tag,
           y = dailyServiceHours$Mittl_Fahrzeugverfuegbarkeit_h,
           name = "Mittlere Fahrzeugverfuegbarkeit pro Tag",
-          type = "scatter",
-          mode = "markers",
+          type = "bar",
+          mode = "lines",
           yaxis = "y1",
-          marker = list(color = "black")
+          marker = list(color = "darkgrey")
         )
 
       # Linie für den gleitenden 7-Tages-Schnitt der mittleren Fahrzeugverfügbarkeit
@@ -732,7 +733,7 @@ server <- function(input, output) {
           yaxis2 = list(title = "Passagiere pro Tag",
                         overlaying = "y",
                         side = "right",
-                        color = "blue")#,
+                        color = "red")#,
           #plot.subtitle = list(
           #  text = "Ihr Untertitel hier",
           #  font = list(size = 16, color = "grey", family = "Arial"),
@@ -741,6 +742,58 @@ server <- function(input, output) {
         )
 
       fig
+    
+  })
+  
+  output$vehiclesOverTimeNorm <- renderPlotly({
+    dailyServiceHours <- dailyServiceHours()
+    
+    #Finde den Index des maximalen, minimalen und Medianwerts des Moving_Average_h
+    max_val_fzg <- max(dailyServiceHours$Mittl_Fahrzeugverfuegbarkeit_h, na.rm = TRUE)
+    max_val_pax <- max(grouped_data()$TotalPassengers, na.rm = TRUE)
+    
+    fig <- plot_ly()
+    
+    # Balken für Nachfrage / Passgiere pro Tag
+    fig <- fig %>%
+      add_trace(
+        x = grouped_data()$date,
+        y = grouped_data()$TotalPassengers / max_val_pax,
+        name = "Passagiere pro Tag",
+        type = "bar",
+        mode = "lines",
+        marker = list(color = "red", opacity = 1)
+      )
+    
+    # Linie für die Durchschnittliche Fahrzeugverfügbarkeit
+    fig <- fig %>%
+      add_trace(
+        x = dailyServiceHours$Tag,
+        y = dailyServiceHours$Mittl_Fahrzeugverfuegbarkeit_h / 5.0,
+        name = "Mittlere Fahrzeugverfuegbarkeit pro Tag",
+        type = "bar",
+        mode = "lines",
+        marker = list(color = "darkgrey")
+      )
+    
+    # Layout-Anpassungen
+    fig <- fig %>%
+      layout(
+        title = list(
+          text = "Mittlere Anzahl verfügbarer Fahrzeuge und Summe aller Passagiere pro Tag",
+          font = list(size = 18, color = "black", family = "Arial", weight = "bold"),
+          x = 0.5  # Zentriert den Titel
+        ),
+        xaxis = list(title = "Datum"),
+        yaxis = list(title = "% vom maximalen Wert", side = "left"),
+        plot.subtitle = list(
+          text = "normiert auf 5 Fzge bzw. das Maximum der Passagiere im gewählten Zeitraum",
+          font = list(size = 16, color = "black", family = "Arial"),
+          x = 0.5  # Zentriert den Untertitel
+        )
+      )
+    
+    fig
     
   })
   
