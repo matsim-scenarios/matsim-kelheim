@@ -57,7 +57,9 @@ testingCustomerIds_extended <- c(1,  # Testrider
                                  12777, # Salah
                                  13288, #Bus47
                                  #13497,  #Taba S. (kelride1@landkreis-kelheim.de)
-                                 13498  #kam von Jan Eller
+                                 13498,  #kam von Jan Eller
+                                 13725,  #Landratsamt Kelheim --> Kaffeefahrten am 22.04. + Delegation am 26.04.
+                                 10493  #Alicia Krammel --> Kaffeefahrten am 22.04. + Delegation am 26.04.
 )
 
 
