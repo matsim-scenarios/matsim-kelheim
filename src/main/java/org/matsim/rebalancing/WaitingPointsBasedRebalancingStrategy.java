@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 /**
  * @author Chengqi Lu
  */
-public class WaitingPointsBasedRebalancingStrategy implements RebalancingStrategy {
+class WaitingPointsBasedRebalancingStrategy implements RebalancingStrategy {
 
 	private final Network network;
 	private final RebalancingParams params;
@@ -37,7 +37,7 @@ public class WaitingPointsBasedRebalancingStrategy implements RebalancingStrateg
 	private final Map<Id<Link>, Integer> waitingPointsCapcityMap = new HashMap<>();
 	private static final Logger log = LogManager.getLogger(WaitingPointsBasedRebalancingStrategy.class);
 
-	public WaitingPointsBasedRebalancingStrategy(Network network, String waitingPointsPath, RebalancingParams params, Fleet fleet) throws IOException {
+	WaitingPointsBasedRebalancingStrategy(Network network, String waitingPointsPath, RebalancingParams params, Fleet fleet) throws IOException {
 		this.network = network;
 		this.params = params;
 		this.fleet = fleet;
