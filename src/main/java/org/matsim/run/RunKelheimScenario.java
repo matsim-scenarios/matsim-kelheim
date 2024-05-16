@@ -163,10 +163,10 @@ public class RunKelheimScenario extends MATSimApplication {
 	protected Config prepareConfig(Config config) {
 
 		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
+		config.controller().setLastIteration(0);
 
 		// stuff needed for accessibility
 		if (acc) {
-			config.controller().setLastIteration(0);
 
 			AccessibilityConfigGroup accConfig = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class ) ;
 //		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
@@ -185,10 +185,10 @@ public class RunKelheimScenario extends MATSimApplication {
 			accConfig.setBoundingBoxTop(trainStationY + num_rows*tileSize + tileSize/2);
 			accConfig.setTileSize_m((int) tileSize);
 			accConfig.setTimeOfDay(14 * 60 * 60.);
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, true); // works
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
 //		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // doesn't work!!!
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, false); // works
 //			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
 		}
 
@@ -213,7 +213,7 @@ public class RunKelheimScenario extends MATSimApplication {
 		sw.defaultParams().shp = "../shp/dilutionArea.shp";
 		sw.defaultParams().mapCenter = "11.89,48.91";
 		sw.defaultParams().mapZoomLevel = 11d;
-		sw.defaultParams().sampleSize = sample.getSample();
+		sw.sampleSize = sample.getSample();
 
 		if (intermodal) {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);

@@ -22,6 +22,8 @@ import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.geotools.referencing.CRS;
+import org.locationtech.jts.geom.Coordinate;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -34,7 +36,14 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy.OverwriteFileSetting;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.geometry.CoordUtils;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
+import org.matsim.core.utils.geometry.transformations.GeotoolsTransformation;
 import org.matsim.facilities.*;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.MathTransform;
+import org.opengis.referencing.operation.TransformException;
 
 /**
  * @author nagel
@@ -89,14 +98,18 @@ final public class RunAccessibilityKelheim {
 		//train station 715041.71, 5420617.28
 		double trainStationX = 715041.71;
 		double trainStationY = 5420617.28;
-		double tileSize = 250;
+
+		double mapCenterX = 712144.17;
+		double mapCenterY = 712144.17;
+
+		double tileSize = 500;
 		double num_rows = 10;
 
 		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);
-		accConfig.setBoundingBoxLeft(trainStationX - num_rows*tileSize - tileSize/2);
-		accConfig.setBoundingBoxRight(trainStationX + num_rows*tileSize + tileSize/2);
-		accConfig.setBoundingBoxBottom(trainStationY - num_rows*tileSize - tileSize/2);
-		accConfig.setBoundingBoxTop(trainStationY + num_rows*tileSize + tileSize/2);
+		accConfig.setBoundingBoxLeft(mapCenterX - num_rows*tileSize - tileSize/2);
+		accConfig.setBoundingBoxRight(mapCenterX + num_rows*tileSize + tileSize/2);
+		accConfig.setBoundingBoxBottom(mapCenterY - num_rows*tileSize - tileSize/2);
+		accConfig.setBoundingBoxTop(mapCenterY + num_rows*tileSize + tileSize/2);
 		accConfig.setTileSize_m((int) tileSize);
 		accConfig.setTimeOfDay(14 * 60 * 60.);
 		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
