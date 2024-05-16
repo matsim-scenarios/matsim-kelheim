@@ -50,6 +50,7 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
@@ -150,6 +151,42 @@ public class RunKelheimScenario extends MATSimApplication {
 	@Override
 	protected Config prepareConfig(Config config) {
 
+		if (drt) {
+//			config.addModule(new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
+
+			if (!ConfigUtils.hasModule(config, MultiModeDrtConfigGroup.class)){
+				//the user did not provide a drt config, but used the --with-drt command line flag.
+				//Thus, we load the default KEXI config
+
+				//TODO instead of overriding entire config, load an extra config that does not contain duplicative stuff compared to base config.
+				//there is a draft for that but the utlility method overrides (deletes) all exisiting modeparams so it does not work as we need it.
+
+				config = ConfigUtils.loadConfig(
+					//config,
+					IOUtils.resolveFileOrResource(String.format("input/v%s/kelheim-v%s-25pct.kexi.config.xml", VERSION, VERSION)),
+//					IOUtils.resolveFileOrResource(String.format("input/v%s/kelheim-v%s-config-kexi.xml", VERSION, VERSION)),
+					new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
+			}
+
+			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
+
+			for (DrtConfigGroup drtConfigGroup : multiModeDrtConfig.getModalElements()) {
+				//only the KEXI (conventionally driven drt) should get companions
+				if (drtConfigGroup.getMode().equals(TransportMode.drt)) {
+					DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtConfigGroup;
+					addDrtCompanionParameters(drtWithExtensionsConfigGroup);
+				}
+			}
+
+			ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
+			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.scoring(), config.routing());
+		}
+
+		if (intermodal) {
+			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
+		}
+
+
 		SnzActivities.addScoringParams(config);
 
 		config.controller().setOutputDirectory(sample.adjustName(config.controller().getOutputDirectory()));
@@ -172,26 +209,6 @@ public class RunKelheimScenario extends MATSimApplication {
 		sw.defaultParams().mapZoomLevel = 11d;
 		sw.defaultParams().sampleSize = sample.getSample();
 
-		if (intermodal) {
-			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
-		}
-
-		if (drt) {
-			config.addModule(new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
-
-			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
-
-			for (DrtConfigGroup drtConfigGroup : multiModeDrtConfig.getModalElements()) {
-				//only the KEXI (conventionally driven drt) should get companions
-				if (drtConfigGroup.getMode().equals(TransportMode.drt)) {
-					DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtConfigGroup;
-					addDrtCompanionParameters(drtWithExtensionsConfigGroup);
-				}
-			}
-
-			ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
-			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.scoring(), config.routing());
-		}
 
 		// Config is always needed
 		/* Informed-Mode-Choice
