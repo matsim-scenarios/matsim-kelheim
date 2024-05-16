@@ -104,7 +104,7 @@ final public class RunAccessibilityKelheim {
 //		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // doesn't work!!!
 		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
 //		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.walk, true); //TODO: walk doesn't work, maybe since it is a teleported mode?
-		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true);
+//		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true);
 
 
 		//TODO: implement closest accessibility type

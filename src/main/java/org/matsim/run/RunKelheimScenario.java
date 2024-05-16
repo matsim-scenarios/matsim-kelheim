@@ -189,7 +189,7 @@ public class RunKelheimScenario extends MATSimApplication {
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
 //		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // doesn't work!!!
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
+//			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
 		}
 
 
