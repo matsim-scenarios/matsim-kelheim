@@ -19,7 +19,6 @@
 package org.matsim.run;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -46,8 +45,6 @@ final public class RunAccessibilityKelheim {
 	private static final Logger LOG = LogManager.getLogger(RunAccessibilityKelheim.class);
 
 
-	// use contribs/accessibility/examples/RunAccessibilityExample/config.xml
-
 
 
 	public static void main(String[] args) {
@@ -67,8 +64,10 @@ final public class RunAccessibilityKelheim {
 		config.global().setCoordinateSystem("EPSG:25832");
 
 		// Now we try loading the full output config from a kelheim run.
-//		Config config = ConfigUtils.loadConfig("input/v3.0-release/output-KEXI-adequate-vehicles/seed-1-adequate-vehicles/kexi-seed1-adequate-vehicles.output_config.xml");
+//		Config config = ConfigUtils.createConfig();
+//		ConfigUtils.loadConfig(config, "input/v3.0-release/output-KEXI-adequate-vehicles/seed-1-adequate-vehicles/kexi-seed1-adequate-vehicles.output_config.xml");
 
+		// or just
 //		Config config = ConfigUtils.createConfig();
 
 
@@ -105,7 +104,7 @@ final public class RunAccessibilityKelheim {
 //		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // doesn't work!!!
 		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
 //		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.walk, true); //TODO: walk doesn't work, maybe since it is a teleported mode?
-//		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true);
+		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true);
 
 
 		//TODO: implement closest accessibility type

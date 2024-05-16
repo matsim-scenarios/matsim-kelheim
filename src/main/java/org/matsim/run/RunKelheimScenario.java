@@ -8,6 +8,7 @@ import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
 import org.matsim.analysis.postAnalysis.drt.DrtServiceQualityAnalysis;
 import org.matsim.analysis.postAnalysis.drt.DrtVehiclesRoadUsageAnalysis;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -27,6 +28,9 @@ import org.matsim.application.prepare.freight.tripExtraction.ExtractRelevantFrei
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
+import org.matsim.contrib.accessibility.AccessibilityConfigGroup;
+import org.matsim.contrib.accessibility.AccessibilityModule;
+import org.matsim.contrib.accessibility.Modes4Accessibility;
 import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
@@ -44,14 +48,19 @@ import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.config.groups.RoutingConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
+import org.matsim.facilities.ActivityFacilitiesFactory;
+import org.matsim.facilities.ActivityFacility;
+import org.matsim.facilities.ActivityOption;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
@@ -119,6 +128,9 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--surcharge", defaultValue = "1.0", description = "Surcharge of KEXI trip from / to train station")
 	private double surcharge;
 
+	@CommandLine.Option(names = "--accessibility", defaultValue = "false", description = "enable accessibility calculations")
+	private boolean acc;
+
 	public RunKelheimScenario(@Nullable Config config) {
 		super(config);
 	}
@@ -150,6 +162,37 @@ public class RunKelheimScenario extends MATSimApplication {
 	@Override
 	protected Config prepareConfig(Config config) {
 
+		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
+
+		// stuff needed for accessibility
+		if (acc) {
+			config.controller().setLastIteration(0);
+
+			AccessibilityConfigGroup accConfig = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class ) ;
+//		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
+//		accConfig.setShapeFileCellBasedAccessibility("/Users/jakob/Downloads/solid_gitter/solid_gitter.shp");
+
+			//train station 715041.71, 5420617.28
+			double trainStationX = 715041.71;
+			double trainStationY = 5420617.28;
+			double tileSize = 250;
+			double num_rows = 10;
+
+			accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);
+			accConfig.setBoundingBoxLeft(trainStationX - num_rows*tileSize - tileSize/2);
+			accConfig.setBoundingBoxRight(trainStationX + num_rows*tileSize + tileSize/2);
+			accConfig.setBoundingBoxBottom(trainStationY - num_rows*tileSize - tileSize/2);
+			accConfig.setBoundingBoxTop(trainStationY + num_rows*tileSize + tileSize/2);
+			accConfig.setTileSize_m((int) tileSize);
+			accConfig.setTimeOfDay(14 * 60 * 60.);
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
+//		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // doesn't work!!!
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
+		}
+
+
 		SnzActivities.addScoringParams(config);
 
 		config.controller().setOutputDirectory(sample.adjustName(config.controller().getOutputDirectory()));
@@ -177,6 +220,10 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		if (drt) {
+
+			// yyyyyyy added to avoid following error "java.lang.RuntimeException: DynAgents require simulation to start from the very beginning. Set 'QSim.simStarttimeInterpretation' to onlyUseStarttime" -JR May'24
+			config.qsim().setSimStarttimeInterpretation(QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime);
+
 			config.addModule(new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
 
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
@@ -266,6 +313,17 @@ public class RunKelheimScenario extends MATSimApplication {
 			}
 		}
 
+		if (acc) {
+			// add opportunity facility
+			double trainStationX = 715041.71;
+			double trainStationY = 5420617.28;
+			ActivityFacilitiesFactory af = scenario.getActivityFacilities().getFactory();
+			ActivityFacility fac1 = af.createActivityFacility(Id.create("xxx", ActivityFacility.class), new Coord(trainStationX, trainStationY));
+			ActivityOption ao = af.createActivityOption("train station");
+			fac1.addActivityOption(ao);
+			scenario.getActivityFacilities().addActivityFacility(fac1);
+		}
+
 	}
 
 	@Override
@@ -333,10 +391,12 @@ public class RunKelheimScenario extends MATSimApplication {
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
 
 			// Add speed limit to av vehicle
+			// yyyyyyyy gives me error, no "autonomous_vehicle VehicleType found. Replaced with value for car, as a quick hack. -JR May'24
 			double maxSpeed = controler.getScenario()
 				.getVehicles()
 				.getVehicleTypes()
-				.get(Id.create("autonomous_vehicle", VehicleType.class))
+//				.get(Id.create("autonomous_vehicle", VehicleType.class))
+				.get(Id.create("car", VehicleType.class))
 				.getMaximumVelocity();
 			controler.addOverridingModule(
 				new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
@@ -362,6 +422,12 @@ public class RunKelheimScenario extends MATSimApplication {
 //                    }
 //                });
 //            }
+		}
+
+		if (acc) {
+			final AccessibilityModule module = new AccessibilityModule();
+			module.setConsideredActivityType("train station");
+			controler.addOverridingModule(module);
 		}
 	}
 }
