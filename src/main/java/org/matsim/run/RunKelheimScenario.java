@@ -50,6 +50,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.config.groups.RoutingConfigGroup;
+import org.matsim.core.config.groups.ScoringConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
@@ -166,31 +167,7 @@ public class RunKelheimScenario extends MATSimApplication {
 		config.controller().setLastIteration(0);
 
 		// stuff needed for accessibility
-		if (acc) {
 
-			AccessibilityConfigGroup accConfig = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class ) ;
-//		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
-//		accConfig.setShapeFileCellBasedAccessibility("/Users/jakob/Downloads/solid_gitter/solid_gitter.shp");
-
-			//train station 715041.71, 5420617.28
-			double trainStationX = 715041.71;
-			double trainStationY = 5420617.28;
-			double tileSize = 250;
-			double num_rows = 10;
-
-			accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);
-			accConfig.setBoundingBoxLeft(trainStationX - num_rows*tileSize - tileSize/2);
-			accConfig.setBoundingBoxRight(trainStationX + num_rows*tileSize + tileSize/2);
-			accConfig.setBoundingBoxBottom(trainStationY - num_rows*tileSize - tileSize/2);
-			accConfig.setBoundingBoxTop(trainStationY + num_rows*tileSize + tileSize/2);
-			accConfig.setTileSize_m((int) tileSize);
-			accConfig.setTimeOfDay(14 * 60 * 60.);
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, true); // works
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
-//		accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // doesn't work!!!
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, false); // works
-//			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
-		}
 
 
 		SnzActivities.addScoringParams(config);
@@ -213,7 +190,7 @@ public class RunKelheimScenario extends MATSimApplication {
 		sw.defaultParams().shp = "../shp/dilutionArea.shp";
 		sw.defaultParams().mapCenter = "11.89,48.91";
 		sw.defaultParams().mapZoomLevel = 11d;
-		sw.sampleSize = sample.getSample();
+		sw.defaultParams().sampleSize = sample.getSample();
 
 		if (intermodal) {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
@@ -238,6 +215,46 @@ public class RunKelheimScenario extends MATSimApplication {
 
 			ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
 			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.scoring(), config.routing());
+		}
+
+		if (acc) {
+
+			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
+			for (DrtConfigGroup drtConfigGroup : multiModeDrtConfig.getModalElements()) {
+				//TODO: temp, allow accessibility computations to occur more than 1.5km away from drt stops.
+				drtConfigGroup.maxWalkDistance = 100000.;
+
+			}
+
+			// TODO: what is a good constant for DRT. The existing one of 2.45 makes drt trips really attractive; you no longer see a difference with stops that are far away and ones that are close.
+//			ScoringConfigGroup.ModeParams drtParams = config.scoring().getOrCreateModeParams(TransportMode.drt);
+//			drtParams.setConstant(0.0);
+
+
+			AccessibilityConfigGroup accConfig = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
+			//yyyyyyyyy this was neccessary for the RandomizingTimeDistanceTravelDisutility. TODO: is this compatible with the kelheim runs?
+			config.routing().setRoutingRandomness(0);
+
+
+
+			double mapCenterX = 712144.17;
+			double mapCenterY = 5422153.87;
+
+			double tileSize = 100;
+			double num_rows = 50;
+
+			accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);
+			accConfig.setBoundingBoxLeft(mapCenterX - num_rows*tileSize - tileSize/2);
+			accConfig.setBoundingBoxRight(mapCenterX + num_rows*tileSize + tileSize/2);
+			accConfig.setBoundingBoxBottom(mapCenterY - num_rows*tileSize - tileSize/2);
+			accConfig.setBoundingBoxTop(mapCenterY + num_rows*tileSize + tileSize/2);
+			accConfig.setTileSize_m((int) tileSize);
+			accConfig.setTimeOfDay(14 * 60 * 60.);
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, true); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // works
+//			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // ??
+//			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // doesn't work
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
 		}
 
 		// Config is always needed
