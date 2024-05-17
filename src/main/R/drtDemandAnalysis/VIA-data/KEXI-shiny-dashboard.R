@@ -20,8 +20,8 @@ library(zoo) #for moving averages
 data_jan_01_apr_24 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrtanfragen-2024-04-24.csv"
 data_jan_01_apr_24_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrerschichten-2024-04-24.csv"
 
-requests_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_13/Fahrtanfragen-2024-05-13.csv"
-shifts_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_13/Fahrerschichten-2024-05-13.csv"
+requests_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_17/Fahrtanfragen-2024-05-17.csv"
+shifts_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_17/Fahrerschichten-2024-05-17.csv"
 
 #parse data
 data <- read.csv2(requests_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
@@ -41,25 +41,26 @@ data_fahrerschichten <- read.csv2(shifts_file, sep = ",", stringsAsFactors = FAL
 ## filter out test bookings
 #10718 is a real customer
 #10031 too
-testingCustomerIds_extended <- c(1,  # Testrider
-                                 43, # Stefan
-                                 649,# Salah
-                                 673,# Markus
-                                 3432,# ??
-                                 3847, # CS Test
-                                 3887, # Jonathan
-                                 4589, # Gerlinde
-                                 7409, # Jalal
-                                 7477, # Bus31
-                                 9808, # Marina
-                                 9809, # Günter
-                                 8320, # Bus28
-                                 12777, # Salah
-                                 13288, #Bus47
-                                 #13497,  #Taba S. (kelride1@landkreis-kelheim.de)
-                                 13498,  #kam von Jan Eller
-                                 13725,  #Landratsamt Kelheim --> Kaffeefahrten am 22.04. + Delegation am 26.04.
-                                 10493  #Alicia Krammel --> Kaffeefahrten am 22.04. + Delegation am 26.04.
+testingCustomerIds_extended <- c(1,      # Testrider
+                                 43,     # Stefan
+                                 649,    # Salah
+                                 673,    # Markus
+                                 3432,   # Oriya Test
+                                 3847,   # CS Test
+                                 3887,   # Jonathan
+                                 4589,   # Gerlinde
+                                 7409,   # Jalal
+                                 7477,   # Bus31
+                                 9808,   # Marina
+                                 9809,   # Günter
+                                 8320,   # Bus28
+                                 12777,  # Salah
+                                 13288,  #Bus47
+                                 13497,  #Taba S. (kelride1@landkreis-kelheim.de)
+                                 13498#, #kam von Jan Eller (Schm G. 26)
+                                 #13725, #Landratsamt Kelheim --> Kaffeefahrten am 22.04. + Delegation am 26.04.
+                                 #10493  #Alicia Krammel --> Kaffeefahrten am 22.04. + Delegation am 26.04.
+                                 #10031  #Tanja Taps
 )
 
 
@@ -90,13 +91,10 @@ data <- data %>%
          date = date(time),
          isWeekend = wday(date) >= 6)
 
-
-## TODO:
-#Anbietername wieder aufnehmen und filtern!
-
-test <- data %>%
-  select(Fahrgast.ID, isTestBooking)
-###
+##testing
+test <- data %>%  filter(isTestBooking == FALSE,
+                       Status.der.Fahrtanfrage == "Completed") %>%  
+  select(Fahrgast.ID, Fahrtanfragen.ID, Tatsächliche.Einstiegszeit, Tatsächliche.Ausstiegszeit, Tatsächliche.Einstiegsadresse, Tatsächliche.Ausstiegsadresse, Fahrtdauer, Fahrtdistanz, Geteilte.Fahrt, Geteilte.Fahrtdauer..Min..)
 
 # Shiny-App erstellen
 ui <- fluidPage(
@@ -565,7 +563,7 @@ server <- function(input, output) {
         y = traveled_distances_data()$mean_traveled_distance,
         name = "Durchschnittliche Distanz",
         type = "scatter",
-        mode = "lines",
+        mode = "markers",
         yaxis = "y1"
       )
     
@@ -576,7 +574,7 @@ server <- function(input, output) {
         y = traveled_time_data()$mean_traveled_time,
         name = "Durchschnittliche Zeit",
         type = "scatter",
-        mode = "lines",
+        mode = "markers",
         yaxis = "y2"
       )
     
@@ -852,7 +850,7 @@ server <- function(input, output) {
       x = merged_data$date,
       y = merged_data$quotient,
       type = "scatter",
-      mode = "lines",
+      mode = "markers",
       name = "Quotient",
       yaxis = "y"
     )
