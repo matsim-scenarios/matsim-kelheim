@@ -33,6 +33,7 @@ import org.matsim.contrib.dvrp.run.AbstractDvrpModeQSimModule;
 import java.io.IOException;
 
 /**
+ * Temporary installation module for the waiting point based rebalancing strategy.
  * @author Chengqi Lu
  */
 public class WaitingPointsBasedRebalancingModule extends AbstractDvrpModeModule {
