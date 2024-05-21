@@ -27,6 +27,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 /**
+ * The waiting point based rebalancing strategy will relocate vehicles to nearest waiting point that still has capacity when it becomes idle.
  * @author Chengqi Lu
  */
 class WaitingPointsBasedRebalancingStrategy implements RebalancingStrategy {
@@ -50,9 +51,9 @@ class WaitingPointsBasedRebalancingStrategy implements RebalancingStrategy {
 			log.info("Reading waiting points from the file...");
 			try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(waitingPointsPath), StandardCharsets.UTF_8),
 				CSVFormat.TDF.builder().setHeader().setSkipHeaderRecord(true).build())) {
-				for (CSVRecord record : parser) {
-					Link waitingPointLink = network.getLinks().get(Id.createLinkId(record.get("link_id")));
-					Integer capacity = Integer.parseInt(record.get("capacity"));
+				for (CSVRecord csvRecord : parser) {
+					Link waitingPointLink = network.getLinks().get(Id.createLinkId(csvRecord.get("link_id")));
+					Integer capacity = Integer.parseInt(csvRecord.get("capacity"));
 					waitingPointsCapcityMap.put(waitingPointLink.getId(), capacity);
 				}
 			}

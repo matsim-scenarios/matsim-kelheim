@@ -23,8 +23,8 @@ import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingParams;
 import org.matsim.core.config.ReflectiveConfigGroup;
 
 /**
+ * The placeholder, which will be moved to the matsim-lib later.
  * @author Chengqi Lu
- * // TODO this is not needed for Kelheim scenario. I will move it to the matsim-lib after eeverything works well here.
  */
 public final class WaitingPointBasedRebalancingStrategyParams extends ReflectiveConfigGroup
 		implements RebalancingParams.RebalancingStrategyParams {
@@ -34,9 +34,17 @@ public final class WaitingPointBasedRebalancingStrategyParams extends Reflective
 	@Comment("The path to the waiting point file (csv/tsv) can be specified here. title row of the file: link_id	capacity" +
 		"If unspecified (i.e., empty string by default), starting points of the fleet will be used as the waiting points")
 	@NotNull
-	public String waitingPointPath = "";
+	private String waitingPointPath = "";
 
 	public WaitingPointBasedRebalancingStrategyParams() {
 		super(SET_NAME);
+	}
+
+	public String getWaitingPointPath() {
+		return waitingPointPath;
+	}
+
+	public void setWaitingPointPath(String waitingPointPath) {
+		this.waitingPointPath = waitingPointPath;
 	}
 }
