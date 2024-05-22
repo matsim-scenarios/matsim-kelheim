@@ -36,8 +36,7 @@ public class AverageDrtDashboard implements Dashboard {
 	@Override
 	public void configure(Header header, Layout layout) {
 		header.title = mode;
-		header.description = "Overview for the demand-responsive mode '" + mode + "'" +
-			"/n" + "This dashboard shows average values for " + noRuns +
+		header.description = "Overview for the demand-responsive mode '" + mode + "'. This dashboard shows average values for " + noRuns +
 			" simulation runs. For the results of the specific runs please choose the according directory next to this dashboard.yaml.";
 
 //		DEMAND

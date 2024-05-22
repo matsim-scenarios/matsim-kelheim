@@ -21,8 +21,6 @@
 package org.matsim.dashboard;
 
 import org.matsim.analysis.postAnalysis.EmissionsPostProcessingAverageAnalysis;
-import org.matsim.analysis.postAnalysis.drt.DrtPostProcessingAverageAnalysis;
-import org.matsim.application.prepare.network.CreateGeoJsonNetwork;
 import org.matsim.simwrapper.Dashboard;
 import org.matsim.simwrapper.Data;
 import org.matsim.simwrapper.Header;
@@ -31,13 +29,18 @@ import org.matsim.simwrapper.viz.GridMap;
 import org.matsim.simwrapper.viz.Links;
 import org.matsim.simwrapper.viz.Table;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Average emissions dashboard for several runs with the same config but a different random seed.
  */
-public class AverageKelheimEmissionsDashboard implements Dashboard{
+public class AverageKelheimEmissionsDashboard implements Dashboard {
 	private final List<String> dirs;
 	private final Integer noRuns;
 	private final String pathToCsvBase;
@@ -65,6 +68,24 @@ public class AverageKelheimEmissionsDashboard implements Dashboard{
 		return data.compute(EmissionsPostProcessingAverageAnalysis.class, outputFile, args.toArray(new String[0]));
 	}
 
+	private String copyGeoJsonNetwork() {
+
+		for (String dir : dirs) {
+			File networkFile = new File(dir + "/analysis/network/network.geojson");
+			Path target = Path.of(Path.of(dir).getParent() + "/analysis/network");
+
+			if (Files.notExists(target) && networkFile.exists() && networkFile.isFile()) {
+				try {
+					Files.createDirectories(target);
+					Files.copy(networkFile.toPath(), Path.of(target + "/network.geojson"));
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
+			}
+		}
+		return "analysis/network/network.geojson";
+	}
+
 	/**
 	 * Produces the dashboard.
 	 */
@@ -74,7 +95,7 @@ public class AverageKelheimEmissionsDashboard implements Dashboard{
 
 		String linkDescription = "Displays the emissions for each link per meter. Be aware that emission values are provided in the simulation sample size!";
 		if (pathToCsvBase != null){
-			linkDescription += String.format("\n Base is %s", pathToCsvBase);
+			linkDescription += String.format("%n Base is %s", pathToCsvBase);
 		}
 		String finalLinkDescription = linkDescription;
 
@@ -92,8 +113,8 @@ public class AverageKelheimEmissionsDashboard implements Dashboard{
 				viz.description = finalLinkDescription;
 				viz.height = 12.0;
 				viz.datasets.csvFile = postProcess(data, "mean_emissions_per_link_per_m.csv");
-				viz.datasets.csvBase = this.pathToCsvBase;
-				viz.network = data.compute(CreateGeoJsonNetwork.class, "network.geojson");
+				viz.datasets.csvBase = Path.of(this.dirs.get(0)).getParent().relativize(Path.of(pathToCsvBase)).toString();
+				viz.network = copyGeoJsonNetwork();
 				viz.display.color.columnName = "CO2_TOTAL [g/m]";
 				viz.display.color.dataset = "csvFile";
 				viz.display.width.scaleFactor = 100;

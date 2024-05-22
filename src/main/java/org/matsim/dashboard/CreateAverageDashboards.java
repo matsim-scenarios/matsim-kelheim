@@ -65,8 +65,6 @@ public class CreateAverageDashboards implements MATSimAppCommand {
 		}
 
 		sw.addDashboard(Dashboard.customize(new AverageKelheimEmissionsDashboard(foldersSeeded, noRuns, pathToBaseRun)).context("emissions"));
-
-//		TODO: rather call generate method with append true than the standard one bc we are in post processing
 		sw.generate(Path.of(inputPath), true);
 		sw.run(Path.of(inputPath));
 

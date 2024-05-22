@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import static org.matsim.application.ApplicationUtils.globFile;
 
@@ -47,7 +48,10 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 	private final Map<Map.Entry<Double, Coord>, Double> meanGridPerHour = new HashMap<>();
 
 	private final CsvOptions csv = new CsvOptions();
-	String value = "value";
+	private static final String VALUE = "value";
+	private static final String LINK_ID = "linkId";
+	private static final String POLLUTANT = "Pollutant";
+	private static final String ANALYSIS_DIR = "/analysis/emissions";
 
 	public static void main(String[] args) {
 		new EmissionsPostProcessingAverageAnalysis().execute(args);
@@ -58,29 +62,42 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 
 		String runs = input.getPath("runs");
 
+//		function to determine column types
+		Function<String, ColumnType> columnTypeFunction = columnName -> {
+			if (columnName.equals(LINK_ID) || columnName.equals(POLLUTANT)) {
+				return ColumnType.STRING;
+			} else {
+				return ColumnType.DOUBLE;
+			}
+		};
+
 		List<String> foldersSeeded = Arrays.stream(runs.split(",")).toList();
 
 //		add stats from every run to map
 		for (String folder : foldersSeeded) {
-			String totalCsv = globFile(Path.of(folder + "/analysis/emissions" ), "*emissions_total.csv*").toString();
-			String emissionsPerLinkMCsv = globFile(Path.of(folder + "/analysis/emissions"), "*emissions_per_link_per_m.csv*").toString();
-			String emissionsGridPerDayCsv = globFile(Path.of(folder + "/analysis/emissions"), "*emissions_grid_per_day.xyt.csv*").toString();
-			String emissionsGridPerHourCsv = globFile(Path.of(folder + "/analysis/emissions"), "*emissions_grid_per_hour.csv*").toString();
+			final Path analysisDir = Path.of(folder + ANALYSIS_DIR);
+			String totalCsv = globFile(analysisDir, "*emissions_total.csv*").toString();
+			String emissionsPerLinkMCsv = globFile(analysisDir, "*emissions_per_link_per_m.csv*").toString();
+			String emissionsGridPerDayCsv = globFile(analysisDir, "*emissions_grid_per_day.xyt.csv*").toString();
+			String emissionsGridPerHourCsv = globFile(analysisDir, "*emissions_grid_per_hour.csv*").toString();
 
 			Table total = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(totalCsv))
+				.columnTypes(columnTypeFunction)
 				.sample(false)
 				.separator(csv.detectDelimiter(totalCsv)).build());
 
 			Table emissionsPerLinkM = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(emissionsPerLinkMCsv))
+				.columnTypes(columnTypeFunction)
 				.sample(false)
 				.separator(csv.detectDelimiter(emissionsPerLinkMCsv)).build());
 
-//			TODO: update matsim version to newest for necessary changes in detectDelimiter method
 			Table emissionsGridPerDay = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(emissionsGridPerDayCsv))
+				.columnTypes(columnTypeFunction)
 				.sample(false)
 				.separator(csv.detectDelimiter(emissionsGridPerDayCsv)).header(true).build());
 
 			Table emissionsGridPerHour = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(emissionsGridPerHourCsv))
+				.columnTypes(columnTypeFunction)
 				.sample(false)
 				.separator(csv.detectDelimiter(emissionsGridPerHourCsv)).build());
 
@@ -88,16 +105,10 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 			for (int i = 0; i < total.rowCount(); i++) {
 				Row row = total.row(i);
 
-				if (!totalStats.containsKey(row.getString(i))) {
-					totalStats.put(row.getString(i), new ArrayList<>());
+				if (!totalStats.containsKey(row.getString(POLLUTANT))) {
+					totalStats.put(row.getString(POLLUTANT), new ArrayList<>());
 				}
-
-//				some values are in format hh:mm:ss or empty
-				if (row.getString("kg").isEmpty()) {
-					totalStats.get(row.getString("Pollutant")).add(0.);
-				} else {
-					totalStats.get(row.getString("Pollutant")).add(row.getDouble("kg"));
-				}
+				totalStats.get(row.getString(POLLUTANT)).add(row.getDouble("kg"));
 			}
 
 //			get all per link per m stats
@@ -106,18 +117,13 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 				Double[] values = new Double[emissionsPerLinkM.columnCount() - 1];
 
 //				iterate through columns. this file contains 23 params per link, as of may24
-				for (int j = 1; i < emissionsPerLinkM.columnCount() - 1; j++) {
-					if (!perLinkMStats.containsKey(row.getString(i))) {
-						perLinkMStats.put(row.getString(i), new ArrayList<>());
+				for (int j = 1; j < emissionsPerLinkM.columnCount(); j++) {
+					if (!perLinkMStats.containsKey(row.getString(LINK_ID))) {
+						perLinkMStats.put(row.getString(LINK_ID), new ArrayList<>());
 					}
-
-					if (row.getColumnType(j) == ColumnType.INTEGER) {
-						values[j - 1] = (double) row.getInt(j);
-					} else {
-						values[j - 1] = row.getDouble(j);
-					}
+					values[j - 1] = row.getDouble(j);
 				}
-				perLinkMStats.get(row.getString(i)).add(values);
+				perLinkMStats.get(row.getString(LINK_ID)).add(values);
 			}
 
 //			get all grid per day stats
@@ -142,6 +148,10 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 
 			for (Double[] d : e.getValue()) {
 				for (int i = 0; i <= d.length - 1; i++) {
+//					initial array values are null
+					if (sums[i] == null) {
+						sums[i] = 0.;
+					}
 					sums[i] += d[i];
 				}
 			}
@@ -160,7 +170,7 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 
 //		write total mean stats
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("mean_emissions_total.csv")), CSVFormat.DEFAULT)) {
-			printer.printRecord("Pollutant", "kg");
+			printer.printRecord(POLLUTANT, "kg");
 
 			for (Map.Entry<String, Double> e : meanTotal.entrySet()) {
 				printer.printRecord("mean-" + e.getKey(), e.getValue());
@@ -169,7 +179,7 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 
 //		write per linkM mean stats
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("mean_emissions_per_link_per_m.csv")), CSVFormat.DEFAULT)) {
-			printer.printRecord("linkId", "CO [g/m]", "CO2_TOTAL [g/m]", "FC [g/m]", "HC [g/m]", "NMHC [g/m]", "NOx [g/m]", "NO2 [g/m]", "PM [g/m]", "SO2 [g/m]",
+			printer.printRecord(LINK_ID, "CO [g/m]", "CO2_TOTAL [g/m]", "FC [g/m]", "HC [g/m]", "NMHC [g/m]", "NOx [g/m]", "NO2 [g/m]", "PM [g/m]", "SO2 [g/m]",
 				"FC_MJ [g/m]", "CO2_rep [g/m]", "CO2e [g/m]", "PM2_5 [g/m]", "PM2_5_non_exhaust [g/m]", "PM_non_exhaust [g/m]", "BC_exhaust [g/m]", "BC_non_exhaust [g/m]",
 				"Benzene [g/m]", "PN [g/m]", "Pb [g/m]", "CH4 [g/m]", "N2O [g/m]", "NH3 [g/m]"
 			);
@@ -204,7 +214,7 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 			Map.Entry<Double, Coord> entry = new AbstractMap.SimpleEntry<>(row.getDouble("time"), new Coord(row.getDouble("x"), row.getDouble("y")));
 
 			dataMap.computeIfAbsent(entry, key -> new ArrayList<>());
-			dataMap.get(entry).add(row.getDouble(value));
+			dataMap.get(entry).add(row.getDouble(VALUE));
 		}
 	}
 
@@ -212,7 +222,7 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath(fileName)), CSVFormat.DEFAULT)) {
 
 			printer.printRecord("# EPSG:25832");
-			printer.printRecord("time", "x", "y", value);
+			printer.printRecord("time", "x", "y", VALUE);
 
 			for (Map.Entry<Map.Entry<Double, Coord>, Double> e : values.entrySet()) {
 				printer.printRecord(e.getKey().getKey(), e.getKey().getValue().getX(), e.getKey().getValue().getY(), e.getValue());
