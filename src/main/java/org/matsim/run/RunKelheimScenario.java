@@ -4,6 +4,9 @@ import ch.sbb.matsim.config.SwissRailRaptorConfigGroup;
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
@@ -74,6 +77,11 @@ import playground.vsp.pt.fare.PtFareConfigGroup;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.SplittableRandom;
@@ -335,13 +343,39 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		if (acc) {
 			// add opportunity facility
-			double trainStationX = 715041.71;
-			double trainStationY = 5420617.28;
 			ActivityFacilitiesFactory af = scenario.getActivityFacilities().getFactory();
-			ActivityFacility fac1 = af.createActivityFacility(Id.create("xxx", ActivityFacility.class), new Coord(trainStationX, trainStationY));
-			ActivityOption ao = af.createActivityOption("train station");
-			fac1.addActivityOption(ao);
-			scenario.getActivityFacilities().addActivityFacility(fac1);
+
+
+			// Use this method if reading facilities from a csv.
+			Path filePath = Path.of("testOsmFacilitiesList.csv");
+			try (CSVParser parser = new CSVParser(new BufferedReader(new InputStreamReader(Files.newInputStream(filePath))),
+				CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
+
+				for (CSVRecord record : parser) {
+
+					String id = record.get("id");
+					double x = Double.parseDouble(record.get("x"));
+					double y = Double.parseDouble(record.get("y"));
+					String type = record.get("type");
+					ActivityFacility fac = af.createActivityFacility(Id.create(id, ActivityFacility.class), new Coord(x, y));
+					ActivityOption ao = af.createActivityOption(type);
+					fac.addActivityOption(ao);
+
+				}
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+
+
+//			{// set facility manually
+//				double trainStationX = 715041.71;
+//				double trainStationY = 5420617.28;
+//				ActivityFacility fac1 = af.createActivityFacility(Id.create("xxx", ActivityFacility.class), new Coord(trainStationX, trainStationY));
+//				ActivityOption ao = af.createActivityOption("train station");
+//				fac1.addActivityOption(ao);
+//				scenario.getActivityFacilities().addActivityFacility(fac1);
+//			}
+
 		}
 
 	}
