@@ -1,5 +1,6 @@
 package org.matsim.run;
 
+import ch.sbb.matsim.config.SwissRailRaptorConfigGroup;
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -167,9 +168,6 @@ public class RunKelheimScenario extends MATSimApplication {
 		config.controller().setLastIteration(0);
 
 		// stuff needed for accessibility
-
-
-
 		SnzActivities.addScoringParams(config);
 
 		config.controller().setOutputDirectory(sample.adjustName(config.controller().getOutputDirectory()));
@@ -198,9 +196,6 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		if (drt) {
 
-			// yyyyyyy added to avoid following error "java.lang.RuntimeException: DynAgents require simulation to start from the very beginning. Set 'QSim.simStarttimeInterpretation' to onlyUseStarttime" -JR May'24
-			config.qsim().setSimStarttimeInterpretation(QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime);
-
 			config.addModule(new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
 
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
@@ -218,6 +213,14 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		if (acc) {
+
+			// yyyyyyy TODO: added to avoid following error "java.lang.RuntimeException: DynAgents require simulation to start from the very beginning. Set 'QSim.simStarttimeInterpretation' to onlyUseStarttime" -JR May'24
+			config.qsim().setSimStarttimeInterpretation(QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime);
+
+
+			// yyyyyyy TODO: had to turn off intermodal pt access/egress because "= this.routingModules.get(mode) = null" in DefaultRaptorStopFinder. No drt router present...
+			SwissRailRaptorConfigGroup swissRailRaptorConfigGroup = ConfigUtils.addOrGetModule(config, SwissRailRaptorConfigGroup.class);
+			swissRailRaptorConfigGroup.setUseIntermodalAccessEgress(false);
 
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
 			for (DrtConfigGroup drtConfigGroup : multiModeDrtConfig.getModalElements()) {
@@ -249,11 +252,11 @@ public class RunKelheimScenario extends MATSimApplication {
 			accConfig.setBoundingBoxBottom(mapCenterY - num_rows*tileSize - tileSize/2);
 			accConfig.setBoundingBoxTop(mapCenterY + num_rows*tileSize + tileSize/2);
 			accConfig.setTileSize_m((int) tileSize);
-			accConfig.setTimeOfDay(14 * 60 * 60.);
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, true); // works
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // works
+			accConfig.setTimeOfDay(15.5 * 60 * 60.);
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
 //			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // ??
-//			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // doesn't work
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
 		}
 
