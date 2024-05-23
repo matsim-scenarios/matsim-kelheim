@@ -82,3 +82,11 @@ Here are the most common ways to analyse and visualize the results (and inputs):
 
 If you have questions, feel free to contact us [(VSP)](https://www.tu.berlin/vsp) any time  :)
 
+---
+## More information
+
+For more information about MATSim, see here: https://www.matsim.org/
+## Internal documentation
+
+Internal documentation can be found here:
+https://docs.google.com/document/d/1xOkHVUKVLrtliVS4Y8ITz6zs_wQE6BG2-Cdmhw-HKgQ/edit?usp=drive_link

@@ -30,12 +30,15 @@ import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
 import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
+import org.matsim.contrib.drt.optimizer.rebalancing.NoRebalancingStrategy;
+import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingStrategy;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.DrtConfigs;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtModule;
+import org.matsim.contrib.dvrp.run.AbstractDvrpModeModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
@@ -54,6 +57,7 @@ import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
+import org.matsim.rebalancing.WaitingPointsBasedRebalancingModule;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.SimWrapperModule;
 import org.matsim.vehicles.VehicleType;
@@ -112,6 +116,20 @@ public class RunKelheimScenario extends MATSimApplication {
 
 	@CommandLine.Option(names = "--plans", defaultValue = "", description = "Use different input plans")
 	private String planOrigin;
+
+	@CommandLine.Option(names = "--base-fare", defaultValue = "2.0", description = "Base fare of KEXI trip")
+	private double baseFare;
+
+	@CommandLine.Option(names = "--surcharge", defaultValue = "1.0", description = "Surcharge of KEXI trip from / to train station")
+	private double surcharge;
+
+	@CommandLine.Option(names = "--rebalancing", description = "enable waiting point based rebalancing strategy or not", defaultValue = "false")
+	private boolean rebalancing;
+
+	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy. If unspecified, the starting" +
+		"points of the fleet will be set as waiting points", defaultValue = "")
+	private String waitingPointsPath;
+
 
 	public RunKelheimScenario(@Nullable Config config) {
 		super(config);
@@ -337,7 +355,18 @@ public class RunKelheimScenario extends MATSimApplication {
 					maxSpeed));
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare));
+				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, baseFare, surcharge));
+				if (rebalancing && drtCfg.mode.equals("av")) {
+					controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
+				} else {
+					// No rebalancing strategy
+					controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.mode) {
+						@Override
+						public void install() {
+							bindModal(RebalancingStrategy.class).to(NoRebalancingStrategy.class).asEagerSingleton();
+						}
+					});
+				}
 			}
 
 			//controler.addOverridingModule(new DrtEstimatorModule());
