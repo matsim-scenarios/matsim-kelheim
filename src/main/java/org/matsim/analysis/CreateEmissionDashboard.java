@@ -66,7 +66,7 @@ final class CreateEmissionDashboard implements MATSimAppCommand {
 			log.info("Running on {}", runDirectory);
 
 			//this is to avoid overriding
-			renameExistingDashboardYAMLs(runDirectory);
+//			renameExistingDashboardYAMLs(runDirectory);
 
 			Path configPath = ApplicationUtils.matchInput("config.xml", runDirectory);
 			Config config = ConfigUtils.loadConfig(configPath.toString());
@@ -88,7 +88,7 @@ final class CreateEmissionDashboard implements MATSimAppCommand {
 			}
 
 			try {
-				sw.generate(runDirectory);
+				sw.generate(runDirectory, true);
 				sw.run(runDirectory);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
