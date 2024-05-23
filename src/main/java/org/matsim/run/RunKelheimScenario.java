@@ -360,6 +360,8 @@ public class RunKelheimScenario extends MATSimApplication {
 					ActivityFacility fac = af.createActivityFacility(Id.create(id, ActivityFacility.class), new Coord(x, y));
 					ActivityOption ao = af.createActivityOption(type);
 					fac.addActivityOption(ao);
+					scenario.getActivityFacilities().addActivityFacility(fac);
+
 
 				}
 			} catch (IOException e) {
@@ -479,9 +481,13 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		if (acc) {
-			final AccessibilityModule module = new AccessibilityModule();
-			module.setConsideredActivityType("train station");
-			controler.addOverridingModule(module);
+			final AccessibilityModule moduleTrain = new AccessibilityModule();
+			moduleTrain.setConsideredActivityType("train station");
+			controler.addOverridingModule(moduleTrain);
+
+			final AccessibilityModule moduleHosp = new AccessibilityModule();
+			moduleHosp.setConsideredActivityType("hospital");
+			controler.addOverridingModule(moduleHosp);
 		}
 	}
 }
