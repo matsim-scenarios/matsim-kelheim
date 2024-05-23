@@ -1,7 +1,6 @@
 package org.matsim.run;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.matsim.application.MATSimApplication;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -13,8 +12,6 @@ import org.matsim.testcases.MatsimTestUtils;
  * integration test.
  */
 public class RunKelheimIntegrationTest {
-	@Rule
-	public MatsimTestUtils utils = new MatsimTestUtils();
 
 	@Test
 	public final void runExamplePopulationTest() {
@@ -24,7 +21,8 @@ public class RunKelheimIntegrationTest {
 		config.qsim().setNumberOfThreads(1);
 		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
 
-		ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class).defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
+//		ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class).defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
+		ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class).defaultDashboards = SimWrapperConfigGroup.Mode.enabled;
 
 		MATSimApplication.execute(RunKelheimScenario.class, config,
 			"run", "--1pct");

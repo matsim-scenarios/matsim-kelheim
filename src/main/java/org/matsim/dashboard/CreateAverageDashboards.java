@@ -7,6 +7,9 @@ import org.matsim.simwrapper.SimWrapper;
 import picocli.CommandLine;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +30,12 @@ public class CreateAverageDashboards implements MATSimAppCommand {
 	public static void main(String[] args) {
 		new CreateAverageDashboards().execute(args);
 	}
+
+	CreateAverageDashboards() {
+
+	}
+
+
 
 	@Override
 	public Integer call() throws Exception {
@@ -65,11 +74,31 @@ public class CreateAverageDashboards implements MATSimAppCommand {
 		}
 
 		sw.addDashboard(Dashboard.customize(new AverageKelheimEmissionsDashboard(foldersSeeded, noRuns, pathToBaseRun)).context("emissions"));
+		sw.addDashboard(Dashboard.customize(new AverageKelheimNoiseDashboard(foldersSeeded, noRuns)).context("noise"));
 		sw.generate(Path.of(inputPath), true);
 		sw.run(Path.of(inputPath));
 
-
-
 		return 0;
+	}
+
+	/**
+	 * A helper method to copy an already existing Geojson network rather than creating it all over again.
+	 */
+	String copyGeoJsonNetwork(List<String> dirs) {
+
+		for (String dir : dirs) {
+			File networkFile = new File(dir + "/analysis/network/network.geojson");
+			Path target = Path.of(Path.of(dir).getParent() + "/analysis/network");
+
+			if (Files.notExists(target) && networkFile.exists() && networkFile.isFile()) {
+				try {
+					Files.createDirectories(target);
+					Files.copy(networkFile.toPath(), Path.of(target + "/network.geojson"));
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
+			}
+		}
+		return "analysis/network/network.geojson";
 	}
 }

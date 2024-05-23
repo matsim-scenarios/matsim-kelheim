@@ -68,24 +68,6 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 		return data.compute(EmissionsPostProcessingAverageAnalysis.class, outputFile, args.toArray(new String[0]));
 	}
 
-	private String copyGeoJsonNetwork() {
-
-		for (String dir : dirs) {
-			File networkFile = new File(dir + "/analysis/network/network.geojson");
-			Path target = Path.of(Path.of(dir).getParent() + "/analysis/network");
-
-			if (Files.notExists(target) && networkFile.exists() && networkFile.isFile()) {
-				try {
-					Files.createDirectories(target);
-					Files.copy(networkFile.toPath(), Path.of(target + "/network.geojson"));
-				} catch (IOException e) {
-					throw new UncheckedIOException(e);
-				}
-			}
-		}
-		return "analysis/network/network.geojson";
-	}
-
 	/**
 	 * Produces the dashboard.
 	 */
@@ -114,7 +96,7 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 				viz.height = 12.0;
 				viz.datasets.csvFile = postProcess(data, "mean_emissions_per_link_per_m.csv");
 				viz.datasets.csvBase = Path.of(this.dirs.get(0)).getParent().relativize(Path.of(pathToCsvBase)).toString();
-				viz.network = copyGeoJsonNetwork();
+				viz.network = new CreateAverageDashboards().copyGeoJsonNetwork(dirs);
 				viz.display.color.columnName = "CO2_TOTAL [g/m]";
 				viz.display.color.dataset = "csvFile";
 				viz.display.width.scaleFactor = 100;

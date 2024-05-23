@@ -29,7 +29,6 @@ public class KelheimDashboardProvider implements DashboardProvider {
 			new TravelTimeComparisonDashboard(IOUtils.resolveFileOrResource( "kelheim-v3.0-routes-ref.csv.gz").toString()),
 			new KelheimEmissionsDashboard(),
 			new NoiseDashboard()
-//			TODO: add noise dashboard here + test
 		);
 	}
 
