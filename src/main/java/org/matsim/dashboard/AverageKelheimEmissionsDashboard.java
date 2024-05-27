@@ -29,10 +29,6 @@ import org.matsim.simwrapper.viz.GridMap;
 import org.matsim.simwrapper.viz.Links;
 import org.matsim.simwrapper.viz.Table;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
