@@ -16,12 +16,8 @@ library(zoo) #for moving averages
 #### read data.
 
 #input files
-
-data_jan_01_apr_24 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrtanfragen-2024-04-24.csv"
-data_jan_01_apr_24_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrerschichten-2024-04-24.csv"
-
-requests_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_17/Fahrtanfragen-2024-05-17.csv"
-shifts_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_17/Fahrerschichten-2024-05-17.csv"
+requests_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_22/Fahrtanfragen-2024-05-22.csv"
+shifts_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_22/Fahrerschichten-2024-05-22.csv"
 
 #parse data
 data <- read.csv2(requests_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
@@ -40,9 +36,8 @@ data_fahrerschichten <- read.csv2(shifts_file, sep = ",", stringsAsFactors = FAL
 
 ## filter out test bookings
 #10718 is a real customer
-#10031 too
+
 testingCustomerIds_extended <- c(1,      # Testrider
-                                 43,     # Stefan
                                  649,    # Salah
                                  673,    # Markus
                                  3432,   # Oriya Test
@@ -57,10 +52,12 @@ testingCustomerIds_extended <- c(1,      # Testrider
                                  12777,  # Salah
                                  13288,  #Bus47
                                  13497,  #Taba S. (kelride1@landkreis-kelheim.de)
-                                 13498#, #kam von Jan Eller (Schm G. 26)
-                                 #13725, #Landratsamt Kelheim --> Kaffeefahrten am 22.04. + Delegation am 26.04.
-                                 #10493  #Alicia Krammel --> Kaffeefahrten am 22.04. + Delegation am 26.04.
-                                 #10031  #Tanja Taps
+                                 13498  #kam von Jan Eller (Schm G. 26)
+                                 ,
+                                 43,     # Stefan
+                                 13725,  #Landratsamt Kelheim --> Kaffeefahrten am 22.04. + Delegation am 26.04.
+                                 10493,   #Alicia Krammel --> Kaffeefahrten am 22.04. + Delegation am 26.04.
+                                 10031   #Tanja Taps
 )
 
 
@@ -94,7 +91,7 @@ data <- data %>%
 ##testing
 test <- data %>%  filter(isTestBooking == FALSE,
                        Status.der.Fahrtanfrage == "Completed") %>%  
-  select(Fahrgast.ID, Fahrtanfragen.ID, Tatsächliche.Einstiegszeit, Tatsächliche.Ausstiegszeit, Tatsächliche.Einstiegsadresse, Tatsächliche.Ausstiegsadresse, Fahrtdauer, Fahrtdistanz, Geteilte.Fahrt, Geteilte.Fahrtdauer..Min..)
+  select(date, Fahrgast.ID, Fahrtanfragen.ID, Anzahl.der.Fahrgäste, Tatsächliche.Einstiegszeit, Tatsächliche.Ausstiegszeit, Tatsächliche.Einstiegsadresse, Tatsächliche.Ausstiegsadresse, Fahrtdauer, Fahrtdistanz, Geteilte.Fahrt, Geteilte.Fahrtdauer..Min..)
 
 # Shiny-App erstellen
 ui <- fluidPage(
