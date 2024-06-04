@@ -45,6 +45,7 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
 	private final Network network;
 	private final Map<String, Geometry> zonalSystem;
 
+	//the boolean determines whether we need to surcharge, which is the case for trips starting and ending in zone 1.
 	private final Map<Id<Request>, Boolean> surchargeMap = new HashMap<>();
 
 	public KelheimDrtFareHandler(String mode, Network network, KelheimDrtFareParams params) {
@@ -79,6 +80,7 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
 		if (drtRequestSubmittedEvent.getMode().equals(mode)) {
 			Link fromLink = network.getLinks().get(drtRequestSubmittedEvent.getFromLinkId());
 			Link toLink = network.getLinks().get(drtRequestSubmittedEvent.getToLinkId());
+//			log.warn("######### Passenger submitted {}, firstPerson = {}, lastPerson={}, event = {}", drtRequestSubmittedEvent.getRequestId(), drtRequestSubmittedEvent.getPersonIds().getFirst(), drtRequestSubmittedEvent.getPersonIds().getLast(), drtRequestSubmittedEvent);
 			if (!zonalSystem.isEmpty()) {
 				if (zonalSystem.get("1") == null) {
 					throw new RuntimeException("The shape file data entry is not prepared correctly. " +
@@ -105,6 +107,7 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
 	public void handleEvent(PassengerDroppedOffEvent event) {
 		if (event.getMode().equals(mode)) {
 			double actualFare = baseFare;
+//			log.warn("######### Passenger dropped off. request = {}, person = {}, event = {}", event.getRequestId(), event.getPersonId(), event);
 			boolean doesSurchargeApply = surchargeMap.get(event.getRequestId());
 			if (doesSurchargeApply) {
 				actualFare = actualFare + zone2Surcharge;
@@ -112,12 +115,17 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
 			events.processEvent(
 					new PersonMoneyEvent(event.getTime(), event.getPersonId(),
 							-actualFare, DrtFareHandler.PERSON_MONEY_EVENT_PURPOSE_DRT_FARE, mode, event.getRequestId().toString()));
-			surchargeMap.remove(event.getRequestId());
+
+			/*there are potentially multiple PassengerDroppedOffEvents per request (bc of groups), which is why we can't remove the request from the map here
+			in Kelheim scenarios, we mostly don't have large demand, which is why i don't care so much about the growing map. In other scenarios, one should maybe think about cleaning up
+			tschlenther, june '24*/
+//			surchargeMap.remove(event.getRequestId());
 		}
 	}
 
 	@Override
 	public void handleEvent(PassengerRequestRejectedEvent passengerRequestRejectedEvent) {
+//		log.warn("######### Passenger rejected {}, firstPerson = {}, lastPerson = {}, event = {}", passengerRequestRejectedEvent.getRequestId(), passengerRequestRejectedEvent.getPersonIds().getFirst(), passengerRequestRejectedEvent.getPersonIds().getLast(), passengerRequestRejectedEvent);
 		if (passengerRequestRejectedEvent.getMode().equals(mode)) {
 			surchargeMap.remove(passengerRequestRejectedEvent.getRequestId());
 		}
