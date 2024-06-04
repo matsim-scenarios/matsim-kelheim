@@ -50,7 +50,7 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
-import org.matsim.core.utils.gis.ShapeFileReader;
+import org.matsim.core.utils.gis.GeoFileReader;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.freight.carriers.*;
 import org.matsim.vehicles.Vehicle;
@@ -103,7 +103,7 @@ public final class PotentialServiceAreaAnalysis {
 
 		//read in service area map
 		PreparedGeometryFactory factory = new PreparedGeometryFactory();
-		Map<String, PreparedGeometry> serviceAreas = StreamEx.of(ShapeFileReader.getAllFeatures(IOUtils.getFileUrl(INPUT_SERVICE_AREAS_SHAPE)))
+		Map<String, PreparedGeometry> serviceAreas = StreamEx.of(GeoFileReader.getAllFeatures(IOUtils.getFileUrl(INPUT_SERVICE_AREAS_SHAPE)))
 				.mapToEntry(sf -> (String) sf.getAttribute("name"), sf -> factory.create((Geometry) sf.getDefaultGeometry()))
 				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 
@@ -300,8 +300,6 @@ public final class PotentialServiceAreaAnalysis {
 		CarrierVehicle.Builder vBuilder = CarrierVehicle.Builder.newInstance(Id.create((areaName + "_shuttle"), Vehicle.class), depotLink, vehicleType);
 		vBuilder.setEarliestStart(0 * 60 * 60);
 		vBuilder.setLatestEnd(24 * 60 * 60);
-		vBuilder.setType(vehicleType);
-		vBuilder.setTypeId(vehicleType.getId());
 		CarrierVehicle vehicle = vBuilder.build();
 		carrier.getCarrierCapabilities().getCarrierVehicles().put(vehicle.getId(), vehicle);
 

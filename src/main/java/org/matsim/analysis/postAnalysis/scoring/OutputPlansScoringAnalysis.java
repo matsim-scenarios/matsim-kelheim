@@ -59,8 +59,9 @@ public class OutputPlansScoringAnalysis implements MATSimAppCommand {
 		List<Id<Person>> relevantPersons = new ArrayList<>();
 		if (!relevantPersonsFile.equals("")) {
 			List<String> relevantPersonsId = new ArrayList<>();
-			try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(relevantPersonsFile)),
-					CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
+			CSVFormat.Builder format = CSVFormat.DEFAULT.builder().setDelimiter(',').setHeader().setSkipHeaderRecord(true);
+
+			try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(relevantPersonsFile)), format.build())) {
 				for (CSVRecord row : parser) {
 					relevantPersonsId.add(row.get(0));
 				}

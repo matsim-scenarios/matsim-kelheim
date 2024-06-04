@@ -53,10 +53,10 @@ final class CalcEuclideanDistances {
 
 		String output = input.toString().substring(0, input.toString().lastIndexOf('.')) + "_withDistance.csv";
 		CSVPrinter writer;
-		try (CSVParser parser = new CSVParser(Files.newBufferedReader(input),
-			 CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
+		CSVFormat.Builder format = CSVFormat.DEFAULT.builder().setDelimiter(';');
+		try (CSVParser parser = new CSVParser(Files.newBufferedReader(input), format.build())) {
 
-			writer = new CSVPrinter(new FileWriter(output), CSVFormat.DEFAULT.withDelimiter(';'));
+			writer = new CSVPrinter(new FileWriter(output), format.build());
 
 
 			for (CSVRecord row : parser.getRecords()) {

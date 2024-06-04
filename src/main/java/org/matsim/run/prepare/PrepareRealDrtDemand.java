@@ -43,6 +43,8 @@ public class PrepareRealDrtDemand implements MATSimAppCommand {
 	@CommandLine.Mixin
 	private CrsOptions crs = new CrsOptions();
 
+	private final CSVFormat.Builder format = CSVFormat.DEFAULT.builder().setDelimiter(',').setHeader().setSkipHeaderRecord(true);
+
 	public static void main(String[] args) throws IOException {
 		new PrepareRealDrtDemand().execute(args);
 	}
@@ -57,8 +59,7 @@ public class PrepareRealDrtDemand implements MATSimAppCommand {
 
 //        Map<String, Coord> stationCoordMap = loadStationCoordinates();
 
-		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(demands)),
-			CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
+		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(demands)), format.build())) {
 			int counter = 0;
 			for (CSVRecord row : parser) {
 				double fromX = Double.parseDouble(row.get("from_x"));
@@ -99,8 +100,7 @@ public class PrepareRealDrtDemand implements MATSimAppCommand {
 
 	private Map<String, Coord> loadStationCoordinates() throws IOException {
 		Map<String, Coord> stationCoordMap = new HashMap<>();
-		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(drtStops)),
-			CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
+		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of(drtStops)), format.build())) {
 			for (CSVRecord row : parser) {
 				String stationName = row.get(0);
 				double x = Double.parseDouble(row.get(2));

@@ -28,8 +28,8 @@ import org.matsim.core.router.speedy.SpeedyALTFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
-import org.matsim.core.utils.gis.ShapeFileReader;
-import org.matsim.core.utils.gis.ShapeFileWriter;
+import org.matsim.core.utils.gis.GeoFileReader;
+import org.matsim.core.utils.gis.GeoFileWriter;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.utils.gis.shp2matsim.ShpGeometryUtils;
 import org.matsim.vehicles.Vehicle;
@@ -115,7 +115,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
 			List<Double> allWaitingTimes = new ArrayList<>();
 
 			Map<SimpleFeature, ArrayList<Double>> shpWaitingTimes = null;
-			Set<SimpleFeature> shpFeatures = new HashSet<>(ShapeFileReader.getAllFeatures(SHPFILE));
+			Set<SimpleFeature> shpFeatures = new HashSet<>(GeoFileReader.getAllFeatures(SHPFILE));
 			for (SimpleFeature shpFeature : shpFeatures) {
 				shpFeature.setAttribute(FEATURE_ORIGINS_ATTRIBUTE_NAME, 0.d);
 				shpFeature.setAttribute(FEATURE_DESTINATIONS_ATTRIBUTE_NAME, 0.d);
@@ -140,8 +140,8 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
 			}
 
 			int numOfTrips = 0;
-			try (CSVParser parser = new CSVParser(Files.newBufferedReader(tripsFile),
-					CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
+			CSVFormat.Builder format = CSVFormat.DEFAULT.builder().setDelimiter(';').setHeader().setSkipHeaderRecord(true);
+			try (CSVParser parser = new CSVParser(Files.newBufferedReader(tripsFile), format.build())) {
 				for (CSVRecord row : parser.getRecords()) {
 					double waitingTime = Double.parseDouble(row.get(9));
 
@@ -262,7 +262,7 @@ public class DrtServiceQualityAnalysis implements MATSimAppCommand {
 						feature.setAttribute(FEATURE_95PCT_WAIT_ATTRIBUTE_NAME, StatUtils.percentile(waitingTimes.stream().mapToDouble(t -> t).toArray(), 95));
 					}
 			);
-			ShapeFileWriter.writeGeometries(shpWaitingTimes.keySet(), outputFolder + "/" + mode + "_serviceZones_waitStats.shp");
+			GeoFileWriter.writeGeometries(shpWaitingTimes.keySet(), outputFolder + "/" + mode + "_serviceZones_waitStats.shp");
 		}
 		return 0;
 	}

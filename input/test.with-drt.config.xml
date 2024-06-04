@@ -77,7 +77,7 @@
 		<parameterset type="AnnealingVariable" >
 			<param name="annealParameter" value="globalInnovationRate" />
 			<param name="annealType" value="sigmoid" />
-			<param name="defaultSubpopulation" value="person" />
+			<param name="subpopulation" value="person" />
 			<!-- this parameter enters the exponential and sigmoid formulas. May be an iteration or a share, i.e. 0.5 for halfLife at 50% of iterations. Exponential: startValue / exp(it/halfLife) -->
 			<param name="halfLife" value="0.5" />
 			<!-- sigmoid: 1/(1+e^(shapeFactor*(it - halfLife))); geometric: startValue * shapeFactor^it; msa: startValue / it^shapeFactor -->
@@ -292,15 +292,10 @@
 <!--				&lt;!&ndash; Weights to sample an additional drt passenger. E.g. 70 % +0 pax, 30 % +1 pax. Please specify at least two values. &ndash;&gt;-->
 <!--				<param name="drtCompanionSamplingWeights" value="16517.0,2084.0,532.0,163.0,20.0,5.0,0.0,0.0" />-->
 <!--			</parameterset>-->
-			<parameterset type="zonalSystem" >
-				<!-- size of square cells used for demand aggregation. Depends on demand, supply and network. Often used with values in the range of 500 - 2000 m -->
-				<param name="cellSize" value="null" />
-				<!-- Defines how the target link of a zone is determined (e.g. for rebalancing). Possible values are [random,mostCentral]. Default behavior is mostCentral, where all vehicles are sent to the same link. -->
-				<param name="zoneTargetLinkSelection" value="mostCentral" />
-				<!-- Logic for generation of zones for the DRT zonal system. Value can be: [GridFromNetwork, ShapeFile]. -->
-				<param name="zonesGeneration" value="ShapeFile" />
-				<!-- allows to configure zones. Used with zonesGeneration=ShapeFile -->
-				<param name="zonesShapeFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/shp/kelheim-v2.0-drtZonalAnalysisSystem.shp" />
+			<parameterset type="zonalSystem">
+				<parameterset type="SquareGridZoneSystem">
+					<param name="cellSize" value="500"/>
+				</parameterset>
 			</parameterset>
 		</parameterset>
 
@@ -329,16 +324,10 @@
 
             <!-- Writes out detailed DRT customer stats in each iteration. True by default. -->
             <param name="writeDetailedCustomerStats" value="true"/>
-
-			<parameterset type="zonalSystem" >
-				<!-- size of square cells used for demand aggregation. Depends on demand, supply and network. Often used with values in the range of 500 - 2000 m -->
-				<param name="cellSize" value="null" />
-				<!-- Defines how the target link of a zone is determined (e.g. for rebalancing). Possible values are [random,mostCentral]. Default behavior is mostCentral, where all vehicles are sent to the same link. -->
-				<param name="zoneTargetLinkSelection" value="mostCentral" />
-				<!-- Logic for generation of zones for the DRT zonal system. Value can be: [GridFromNetwork, ShapeFile]. -->
-				<param name="zonesGeneration" value="ShapeFile" />
-				<!-- allows to configure zones. Used with zonesGeneration=ShapeFile -->
-				<param name="zonesShapeFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/shp/kelheim-v2.0-drtZonalAnalysisSystem.shp" />
+			<parameterset type="zonalSystem">
+				<parameterset type="SquareGridZoneSystem">
+					<param name="cellSize" value="500"/>
+				</parameterset>
 			</parameterset>
         </parameterset>
     </module>
@@ -349,9 +338,12 @@
 
         <!-- Used for estimation of travel times for VrpOptimizer by means of the exponential moving average. The weighting decrease, alpha, must be in (0,1]. We suggest small values of alpha, e.g. 0.05. The averaging starts from the initial travel time estimates. If not provided, the free-speed TTs is used as the initial estimates For more info see comments in: VrpTravelTimeEstimator, VrpTravelTimeModules, DvrpModule. -->
         <param name="travelTimeEstimationAlpha" value="0.05" />
-        <parameterset type="travelTimeMatrix">
-            <param name="cellSize" value="200"/>
-        </parameterset>
+		<parameterset type="travelTimeMatrix">
+			<parameterset type="SquareGridZoneSystem">
+				<param name="cellSize" value="200"/>
+			</parameterset>
+			<param name="maxNeighborDistance" value="1000"/>
+		</parameterset>
     </module>
 
 </config>
