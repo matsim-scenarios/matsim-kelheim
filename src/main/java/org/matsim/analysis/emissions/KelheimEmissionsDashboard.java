@@ -58,7 +58,7 @@ public class KelheimEmissionsDashboard implements Dashboard{
 
 		String linkDescription = "Displays the emissions for each link per meter. Be aware that emission values are provided in the simulation sample size!";
 		if (pathToCsvBase != null){
-			linkDescription += String.format("\n Base is %s", pathToCsvBase);
+			linkDescription += String.format("%n Base is %s", pathToCsvBase);
 		}
 		String finalLinkDescription = linkDescription;
 
