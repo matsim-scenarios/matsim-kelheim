@@ -102,8 +102,9 @@ public final class DrtStopsWriter extends MatsimXmlWriter {
 				"KEXI_Haltestellen_Liste_Kelheim_utm32n_withLinkIds.csv");
 		Set<Id<Link>> allLinks = new HashSet<>();
 
-		try (CSVParser parser = new CSVParser(IOUtils.getBufferedReader(data),
-				CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
+		CSVFormat.Builder format = CSVFormat.DEFAULT.builder().setDelimiter(';').setHeader().setSkipHeaderRecord(true);
+
+		try (CSVParser parser = new CSVParser(IOUtils.getBufferedReader(data), format.build())) {
 			for (CSVRecord row : parser) {
 				Coord coord = new Coord(Double.parseDouble(row.get("x")), Double.parseDouble(row.get("y")));
 				if (serviceArea == null || MGC.coord2Point(coord).within(serviceArea)) {
