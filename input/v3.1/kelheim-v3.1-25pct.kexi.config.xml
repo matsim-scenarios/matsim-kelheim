@@ -265,11 +265,11 @@
             <param name="transitStopFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-drt-stops.xml"/>
             <!-- Writes out detailed DRT customer stats in each iteration. True by default. -->
             <param name="writeDetailedCustomerStats" value="true"/>
-            <parameterset type="zonalSystem">
-                <param name="zonesGeneration" value="ShapeFile"/>
-                <!--<param name="cellSize" value="200"/>-->
-                <param name="zonesShapeFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/projects/KelRide/AVServiceAreas/input/shp/kelheim-v2.0-drtZonalAnalysisSystem.shp" />
-            </parameterset>
+			<parameterset type="zonalSystem">
+				<parameterset type="SquareGridZoneSystem">
+					<param name="cellSize" value="200"/>
+				</parameterset>
+			</parameterset>
             <!--<parameterset type="rebalancing">
                 <parameterset type="minCostFlowRebalancingStrategy">
                     <param name="targetAlpha" value="0.5"/>
@@ -286,7 +286,10 @@
         <!-- Used for estimation of travel times for VrpOptimizer by means of the exponential moving average. The weighting decrease, alpha, must be in (0,1]. We suggest small values of alpha, e.g. 0.05. The averaging starts from the initial travel time estimates. If not provided, the free-speed TTs is used as the initial estimates For more info see comments in: VrpTravelTimeEstimator, VrpTravelTimeModules, DvrpModule. -->
         <param name="travelTimeEstimationAlpha" value="0.05" />
         <parameterset type="travelTimeMatrix">
-            <param name="cellSize" value="200"/>
+			<parameterset type="SquareGridZoneSystem">
+				<param name="cellSize" value="200"/>
+			</parameterset>
+			<param name="maxNeighborDistance" value="10000"/>
         </parameterset>
     </module>
 
