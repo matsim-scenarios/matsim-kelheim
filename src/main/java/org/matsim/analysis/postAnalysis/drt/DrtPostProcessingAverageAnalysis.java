@@ -111,6 +111,7 @@ public class DrtPostProcessingAverageAnalysis implements MATSimAppCommand {
 		fillAvgMap(supplyStats, supplyAvgs);
 
 //		ordered list of params to display them in same order as in single-run DrtDashboard
+//		TODO: add rides-pax parameter after bumping up matsim version
 		List<String> orderedDemandParams = List.of("Requests", "Rides", "Rides per veh", "Rides per veh-h", "Rides per veh-km", "Rejections",
 			"Rejection rate", "Avg. total travel time", "Avg. in-vehicle time", "Avg. wait time", "95th percentile wait time", "Avg. ride distance [km]",
 			"Avg. direct distance [km]", "Avg. fare [MoneyUnit]");
