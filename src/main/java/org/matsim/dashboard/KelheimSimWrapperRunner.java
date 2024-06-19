@@ -18,7 +18,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.analysis;
+package org.matsim.dashboard;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,10 +26,12 @@ import org.matsim.analysis.emissions.KelheimEmissionsDashboard;
 import org.matsim.application.ApplicationUtils;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.options.ShpOptions;
+import org.matsim.contrib.drt.extension.dashboards.DrtDashboardProvider;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.simwrapper.SimWrapper;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
+import org.matsim.simwrapper.dashboard.NoiseDashboard;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -38,12 +40,12 @@ import java.nio.file.Path;
 import java.util.List;
 
 @CommandLine.Command(
-	name = "emissions",
+	name = "simwrapper",
 	description = "Run emission analysis and create SimWrapper dashboard for existing run output."
 )
-final class CreateEmissionDashboard implements MATSimAppCommand {
+final class KelheimSimWrapperRunner implements MATSimAppCommand {
 
-	private static final Logger log = LogManager.getLogger(CreateEmissionDashboard.class);
+	private static final Logger log = LogManager.getLogger(KelheimSimWrapperRunner.class);
 
 	@CommandLine.Parameters(arity = "1..*", description = "Path to run output directories for which emission dashboards are to be generated.")
 	private List<Path> inputPaths;
@@ -56,11 +58,25 @@ final class CreateEmissionDashboard implements MATSimAppCommand {
 		"Will be used to compare emissions per link.", required = false)
 	private String baseRun;
 
-	private CreateEmissionDashboard(){
+	@CommandLine.Option(names = "--emissions", defaultValue = "false", description = "create emissions dashboard")
+	private boolean emissions;
+
+	@CommandLine.Option(names = "--noise", defaultValue = "false", description = "create noise dashboard")
+	private boolean noise;
+
+	@CommandLine.Option(names = "--drt", defaultValue = "false", description = "create DRT + AV dashboards")
+	private boolean drt;
+
+
+	private KelheimSimWrapperRunner(){
 	}
 
 	@Override
 	public Integer call() throws Exception {
+
+		if (!drt && !emissions && !noise){
+			throw new IllegalArgumentException("you have not configured any dashboard to be created! Use command line parameters!");
+		}
 
 		for (Path runDirectory : inputPaths) {
 			log.info("Running on {}", runDirectory);
@@ -81,10 +97,19 @@ final class CreateEmissionDashboard implements MATSimAppCommand {
 			simwrapperCfg.defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
 			simwrapperCfg.defaultParams().mapCenter = "48.91265,11.89223";
 
-			if (baseRun != null){
-				sw.addDashboard(new KelheimEmissionsDashboard(baseRun));
-			} else {
-				sw.addDashboard(new KelheimEmissionsDashboard());
+			//add dashboards according to command line parameters
+			if (emissions){
+				if (baseRun != null){
+					sw.addDashboard(new KelheimEmissionsDashboard(baseRun));
+				} else {
+					sw.addDashboard(new KelheimEmissionsDashboard());
+				}
+			}
+			if (drt){
+				new DrtDashboardProvider().getDashboards(config, sw).forEach(sw::addDashboard);
+			}
+			if (noise){
+				sw.addDashboard(new NoiseDashboard());
 			}
 
 			try {
@@ -99,7 +124,7 @@ final class CreateEmissionDashboard implements MATSimAppCommand {
 	}
 
 	public static void main(String[] args) {
-		new CreateEmissionDashboard().execute(args);
+		new KelheimSimWrapperRunner().execute(args);
 
 	}
 
