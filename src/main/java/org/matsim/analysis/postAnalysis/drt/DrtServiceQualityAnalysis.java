@@ -8,6 +8,7 @@ import org.apache.commons.math.stat.StatUtils;
 import org.apache.commons.math3.util.Precision;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.geotools.api.feature.simple.SimpleFeature;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.postAnalysis.traffic.TrafficAnalysis;
 import org.matsim.api.core.v01.Coord;
@@ -35,7 +36,6 @@ import org.matsim.utils.gis.shp2matsim.ShpGeometryUtils;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleType;
 import org.matsim.vehicles.VehicleUtils;
-import org.opengis.feature.simple.SimpleFeature;
 import picocli.CommandLine;
 
 import java.io.FileWriter;
