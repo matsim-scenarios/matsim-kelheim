@@ -19,7 +19,7 @@ import java.util.Objects;
 /**
  * class to create average dashboards and run the necessary analysis for that.
  */
-public class CreateAverageDashboards implements MATSimAppCommand {
+final class CreateAverageDashboards implements MATSimAppCommand {
 	@CommandLine.Option(names = "--input-path", required = true, description = "Path to directory with run directories.")
 	private String inputPath;
 	@CommandLine.Option(names = "--no-runs", defaultValue = "5", description = "Number of simulation runs to be averaged.")
