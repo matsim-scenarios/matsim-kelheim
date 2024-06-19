@@ -50,6 +50,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.AbstractModule;
+import org.matsim.core.controler.Injector;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.network.NetworkUtils;
@@ -158,6 +159,10 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 				bind( EmissionModule.class ) ;
 			}
 		};
+
+		com.google.inject.Injector injector = Injector.createInjector(config, module);
+		// Emissions module will be installed to the event handler
+		injector.getInstance(EmissionModule.class);
 
 		EmissionsOnLinkEventHandler emissionsEventHandler = new EmissionsOnLinkEventHandler(3600);
 		eventsManager.addHandler(emissionsEventHandler);
