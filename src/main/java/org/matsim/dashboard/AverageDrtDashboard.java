@@ -39,20 +39,20 @@ public class AverageDrtDashboard implements Dashboard {
 		header.description = "Overview for the demand-responsive mode '" + mode + "'. This dashboard shows average values for " + noRuns +
 			" simulation runs. For the results of the specific runs please choose the according directory next to this dashboard.yaml.";
 
-//		DEMAND
-		layout.row("demand")
+//		SUPPLY
+		layout.row("supply")
 			.el(Table.class, (viz, data) -> {
-				viz.title = "Average demand results";
-				viz.dataset = postProcess(data, "avg_demand_stats.csv");
+				viz.title = "Service summary";
+				viz.dataset = postProcess(data, "avg_supply_stats.csv");
 				viz.showAllRows = true;
 				viz.width = 1.;
 			});
 
-//		SUPPLY
-		layout.row("supply")
+		//		DEMAND
+		layout.row("demand")
 			.el(Table.class, (viz, data) -> {
-				viz.title = "Average service results";
-				viz.dataset = postProcess(data, "avg_supply_stats.csv");
+				viz.title = "Demand summary";
+				viz.dataset = postProcess(data, "avg_demand_stats.csv");
 				viz.showAllRows = true;
 				viz.width = 1.;
 			});
