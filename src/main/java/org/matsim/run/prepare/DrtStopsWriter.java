@@ -5,6 +5,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.geotools.api.feature.simple.SimpleFeature;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -18,7 +19,6 @@ import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.run.RunKelheimScenario;
-import org.opengis.feature.simple.SimpleFeature;
 
 import java.io.FileWriter;
 import java.io.IOException;
