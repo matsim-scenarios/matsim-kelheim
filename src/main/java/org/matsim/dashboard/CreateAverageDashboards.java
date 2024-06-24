@@ -62,7 +62,7 @@ final class CreateAverageDashboards implements MATSimAppCommand {
 
 		Arrays.stream(new File(analysisDir).listFiles())
 			.filter(d -> d.getAbsolutePath().contains(TransportMode.drt))
-			.forEach(f -> modes.add(f.getAbsolutePath().substring(f.getAbsolutePath().lastIndexOf("\\") + 1)));
+			.forEach(f -> modes.add(f.getName()));
 
 		SimWrapper sw = SimWrapper.create();
 
