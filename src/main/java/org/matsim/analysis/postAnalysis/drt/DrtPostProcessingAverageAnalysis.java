@@ -115,7 +115,7 @@ public class DrtPostProcessingAverageAnalysis implements MATSimAppCommand {
 			"Rejections", "Rejection rate", "Avg. total travel time", "Avg. in-vehicle time", "Avg. wait time", "95th percentile wait time", "Avg. ride distance [km]",
 			"Avg. direct distance [km]", "Avg. fare [MoneyUnit]");
 		List<String> orderedSupplyParams = List.of("Number of stops", "Vehicles", "Total vehicle mileage [km]", "Empty ratio", "Total pax distance [km]",
-			"Pooling ratio", "Detour ratio", "Total service hours");
+			"Occupancy rate [pax-km/v-km]", "Detour ratio", "Total service hours");
 
 		writeFile("avg_demand_stats.csv", demandAvgs, orderedDemandParams);
 		writeFile("avg_supply_stats.csv", supplyAvgs, orderedSupplyParams);
