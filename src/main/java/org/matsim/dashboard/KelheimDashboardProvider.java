@@ -6,7 +6,6 @@ import org.matsim.core.utils.io.IOUtils;
 import org.matsim.simwrapper.Dashboard;
 import org.matsim.simwrapper.DashboardProvider;
 import org.matsim.simwrapper.SimWrapper;
-import org.matsim.simwrapper.dashboard.NoiseDashboard;
 import org.matsim.simwrapper.dashboard.TravelTimeComparisonDashboard;
 import org.matsim.simwrapper.dashboard.TripDashboard;
 
@@ -27,8 +26,9 @@ public class KelheimDashboardProvider implements DashboardProvider {
 		return List.of(
 			trips,
 			new TravelTimeComparisonDashboard(IOUtils.resolveFileOrResource( "kelheim-v3.0-routes-ref.csv.gz").toString()),
-			new KelheimEmissionsDashboard(),
-			new NoiseDashboard()
+			new KelheimEmissionsDashboard()
+			//the NoiseAnalysis needs more RAM than the entire simulation, which leads to VM crashes and prevents other analysis to run. We have to run it separately (e.g. with KelheimSimWrapperRunner)
+//			new NoiseDashboard()
 		);
 	}
 
