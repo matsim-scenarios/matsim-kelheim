@@ -34,7 +34,6 @@ import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.dashboard.NoiseDashboard;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -55,7 +54,7 @@ final class KelheimSimWrapperRunner implements MATSimAppCommand {
 
 	@CommandLine.Option(names = "--base", description = "Optional. " +
 		"Relative path (from each! output directory provided) to main output folder for the base MATSim run. " +
-		"Will be used to compare emissions per link.", required = false)
+		"Will be used to compare emissions per link.")
 	private String baseRun;
 
 	@CommandLine.Option(names = "--emissions", defaultValue = "false", description = "create emissions dashboard")
@@ -128,41 +127,4 @@ final class KelheimSimWrapperRunner implements MATSimAppCommand {
 
 	}
 
-	private static void renameExistingDashboardYAMLs(Path runDirectory) {
-		// List of files in the folder
-		File folder = new File(runDirectory.toString());
-		File[] files = folder.listFiles();
-
-		// Loop through all files in the folder
-		if (files != null) {
-			for (File file : files) {
-				if (file.isFile()) {
-					// Check if the file name starts with "dashboard-" and ends with ".yaml"
-					if (file.getName().startsWith("dashboard-") && file.getName().endsWith(".yaml")) {
-						// Get the current file name
-						String oldName = file.getName();
-
-						// Extract the number from the file name
-						String numberPart = oldName.substring(oldName.indexOf('-') + 1, oldName.lastIndexOf('.'));
-
-						// Increment the number by ten
-						int number = Integer.parseInt(numberPart) + 10;
-
-						// Create the new file name
-						String newName = "dashboard-" + number + ".yaml";
-
-						// Create the new File object with the new file name
-						File newFile = new File(file.getParent(), newName);
-
-						// Rename the file
-						if (file.renameTo(newFile)) {
-							log.info("File successfully renamed: " + newName);
-						} else {
-							log.info("Error renaming file: " + file.getName());
-						}
-					}
-				}
-			}
-		}
-	}
 }
