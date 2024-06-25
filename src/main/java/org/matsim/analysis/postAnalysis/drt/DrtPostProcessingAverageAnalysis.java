@@ -17,6 +17,8 @@ import tech.tablesaw.io.csv.CsvReadOptions;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -25,11 +27,7 @@ import static org.matsim.application.ApplicationUtils.globFile;
 @CommandLine.Command(name = "average-drt", description = "Calculates average drt stats based on several sim runs with different random seeds.")
 @CommandSpec(
 	requires = {"runs", "mode"},
-	produces = {"rides_per_veh_avg_demand_stats.csv", "avg_wait_time_avg_demand_stats.csv", "requests_avg_demand_stats.csv", "avg_total_travel_time_avg_demand_stats.csv",
-		"rides_avg_demand_stats.csv", "avg_direct_distance_[km]_avg_demand_stats.csv", "rejections_avg_demand_stats.csv", "95th_percentile_wait_time_avg_demand_stats.csv",
-		"avg_in-vehicle_time_avg_demand_stats.csv", "avg_ride_distance_[km]_avg_demand_stats.csv", "rejection_rate_avg_demand_stats.csv",
-		"avg_fare_[MoneyUnit]_avg_demand_stats.csv", "total_service_hours_avg_supply_stats.csv", "pooling_ratio_avg_supply_stats.csv", "detour_ratio_avg_supply_stats.csv",
-		"total_vehicle_mileage_[km]_avg_supply_stats.csv", "empty_ratio_avg_supply_stats.csv", "number_of_stops_avg_supply_stats.csv", "total_pax_distance_[km]_avg_supply_stats.csv", "vehicles_avg_supply_stats.csv"}
+	produces = {"avg_demand_stats.csv", "avg_supply_stats.csv"}
 )
 public class DrtPostProcessingAverageAnalysis implements MATSimAppCommand {
 
@@ -44,7 +42,6 @@ public class DrtPostProcessingAverageAnalysis implements MATSimAppCommand {
 	private final Map<String, List<Double>> supplyStats = new HashMap<>();
 	private final Map<String, Double[]> demandAvgs = new HashMap<>();
 	private final Map<String, Double[]> supplyAvgs = new HashMap<>();
-	Map<String, List<String>> params = new HashMap<>();
 
 	private final CsvOptions csv = new CsvOptions();
 
@@ -70,11 +67,11 @@ public class DrtPostProcessingAverageAnalysis implements MATSimAppCommand {
 
 			Table demand = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(demandKpiCsv))
 				.sample(false)
-				.separator(csv.detectDelimiter(demandKpiCsv)).build());
+				.separator(CsvOptions.detectDelimiter(demandKpiCsv)).build());
 
 			Table supply = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(supplyKpiCsv))
 				.sample(false)
-				.separator(csv.detectDelimiter(supplyKpiCsv)).build());
+				.separator(CsvOptions.detectDelimiter(supplyKpiCsv)).build());
 
 //			get all demand stats
 			for (int i = 0; i < demand.rowCount(); i++) {
@@ -113,38 +110,30 @@ public class DrtPostProcessingAverageAnalysis implements MATSimAppCommand {
 		fillAvgMap(demandStats, demandAvgs);
 		fillAvgMap(supplyStats, supplyAvgs);
 
-		params.put("avg_demand_stats.csv", List.of("rides_per_veh", "avg_wait_time", "requests", "avg_total_travel_time", "rides", "avg_direct_distance_[km]",
-			"rejections", "95th_percentile_wait_time", "avg_in-vehicle_time", "avg_ride_distance_[km]", "rejection_rate", "avg_fare_[MoneyUnit]"));
-		params.put("avg_supply_stats.csv", List.of("total_service_hours", "pooling_ratio", "detour_ratio", "total_vehicle_mileage_[km]", "empty_ratio", "number_of_stops",
-			"total_pax_distance_[km]", "vehicles"));
+//		ordered list of params to display them in same order as in single-run DrtDashboard
+		List<String> orderedDemandParams = List.of("Handled Requests", "Passengers (Pax)", "Avg Group Size", "Pax per veh", "Pax per veh-h", "Pax per veh-km",
+			"Rejections", "Rejection rate", "Avg. total travel time", "Avg. in-vehicle time", "Avg. wait time", "95th percentile wait time", "Avg. ride distance [km]",
+			"Avg. direct distance [km]", "Avg. fare [MoneyUnit]");
+		List<String> orderedSupplyParams = List.of("Number of stops", "Vehicles", "Total vehicle mileage [km]", "Empty ratio", "Total pax distance [km]",
+			"Occupancy rate [pax-km/v-km]", "Detour ratio", "Total service hours");
 
-		for (Map.Entry<String, List<String>> e : params.entrySet()) {
-			for (String param : params.get(e.getKey())) {
-				if (e.getKey().contains("demand")) {
-					writeFile(e.getKey(), demandAvgs, param);
-				} else {
-					writeFile(e.getKey(), supplyAvgs, param);
-				}
-			}
-		}
+		writeFile("avg_demand_stats.csv", demandAvgs, orderedDemandParams);
+		writeFile("avg_supply_stats.csv", supplyAvgs, orderedSupplyParams);
 
 		return 0;
 	}
 
-	private void writeFile(String fileName, Map<String, Double[]> values, String param) throws IOException {
-		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath(param + "_" + fileName)), CSVFormat.DEFAULT)) {
+	private void writeFile(String fileName, Map<String, Double[]> values, List<String> orderedParams) throws IOException {
+		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath(fileName)), CSVFormat.DEFAULT)) {
+			DecimalFormat df = new DecimalFormat("#,###.##", new DecimalFormatSymbols(Locale.US));
 
-			printer.printRecord("info", value);
+//			as of 19.06.24 min and max values are not printed anymore. they will still be calculated though.
+//			if one wants to include them to dashboard tables one just has to re-include them in this print method. -sme0624
+			printer.printRecord("parameter", "mean", "median", "standard deviation");
 
-			for (Map.Entry<String, Double[]> e : values.entrySet()) {
-				String transformed = e.getKey().toLowerCase().replace(".", "").replace(" ", "_");
-				if (transformed.contains(param)) {
-					printer.printRecord("mean-" + e.getKey(), e.getValue()[0]);
-					printer.printRecord("median-" + e.getKey(), e.getValue()[1]);
-					printer.printRecord("sd-" + e.getKey(), e.getValue()[2]);
-					printer.printRecord("min-" + e.getKey(), e.getValue()[3]);
-					printer.printRecord("max-" + e.getKey(), e.getValue()[4]);
-				}
+
+			for (String param : orderedParams) {
+				printer.printRecord(param, df.format(values.get(param)[0]), df.format(values.get(param)[1]), df.format(values.get(param)[2]));
 			}
 		}
 	}
