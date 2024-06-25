@@ -8,7 +8,7 @@
     <module name="controler">
         <param name="lastIteration" value="1000"/>
         <param name="overwriteFiles" value="failIfDirectoryExists"/>
-        <param name="runId" value="kelheim-v3.1-25pct-kexi"/>
+        <param name="runId" value="kelheim-v3.0-25pct"/>
         <param name="outputDirectory" value="./output/output-kelheim-v3.0-25pct"/>
         <param name="writeEventsInterval" value="250"/>
         <param name="writePlansInterval" value="250"/>
@@ -33,7 +33,7 @@
     </module>
 
     <module name="vehicles">
-        <param name="vehiclesFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-vehicle-types-with-drt.xml"/>
+        <param name="vehiclesFile" value="please provide vehicles file per command line"/>
     </module>
 
     <module name="transit">
@@ -123,12 +123,19 @@
 
     <module name="subtourModeChoice">
         <param name="chainBasedModes" value="car,bike"/>
-        <param name="modes" value="car,pt,bike,walk,ride,drt"/>
+        <param name="modes" value="car,pt,bike,walk,ride,drt,av"/>
         <param name="considerCarAvailability" value="true"/>
         <param name="behavior" value="betweenAllAndFewerConstraints"/>
         <param name="probaForRandomSingleTripMode" value="0.5"/>
 		<param name="coordDistance" value="100"/>
     </module>
+
+	<!--
+    <module name="informedModeChoice">
+        <param name="modes" value="car,ride,pt,bike,walk"/>
+        <param name="topK" value="5"/>
+    </module>
+	-->
 
     <module name="transitRouter">
         <param name="extensionRadius" value="500.0"/>
@@ -164,6 +171,14 @@
                 <param name="marginalUtilityOfDistance_util_m" value="-2.5E-4" /> <!-- need this to fit the KEXI real data (Jan' 2022 - July 2023)-->
                 <param name="marginalUtilityOfTraveling_util_hr" value="0.0" />
                 <param name="mode" value="drt" />
+                <param name="monetaryDistanceRate" value="0.0" />
+            </parameterset>
+
+            <parameterset type="modeParams">
+                <param name="constant" value="0.0" /> <!-- this fits the real AV demand data for 2024 quite well-->
+                <param name="marginalUtilityOfDistance_util_m" value="0.0" /> 
+                <param name="marginalUtilityOfTraveling_util_hr" value="0.0" />
+                <param name="mode" value="av" />
                 <param name="monetaryDistanceRate" value="0.0" />
             </parameterset>
 
@@ -269,6 +284,43 @@
                     <param name="targetBeta" value="0.5"/>
                 </parameterset>-->
 <!--             </parameterset> -->
+        </parameterset>
+        <parameterset type="drt">
+            <param name="mode" value="av"/>
+            <parameterset type="ExtensiveInsertionSearch" >
+                <param name="admissibleBeelineSpeedFactor" value="1.0" />
+                <param name="nearestInsertionsAtEndLimit" value="10" />
+            </parameterset>
+            <!-- If true, the startLink is changed to last link in the current schedule, so the taxi starts the next day at the link where it stopped operating the day before. False by default. -->
+            <param name="changeStartLinkToLastLinkInSchedule" value="false"/>
+            <!-- Defines the slope of the maxTravelTime estimation function (optimisation constraint), i.e. maxTravelTimeAlpha * estimated_drt_travel_time + maxTravelTimeBeta. Alpha should not be smaller than 1. -->
+            <param name="maxTravelTimeAlpha" value="1.5"/>
+            <!-- Defines the shift of the maxTravelTime estimation function (optimisation constraint), i.e. maxTravelTimeAlpha * estimated_drt_travel_time + maxTravelTimeBeta. Beta should not be smaller than 0. -->
+            <param name="maxTravelTimeBeta" value="1200.0"/>
+            <!-- Max wait time for the bus to come (optimisation constraint). -->
+            <param name="maxWaitTime" value="1200.0"/>
+            <!-- Maximum walk distance to next stop location in stationbased system. -->
+            <param name="maxWalkDistance" value="1500.0"/>
+            <param name="rejectRequestIfMaxWaitOrTravelTimeViolated" value="false" />
+            <!-- Operational Scheme, either door2door or stopbased. door2door by default -->
+            <param name="operationalScheme" value="stopbased"/>
+            <!-- Bus stop duration. -->
+            <param name="stopDuration" value="60.0"/>
+            <!-- Stop locations file (transit schedule format, but without lines) for DRT stops. Used only for the stopbased mode -->
+            <param name="transitStopFile" value="please provide AV stops file per command line"/>
+            <!-- Writes out detailed DRT customer stats in each iteration. True by default. -->
+            <param name="writeDetailedCustomerStats" value="true"/>
+            <parameterset type="zonalSystem">
+                <parameterset type="SquareGridZoneSystem">
+				    <param name="cellSize" value="200"/>
+			    </parameterset>
+            </parameterset>
+            <parameterset type="rebalancing">
+                <param name="interval" value="1" />
+                <parameterset type="CustomRebalancingStrategy">
+                <!-- note that av rebalancin gis configured via java run script-->
+                </parameterset>
+            </parameterset>
         </parameterset>
 
     </module>
