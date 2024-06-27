@@ -11,19 +11,19 @@ layout:
         constant:
           source: Simulated
         aggregate:
-          target: share
+          func: SUM
           groupBy:
           - main_mode
-          func: SUM
+          target: share
       kelheimmodeshare:
         file: analysis/resources/kelheim_mode_share.csv
         constant:
           source: Reference
         aggregate:
-          target: share
+          func: SUM
           groupBy:
           - main_mode
-          func: SUM
+          target: share
     traces:
     - x: $dataset.share
       "y": $dataset.source
@@ -39,17 +39,17 @@ layout:
       dataset:
         file: analysis/population/mode_share.csv
         aggregate:
-          target: share
+          func: SUM
           groupBy:
           - dist_group
-          func: SUM
+          target: share
       kelheimmodeshare:
         file: analysis/resources/kelheim_mode_share.csv
         aggregate:
-          target: share
+          func: SUM
           groupBy:
           - dist_group
-          func: SUM
+          target: share
     traces:
     - x: $dataset.dist_group
       "y": $dataset.share

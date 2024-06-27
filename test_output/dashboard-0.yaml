@@ -27,15 +27,15 @@ layout:
         columnName: simulated_traffic_volume
         join: link_id
         colorRamp:
-          ramp: RdYlBu
-          steps: 5
           reverse: true
+          steps: 5
+          ramp: RdYlBu
       fill: {}
       fillHeight: {}
       radius: {}
     shapes:
-      file: analysis/network/network.geojson
       join: id
+      file: analysis/network/network.geojson
     datasets:
       traffic: analysis/traffic/traffic_stats_by_link_daily.csv
   warnings:
@@ -95,9 +95,9 @@ layout:
         file: analysis/general/memory_stats.csv
         pivot:
           namesTo: names
-          valuesTo: values
           exclude:
           - time
+          valuesTo: values
     traces:
     - x: $dataset.time
       "y": $dataset.values
