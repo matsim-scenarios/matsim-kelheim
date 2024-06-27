@@ -1,0 +1,201 @@
+header:
+  title: Travel time
+  description: Comparison of simulated travel times vs. results from routing services.
+layout:
+  first:
+  - type: plotly
+    title: Travel time comparison
+    description: by hour
+    datasets:
+      dataset: analysis/traveltime/travel_time_comparison_by_route.csv
+    traces:
+    - fill: none
+      "y": $dataset.simulated
+      x: $dataset.mean
+      mode: markers
+      whiskerwidth: 0.0
+      type: scatter
+      name: $dataset.hour
+      text: $dataset.from_node
+    layout:
+      xaxis:
+        title: "Observed historical mean speed [km/h]"
+        color: '#444'
+        type: '-'
+      yaxis:
+        title: "Simulated mean speed [km/h]"
+        color: '#444'
+        type: '-'
+    height: 8.0
+    fixedRatio: true
+    interactive: slider
+  - type: plotly
+    title: Avg. Speed
+    description: by hour
+    datasets:
+      dataset: analysis/traveltime/travel_time_comparison_by_hour.csv
+    traces:
+    - fill: none
+      "y": $dataset.mean
+      x: $dataset.hour
+      mode: lines
+      line:
+        width: 2.0
+        smoothing: 1.0
+        shape: linear
+        dash: longdashdot
+        simplify: true
+        context:
+          shape: linear
+          width: 2.0
+          smoothing: 1.0
+          simplify: true
+          dash: longdashdot
+      whiskerwidth: 0.0
+      type: scatter
+      name: Mean
+      original_name: Mean
+    - fill: none
+      "y": $dataset.min
+      x: $dataset.hour
+      mode: lines
+      line:
+        width: 2.0
+        smoothing: 1.0
+        shape: linear
+        dash: dash
+        simplify: true
+        context:
+          shape: linear
+          width: 2.0
+          smoothing: 1.0
+          simplify: true
+          dash: dash
+      whiskerwidth: 0.0
+      type: scatter
+      name: Min
+      original_name: Min
+    - fill: none
+      "y": $dataset.max
+      x: $dataset.hour
+      mode: lines
+      line:
+        width: 2.0
+        smoothing: 1.0
+        shape: linear
+        dash: dash
+        simplify: true
+        context:
+          shape: linear
+          width: 2.0
+          smoothing: 1.0
+          simplify: true
+          dash: dash
+      whiskerwidth: 0.0
+      type: scatter
+      name: Max
+      original_name: Max
+    - fill: none
+      "y": $dataset.simulated
+      x: $dataset.hour
+      mode: lines
+      line:
+        width: 2.0
+        smoothing: 1.0
+        shape: linear
+        dash: solid
+        simplify: true
+        context:
+          shape: linear
+          width: 2.0
+          smoothing: 1.0
+          simplify: true
+          dash: solid
+      whiskerwidth: 0.0
+      type: scatter
+      name: Simulated
+      original_name: Simulated
+    layout:
+      xaxis:
+        title: Hour
+        color: '#444'
+        type: '-'
+      yaxis:
+        title: "Speed [km/h]"
+        color: '#444'
+        type: '-'
+  - type: plotly
+    title: Error and bias
+    description: by hour
+    datasets:
+      dataset: analysis/traveltime/travel_time_comparison_by_hour.csv
+    traces:
+    - fill: none
+      "y": $dataset.abs_error
+      x: $dataset.hour
+      mode: lines
+      line:
+        width: 2.0
+        smoothing: 1.0
+        shape: linear
+        dash: solid
+        simplify: true
+        context:
+          shape: linear
+          width: 2.0
+          smoothing: 1.0
+          simplify: true
+          dash: solid
+      whiskerwidth: 0.0
+      type: scatter
+      name: Mean abs. error
+      original_name: Mean abs. error
+    - fill: none
+      "y": $dataset.std
+      x: $dataset.hour
+      mode: lines
+      line:
+        width: 2.0
+        smoothing: 1.0
+        shape: linear
+        dash: longdashdot
+        simplify: true
+        context:
+          shape: linear
+          width: 2.0
+          smoothing: 1.0
+          simplify: true
+          dash: longdashdot
+      whiskerwidth: 0.0
+      type: scatter
+      name: Ref. std.
+      original_name: Ref. std.
+    - fill: none
+      "y": $dataset.bias
+      x: $dataset.hour
+      mode: lines
+      line:
+        width: 2.0
+        smoothing: 1.0
+        shape: linear
+        dash: solid
+        simplify: true
+        context:
+          shape: linear
+          width: 2.0
+          smoothing: 1.0
+          simplify: true
+          dash: solid
+      whiskerwidth: 0.0
+      type: scatter
+      name: Bias
+      original_name: Bias
+    layout:
+      xaxis:
+        title: Hour
+        color: '#444'
+        type: '-'
+      yaxis:
+        title: "Speed [km/h]"
+        color: '#444'
+        type: '-'
