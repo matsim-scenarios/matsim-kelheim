@@ -17,11 +17,8 @@ library(zoo) #for moving averages
 
 #input files
 
-data_jan_01_apr_24 <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrtanfragen-2024-04-24.csv"
-data_jan_01_apr_24_fahrerschichten <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/Via_data_2024_04_24/Fahrerschichten-2024-04-24.csv"
-
-requests_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_13/Fahrtanfragen-2024-05-13.csv"
-shifts_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_13/Fahrerschichten-2024-05-13.csv"
+requests_file <- "D:/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_06_28/Fahrtanfragen-2024-06-28.csv"
+shifts_file <- "D:/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_06_28/Fahrerschichten-2024-06-28.csv"
 
 #parse data
 data <- read.csv2(requests_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
