@@ -85,7 +85,9 @@ process_folders <- function(main_folder, speed) {
 #############
 
 mainDir <- "D:/Projekte/KelRide/runs/v3.1.1/output-KEXI-2.45-AV--0.0/"
-#mainDir <- "//sshfs.r/schlenther@cluster.math.tu-berlin.de/net/ils/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/"
+
+mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/"
+
 speeds <- list(3.3, 5, 8.3)
 
 results <- list()
@@ -114,26 +116,26 @@ write_csv(transposed_result, paste(mainDir, "results.csv", sep=""))
 ######PLOTS####
 
 # Filtern der Daten für die gewünschten Parameter
-plot_data <- results %>%
-  filter(parameter %in% c("Handled Requests"))
+#plot_data <- results %>%
+#  filter(parameter %in% c("Handled Requests"))
 
-# Erstellen des interaktiven dreidimensionalen Plots
-plot <- plot_ly(plot_data, 
-                x = ~speed, 
-                y = ~fleetSize, 
-                z =  ~mean, 
-                color = ~area, 
-                type = "scatter3d", 
-                mode = "markers",
-                marker = list(size = 5)) %>%
-  add_markers() %>%
-  layout(title = "Handled Requests by speed, area and Fleet Size",
-         scene = list(xaxis = list(title = "Speed"),
-                      yaxis = list(title = "Fleet Size"),
-                      zaxis = list(title = "Handled Requests")))
-
-# Plot anzeigen
-plot
+## Erstellen des interaktiven dreidimensionalen Plots
+#plot <- plot_ly(plot_data, 
+#                x = ~speed, 
+#                y = ~fleetSize, 
+#                z =  ~mean, 
+#                color = ~area, 
+#                type = "scatter3d", 
+#                mode = "markers",
+#                marker = list(size = 5)) %>%
+#  add_markers() %>%
+#  layout(title = "Handled Requests by speed, area and Fleet Size",
+#         scene = list(xaxis = list(title = "Speed"),
+#                      yaxis = list(title = "Fleet Size"),
+#                      zaxis = list(title = "Handled Requests")))
+#
+## Plot anzeigen
+#plot
 
 # Erstellen des interaktiven dreidimensionalen Plots mit Mesh
 plot <- plot_ly(plot_data) %>%
@@ -153,38 +155,38 @@ plot <- plot_ly(plot_data) %>%
 # Plot anzeigen
 plot
 
-mesh_data <- plot_data %>%
-  group_by(area) %>%
-  summarise(speed = mean(speed),
-            fleetSize = mean(fleetSize),
-            mean = mean(mean)) %>%
-  arrange(area)
+#mesh_data <- plot_data %>%
+#  group_by(area) %>%
+#  summarise(speed = mean(speed),
+#            fleetSize = mean(fleetSize),
+#            mean = mean(mean)) %>%
+#  arrange(area)
 
-# Erstellen des interaktiven dreidimensionalen Plots mit Meshes für jede Area
-plot <- plot_ly(plot_data) %>%
-  add_trace(x = ~speed, 
-            y = ~fleetSize, 
-            z = ~mean,
-            color = ~area,
-            type = "scatter3d",
-            mode = "markers",
-            marker = list(size = 5)) %>%
-  add_trace(data = mesh_data,
-            x = ~speed,
-            y = ~fleetSize,
-            z = ~mean,
-            color = ~area,
-            type = "mesh3d",
-            opacity = 0.6,  # Opazität der Flächen
-            colorscale = "Viridis",  # Farbskala für die Flächen
-            showscale = TRUE) %>%
-  layout(title = "Handled Requests by speed, fleetSize and area",
-         scene = list(xaxis = list(title = "Speed"),
-                      yaxis = list(title = "Fleet Size"),
-                      zaxis = list(title = "Mean Handled Requests")))
+## Erstellen des interaktiven dreidimensionalen Plots mit Meshes für jede Area
+#plot <- plot_ly(plot_data) %>%
+#  add_trace(x = ~speed, 
+#            y = ~fleetSize, 
+#            z = ~mean,
+#            color = ~area,
+#            type = "scatter3d",
+#            mode = "markers",
+#            marker = list(size = 5)) %>%
+#  add_trace(data = mesh_data,
+#            x = ~speed,
+#            y = ~fleetSize,
+#           z = ~mean,
+#            color = ~area,
+#            type = "mesh3d",
+#            opacity = 0.6,  # Opazität der Flächen
+#            colorscale = "Viridis",  # Farbskala für die Flächen
+#            showscale = TRUE) %>%
+#  layout(title = "Handled Requests by speed, fleetSize and area",
+#         scene = list(xaxis = list(title = "Speed"),
+#                      yaxis = list(title = "Fleet Size"),
+#                      zaxis = list(title = "Mean Handled Requests")))
 
-# Plot anzeigen
-plot
+## Plot anzeigen
+#plot
 
 
 ###########################
@@ -256,7 +258,9 @@ plotByConfiguration("Pax per veh-km")
     geom_point(size = 3
                #,aes(shape = as.factor(intermodal))
                ) +
-    facet_wrap(~ speed, scales = "free") +
+    facet_wrap(~ speed
+               #, scales = "free"
+               ) +
     labs(title = "Handled Requests by Avg. Wait Time, Speed, Area, and All Day",
          x = "Avg. Wait Time",
          y = "Handled Requests",
