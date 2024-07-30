@@ -18,7 +18,7 @@ public class RunDrtEstimModel {
 
 	public static void main(String[] args) throws IOException {
 
-		Path filePath = Path.of("input/v3.0-release/output-KEXI-adequate-vehicles/seed-1-adequate-vehicles/kexi-seed1-adequate-vehicles.output_drt_legs_drt.csv");
+		Path filePath = Path.of("/Users/jakob/git/matsim-kelheim/input/v3.0-release/output-KEXI/seed-1-kexi/kexi-seed1.output_drt_legs_drt.csv");
 
 		DoubleList inVehicleTravelTime = new DoubleArrayList();
 		DoubleList directTravelDistance_m = new DoubleArrayList();
@@ -35,7 +35,7 @@ public class RunDrtEstimModel {
 				n++;
 				waitTimeSum += Double.parseDouble(record.get("waitTime"));
 				inVehicleTravelTime.add(Double.parseDouble(record.get("inVehicleTravelTime")));
-				directTravelDistance_m.add(Double.parseDouble(record.get("directTravelDistance_m")));
+				directTravelDistance_m.add(Double.parseDouble(record.get("travelDistance_m")));
 			}
 		}
 		double waitTime_s = waitTimeSum / n;

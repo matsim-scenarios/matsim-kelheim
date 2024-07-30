@@ -83,8 +83,11 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
+
+//run --1pct --with-drt --accessibility --config input/v3.1/kelheim-v3.1-25pct.kexi.config.xml
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
@@ -262,10 +265,12 @@ public class RunKelheimScenario extends MATSimApplication {
 			accConfig.setTileSize_m((int) tileSize);
 			accConfig.setTimeOfDay(15.5 * 60 * 60.);
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.walk, false);
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
 //			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // ??
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, false); // works
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
+
 		}
 
 		// Config is always needed
@@ -481,9 +486,9 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		if (acc) {
-			final AccessibilityModule moduleTrain = new AccessibilityModule();
-			moduleTrain.setConsideredActivityType("train station");
-			controler.addOverridingModule(moduleTrain);
+//			final AccessibilityModule moduleTrain = new AccessibilityModule();
+//			moduleTrain.setConsideredActivityType("train station");
+//			controler.addOverridingModule(moduleTrain);
 
 			final AccessibilityModule moduleHosp = new AccessibilityModule();
 			moduleHosp.setConsideredActivityType("hospital");
