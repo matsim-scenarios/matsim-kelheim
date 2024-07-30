@@ -51,7 +51,6 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 	@CommandLine.Option(names = "--no-runs", defaultValue = "5", description = "Number of simulation runs to be averaged.")
 	private Integer noRuns;
 
-	private final CsvOptions csv = new CsvOptions();
 	private static final String ANALYSIS_DIR = "/analysis/noise";
 	private static final String LINK_ID = "Link Id";
 	private static final String VALUE = "value";
@@ -65,6 +64,11 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 		new NoiseAverageAnalysis().execute(args);
 	}
 
+	public NoiseAverageAnalysis() {
+//		constructor needed for test only.. otherwise the read and write methods of this class would have to be copied, which is ugly. -sme0624
+
+	}
+
 	@Override
 	public Integer call() throws Exception {
 		String runs = input.getPath("runs");
@@ -76,13 +80,13 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 			final Path analysisDir = Path.of(folder + ANALYSIS_DIR);
 			String emissionsCsv = globFile(analysisDir, "*emission_per_day.csv*").toString();
 			String imissionsPerDayAvro = globFile(analysisDir, "*immission_per_day.avro*").toString();
-			String imissionsPerHourAvro = globFile(analysisDir, "*immission_per_day.avro*").toString();
+			String imissionsPerHourAvro = globFile(analysisDir, "*immission_per_hour.avro*").toString();
 
 //			read
 			Table emissions = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(emissionsCsv))
 				.columnTypesPartial(Map.of(LINK_ID, ColumnType.STRING, VALUE, ColumnType.DOUBLE))
 				.sample(false)
-				.separator(csv.detectDelimiter(emissionsCsv)).build());
+				.separator(CsvOptions.detectDelimiter(emissionsCsv)).build());
 
 //			read avro file
 			readAvroFile(imissionsPerDayAvro, imissionsPerDay);
@@ -128,7 +132,10 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 		return 0;
 	}
 
-	private void writeAvro(XYTData xytData, File outputFile) {
+	/**
+	 * write an .avro file containing immission data.
+	 */
+	public void writeAvro(XYTData xytData, File outputFile) {
 		DatumWriter<XYTData> datumWriter = new SpecificDatumWriter<>(XYTData.class);
 		try (DataFileWriter<XYTData> dataFileWriter = new DataFileWriter<>(datumWriter)) {
 			dataFileWriter.setCodec(CodecFactory.deflateCodec(9));
@@ -148,6 +155,7 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 
 		for (GenericRecord genericRecord: recordList) {
 
+//			for every record: 0 crs, 1 xCoords, 2 yCoords, 3 timeStamps, 4 actual immission data
 			String object0 = genericRecord.get(0).toString();
 			Object object1 = genericRecord.get(1);
 			Object object2 = genericRecord.get(2);
@@ -225,7 +233,10 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 		}
 	}
 
-	private void readAvroFile(String input, List<GenericRecord> target) {
+	/**
+	 * read an .avro file containing immissions.
+	 */
+	public void readAvroFile(String input, List<GenericRecord> target) {
 		try {
 			// Read the schema from the Avro file
 			FileReader<GenericRecord> fileReader = DataFileReader.openReader(new File(input), new GenericDatumReader<>());
