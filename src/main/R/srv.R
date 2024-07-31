@@ -16,7 +16,7 @@ theme_set(theme_Publication(18))
 levels <- c("0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+")
 breaks <- c(0, 1000, 2000, 5000, 10000, 20000, Inf)
 
-shape <- st_read("../../../input/shp/dilutionArea.shp", crs=25832)
+shape <- st_read("../../../scenarios/shp/dilutionArea.shp", crs=25832)
 
 #########
 # Read simulation data

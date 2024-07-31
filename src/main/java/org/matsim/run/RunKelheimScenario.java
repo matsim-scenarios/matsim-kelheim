@@ -136,7 +136,7 @@ public class RunKelheimScenario extends MATSimApplication {
 	}
 
 	public RunKelheimScenario() {
-		super(String.format("input/v%s/kelheim-v%s-config.xml", VERSION, VERSION));
+		super(String.format("scenarios/v%s/kelheim-v%s-config.xml", VERSION, VERSION));
 	}
 
 	public static void main(String[] args) {

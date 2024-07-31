@@ -73,7 +73,7 @@ input/sumo.net.xml: input/network.osm
 	 --osm-files $< -o=$@
 
 
-input/$V/kelheim-$V-network.xml.gz: input/sumo.net.xml
+scenarios/$V/kelheim-$V-network.xml.gz: input/sumo.net.xml
 	$(sc) prepare network-from-sumo $<\
 	 --output $@
 
@@ -82,7 +82,7 @@ input/$V/kelheim-$V-network.xml.gz: input/sumo.net.xml
 	 --network $@\
 	 --output $@
 
-input/$V/kelheim-$V-network-with-pt.xml.gz: input/$V/kelheim-$V-network.xml.gz
+scenarios/$V/kelheim-$V-network-with-pt.xml.gz: input/$V/kelheim-$V-network.xml.gz
 	$(sc) prepare transit-from-gtfs --network $<\
 	 --name kelheim-$V --date "2021-08-18" --target-crs $(CRS) \
 	 --output input/$V\
@@ -102,7 +102,7 @@ input/freight-trips.xml.gz: input/$V/kelheim-$V-network.xml.gz
 	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)\
 	 --output $@
 
-input/$V/kelheim-$V-25pct.plans-initial.xml.gz: input/freight-trips.xml.gz input/$V/kelheim-$V-network.xml.gz
+scenarios/$V/kelheim-$V-25pct.plans-initial.xml.gz: input/freight-trips.xml.gz scenarios/$V/kelheim-$V-network.xml.gz
 	$(sc) prepare trajectory-to-plans\
 	 --name prepare --sample-size 0.25\
 	 --max-typical-duration 0\
@@ -141,11 +141,11 @@ input/$V/kelheim-$V-25pct.plans-initial.xml.gz: input/freight-trips.xml.gz input
     	 --samples 0.1 0.01\
 
 
-check: input/$V/kelheim-$V-25pct.plans-initial.xml.gz
+check: scenarios/$V/kelheim-$V-25pct.plans-initial.xml.gz
 	$(sc) analysis check-population $<\
  	 --input-crs $(CRS)\
  	 --shp ../shared-svn/projects/KelRide/matsim-input-files/20211217_kelheim/20211217_kehlheim/kehlheim.shp --shp-crs $(CRS)
 
 # Aggregated target
-prepare: input/$V/kelheim-$V-25pct.plans-initial.xml.gz input/$V/kelheim-$V-network-with-pt.xml.gz
+prepare: scenarios/$V/kelheim-$V-25pct.plans-initial.xml.gz scenarios/$V/kelheim-$V-network-with-pt.xml.gz
 	echo "Done"

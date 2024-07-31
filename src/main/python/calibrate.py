@@ -29,8 +29,8 @@ target = {
     "ride": 0.17    
 }
 
-city = gpd.read_file("../input/shp/dilutionArea.shp").set_crs("EPSG:25832")
-homes = pd.read_csv("../input/v3.0/kelheim-v3.0-homes.csv", dtype={"person": "str"})
+city = gpd.read_file("../scenarios/shp/dilutionArea.shp").set_crs("EPSG:25832")
+homes = pd.read_csv("../scenarios/v3.0/kelheim-v3.0-homes.csv", dtype={"person": "str"})
 
 def f(persons):
     persons = pd.merge(persons, homes, how="inner", left_on="person", right_on="person")

@@ -15,7 +15,7 @@ public class RunKelheimIntegrationTest {
 
 	@Test
 	public final void runExamplePopulationTest() {
-		Config config = ConfigUtils.loadConfig("input/test.config.xml");
+		Config config = ConfigUtils.loadConfig("scenarios/test/test.config.xml");
 		config.controller().setLastIteration(1);
 		config.global().setNumberOfThreads(1);
 		config.qsim().setNumberOfThreads(1);
@@ -29,7 +29,7 @@ public class RunKelheimIntegrationTest {
 
 	@Test
 	public final void runDrtExamplePopulationTest() {
-		Config config = ConfigUtils.loadConfig("input/test.with-drt.config.xml");
+		Config config = ConfigUtils.loadConfig("scenarios/test/test.with-drt.config.xml");
 		config.controller().setLastIteration(1);
 		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
 

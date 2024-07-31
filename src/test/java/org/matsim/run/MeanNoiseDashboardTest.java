@@ -43,12 +43,12 @@ class MeanNoiseDashboardTest {
 
 		String networkPath = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-network.xml.gz";
 		String crs = "EPSG:25832";
-		String path = utils.getInputDirectory();
+		String outputpath = utils.getOutputDirectory();
 		NoiseAverageAnalysis analysis = new NoiseAverageAnalysis();
 
 		List<String> foldersSeeded = new ArrayList<>();
 
-		new CreateGeoJsonNetwork().execute(List.of("--network", networkPath, "--with-properties", "--shp", "./input/shp/dilutionArea.shp", "--output-network", path + "1seed/analysis/network/network.geojson",
+		new CreateGeoJsonNetwork().execute(List.of("--network", networkPath, "--with-properties", "--shp", "./scenarios/shp/dilutionArea.shp", "--output-network", outputpath + "1seed/analysis/network/network.geojson",
 			"--input-crs", "EPSG:25832").toArray(new String[0]));
 
 //		write dummy data
@@ -67,7 +67,7 @@ class MeanNoiseDashboardTest {
 
 			data.put("imissions", List.of((float) i));
 
-			String seedDir = path + i + "seed/";
+			String seedDir = outputpath + i + "seed/";
 			foldersSeeded.add(seedDir);
 
 //			write avro dummy files
@@ -86,17 +86,17 @@ class MeanNoiseDashboardTest {
 		sw.getConfigGroup().defaultParams().mapCenter = "11.89,48.91";
 		sw.addDashboard(Dashboard.customize(new AverageKelheimNoiseDashboard(foldersSeeded, 3)).context("noise"));
 		try {
-			sw.generate(Path.of(path), true);
+			sw.generate(Path.of(outputpath), true);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		sw.run(Path.of(path));
+		sw.run(Path.of(outputpath));
 
 //		assert that: a) mean immission is 2.0 on daily and hourly data b) hourly data has timestamp 28800 c) mean emission is 2.0
 		List<GenericRecord> daily = new ArrayList<>();
 		List<GenericRecord> hourly = new ArrayList<>();
-		analysis.readAvroFile(path + "analysis/postAnalysis-noise/mean_immission_per_day.avro", daily);
-		analysis.readAvroFile(path + "analysis/postAnalysis-noise/mean_immission_per_hour.avro", hourly);
+		analysis.readAvroFile(outputpath + "analysis/postAnalysis-noise/mean_immission_per_day.avro", daily);
+		analysis.readAvroFile(outputpath + "analysis/postAnalysis-noise/mean_immission_per_hour.avro", hourly);
 
 		if (daily.getFirst().get(4) instanceof HashMap<?, ?>) {
 			Map.Entry<?, ?> entry = ((HashMap<?, ?>) daily.getFirst().get(4)).entrySet().stream().toList().getFirst();
@@ -119,10 +119,10 @@ class MeanNoiseDashboardTest {
 			Assertions.assertEquals(28800, timeStamp);
 		}
 
-		Table emissions = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(path + "analysis/postAnalysis-noise/mean_emission_per_day.csv"))
+		Table emissions = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(outputpath + "analysis/postAnalysis-noise/mean_emission_per_day.csv"))
 			.columnTypesPartial(Map.of("Link Id", ColumnType.STRING, "value", ColumnType.DOUBLE))
 			.sample(false)
-			.separator(CsvOptions.detectDelimiter(path + "analysis/postAnalysis-noise/mean_emission_per_day.csv")).build());
+			.separator(CsvOptions.detectDelimiter(outputpath + "analysis/postAnalysis-noise/mean_emission_per_day.csv")).build());
 
 		String linkId = emissions.row(0).getString("Link Id");
 		double emission = emissions.row(0).getDouble("value");
