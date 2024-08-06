@@ -197,6 +197,11 @@ plotByConfiguration <- function(parameterStr){
     filter(parameter == parameterStr,
            intermodal == TRUE | area == "SAR2023")
   
+  # Funktion zum Anpassen der Facet-Labels
+  label_function <- function(value) {
+    paste(value, "m/s")
+  }
+  
   # Erstellen des Facet-Plots
   ggplot(plot_data, aes(x = fleetSize, y = mean, color = area, linetype = as.factor(allDay), group = interaction(area, allDay))) +
     geom_line(size = 1.2) +
@@ -204,7 +209,8 @@ plotByConfiguration <- function(parameterStr){
                #aes(shape = as.factor(intermodal))
                ) +
     facet_wrap(~ speed,
-               scales = "free"
+               labeller = labeller(speed = label_function)
+               ,scales = "free"
                ) +
     labs(title = paste(parameterStr, "by Fleet Size, Speed, Area and Service Hours"),
          x = "Fleet Size",
@@ -213,7 +219,7 @@ plotByConfiguration <- function(parameterStr){
          linetype = "All Day"
          #,shape = "Intermodal"
          ) +
-    theme_dark() +
+    #theme_dark() +
     theme(
       plot.title = element_text(size = 16, face = "bold"),  # Titelgröße anpassen
       axis.title.x = element_text(size = 14),  # X-Achsentitelgröße anpassen
@@ -226,7 +232,7 @@ plotByConfiguration <- function(parameterStr){
   
 }
 
-unique(results$parameter)
+#unique(results$parameter)
 plotByConfiguration("Handled Requests")
 plotByConfiguration("Avg. wait time")
 plotByConfiguration("Avg. ride distance [km]")
