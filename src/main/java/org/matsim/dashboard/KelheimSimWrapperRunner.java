@@ -89,7 +89,6 @@ final class KelheimSimWrapperRunner implements MATSimAppCommand {
 
 			SimWrapperConfigGroup simwrapperCfg = ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class);
 			if (shp.isDefined()){
-				//not sure if this is the best way to go, might be that the shape file would be automatically read by providing the --shp command line option
 				simwrapperCfg.defaultParams().shp = shp.getShapeFile().toString();
 			}
 			//skip default dashboards
