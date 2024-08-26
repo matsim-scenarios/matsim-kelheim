@@ -67,6 +67,9 @@ final class KelheimSimWrapperRunner implements MATSimAppCommand {
 	@CommandLine.Option(names = "--drt", defaultValue = "false", description = "create DRT + AV dashboards")
 	private boolean drt;
 
+	@CommandLine.Option(names = "--standard-dashboards", defaultValue = "false", description = "create standard dashboards (overview, trips...)")
+	private boolean standard;
+
 
 	private KelheimSimWrapperRunner(){
 	}
@@ -93,8 +96,12 @@ final class KelheimSimWrapperRunner implements MATSimAppCommand {
 				//not sure if this is the best way to go, might be that the shape file would be automatically read by providing the --shp command line option
 				simwrapperCfg.defaultParams().shp = shp.getShapeFile().toString();
 			}
-			//skip default dashboards
-			simwrapperCfg.defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
+
+			if (!standard) {
+				//skip default dashboards
+				simwrapperCfg.defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
+			}
+
 			simwrapperCfg.defaultParams().mapCenter = "48.91265,11.89223";
 
 			//add dashboards according to command line parameters
