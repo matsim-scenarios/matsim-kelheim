@@ -31,7 +31,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.simwrapper.SimWrapper;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
-import org.matsim.simwrapper.dashboard.NoiseDashboard;
+import org.matsim.simwrapper.dashboard.*;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -97,7 +97,14 @@ final class KelheimSimWrapperRunner implements MATSimAppCommand {
 				simwrapperCfg.defaultParams().shp = shp.getShapeFile().toString();
 			}
 
-			if (!standard) {
+			if (standard) {
+				simwrapperCfg.defaultDashboards = SimWrapperConfigGroup.Mode.enabled;
+				sw.addDashboard(new OverviewDashboard());
+				sw.addDashboard(new TripDashboard("kelheim_mode_share.csv", "kelheim_mode_share_per_dist.csv", null));
+				sw.addDashboard(new TrafficDashboard());
+				sw.addDashboard(new TrafficCountsDashboard());
+				sw.addDashboard(new StuckAgentDashboard());
+			} else {
 				//skip default dashboards
 				simwrapperCfg.defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
 			}
