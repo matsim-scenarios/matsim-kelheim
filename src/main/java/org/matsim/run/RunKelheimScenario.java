@@ -83,13 +83,13 @@ import java.util.SplittableRandom;
 public class RunKelheimScenario extends MATSimApplication {
 
 	public static final String VERSION = "3.1";
-	private static final double WEIGHT_1_PASSENGER = 16517.;
-	private static final double WEIGHT_2_PASSENGER = 2084.;
-	private static final double WEIGHT_3_PASSENGER = 532.;
-	private static final double WEIGHT_4_PASSENGER = 163.;
-	private static final double WEIGHT_5_PASSENGER = 20.;
-	private static final double WEIGHT_6_PASSENGER = 5.;
-	private static final double WEIGHT_7_PASSENGER = 0.;
+	private static final double WEIGHT_1_PASSENGER = 22235.;
+	private static final double WEIGHT_2_PASSENGER = 2850.;
+	private static final double WEIGHT_3_PASSENGER = 752.;
+	private static final double WEIGHT_4_PASSENGER = 233.;
+	private static final double WEIGHT_5_PASSENGER = 28.;
+	private static final double WEIGHT_6_PASSENGER = 18.;
+	private static final double WEIGHT_7_PASSENGER = 1.;
 	private static final double WEIGHT_8_PASSENGER = 0.;
 	@CommandLine.Mixin
 	private final SampleOptions sample = new SampleOptions(25, 10, 1);
