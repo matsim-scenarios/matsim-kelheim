@@ -1,11 +1,13 @@
 package org.matsim.dashboard;
 
 import com.univocity.parsers.common.input.EOFException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.application.options.CsvOptions;
-import org.matsim.vehicles.MatsimVehicleReader;
-import org.matsim.vehicles.VehicleUtils;
-import org.matsim.vehicles.Vehicles;
+import org.matsim.contrib.dvrp.fleet.FleetReader;
+import org.matsim.contrib.dvrp.fleet.FleetSpecification;
+import org.matsim.contrib.dvrp.fleet.FleetSpecificationImpl;
 import org.w3c.dom.Comment;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -13,6 +15,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import picocli.CommandLine;
 import tech.tablesaw.api.DoubleColumn;
+import tech.tablesaw.api.IntColumn;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.csv.CsvReadOptions;
 
@@ -40,6 +43,8 @@ import static org.matsim.application.ApplicationUtils.globFile;
 	description = "Adapt run output from a v2 kelheim sim run, such that standard dashboards can be created for the run."
 )
 public class AdaptV2OutputFiles implements MATSimAppCommand {
+
+	private static final Logger log = LogManager.getLogger(AdaptV2OutputFiles.class);
 
 	@CommandLine.Option(names = "--runDir", description = "Path of V2 run directory with files to adapt.", required = true)
 	private String dir;
@@ -112,14 +117,12 @@ public class AdaptV2OutputFiles implements MATSimAppCommand {
 			}
 
 			if (!vehicleStats.containsColumn("totalServiceDuration")) {
-
-				Vehicles vehicles = VehicleUtils.createVehiclesContainer();
-				MatsimVehicleReader.VehicleReader vehicleReader = new MatsimVehicleReader.VehicleReader(vehicles);
-
-				vehicleReader.readFile(globFile(Path.of(dir), "*" + k + "_vehicles.xml").toString());
+				FleetSpecification fleet = new FleetSpecificationImpl();
+				new FleetReader(fleet).readFile(globFile(Path.of(dir), "*" + k + "_vehicles.xml*").toString());
 
 				AtomicReference<Double> serviceDuration = new AtomicReference<>(0.);
-				vehicles.getVehicles().values().forEach(veh -> serviceDuration.updateAndGet(v1 -> v1 + (Double) veh.getAttributes().getAttribute("t_1") - (Double) veh.getAttributes().getAttribute("t_0")));
+
+				fleet.getVehicleSpecifications().values().forEach(veh -> serviceDuration.updateAndGet(v1 -> v1 + veh.getServiceEndTime() - veh.getServiceBeginTime()));
 
 				double[] values = new double[vehicleStats.rowCount()];
 				Arrays.fill(values, serviceDuration.get());
@@ -146,8 +149,8 @@ public class AdaptV2OutputFiles implements MATSimAppCommand {
 
 			if (!customerStats.containsColumn("rides_pax") || !customerStats.containsColumn("groupSize_mean")) {
 				if (customerStats.containsColumn("rides")) {
-					DoubleColumn rides = customerStats.doubleColumn("rides");
-					DoubleColumn ridesPax = rides.copy().setName("rides_pax");
+					IntColumn rides = customerStats.intColumn("rides");
+					IntColumn ridesPax = rides.copy().setName("rides_pax");
 					customerStats.addColumns(ridesPax);
 				}
 				double[] defaultValues = new double[customerStats.rowCount()];
@@ -226,6 +229,9 @@ public class AdaptV2OutputFiles implements MATSimAppCommand {
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
 			}
+		} else {
+			log.warn("File {} was not copied to target path {}. Please check if file already exists in target dir, the input file exists and the input file is not a directory."
+				, inputFile.getAbsolutePath(), targetPath);
 		}
 	}
 }
