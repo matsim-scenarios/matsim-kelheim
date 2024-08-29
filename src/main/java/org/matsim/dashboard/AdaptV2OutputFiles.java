@@ -8,10 +8,7 @@ import org.matsim.application.options.CsvOptions;
 import org.matsim.contrib.dvrp.fleet.FleetReader;
 import org.matsim.contrib.dvrp.fleet.FleetSpecification;
 import org.matsim.contrib.dvrp.fleet.FleetSpecificationImpl;
-import org.w3c.dom.Comment;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 import picocli.CommandLine;
 import tech.tablesaw.api.DoubleColumn;
@@ -172,6 +169,8 @@ public class AdaptV2OutputFiles implements MATSimAppCommand {
 		Document doc = dBuilder.parse(inputConfigFile);
 		doc.getDocumentElement().normalize();
 
+		DocumentType doctype = doc.getDoctype();
+
 		NodeList moduleList = doc.getElementsByTagName("module");
 		for (int i = 0; i < moduleList.getLength(); i++) {
 			Element moduleElement = (Element) moduleList.item(i);
@@ -216,6 +215,9 @@ public class AdaptV2OutputFiles implements MATSimAppCommand {
 
 		TransformerFactory transformerFactory = TransformerFactory.newInstance();
 		Transformer transformer = transformerFactory.newTransformer();
+
+		transformer.setOutputProperty(OutputKeys.DOCTYPE_SYSTEM, doctype.getSystemId());
+
 		DOMSource source = new DOMSource(doc);
 		StreamResult result = new StreamResult(inputConfigFile);
 		transformer.setOutputProperty(OutputKeys.INDENT, "no");
