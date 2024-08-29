@@ -15,6 +15,7 @@ import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.IntColumn;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.csv.CsvReadOptions;
+import tech.tablesaw.io.csv.CsvWriteOptions;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -126,9 +127,11 @@ public class AdaptV2OutputFiles implements MATSimAppCommand {
 
 				DoubleColumn totalServiceDuration = DoubleColumn.create("totalServiceDuration", values);
 				vehicleStats.addColumns(totalServiceDuration);
-
-				vehicleStats.write().csv(vehicleStatsFile);
 			}
+
+			vehicleStats.write().csv(CsvWriteOptions.builder(vehicleStatsFile)
+				.separator(';')
+				.build());
 		});
 
 //		add rides_pax and dummy groupSize_mean columns to customer stats file
@@ -155,9 +158,11 @@ public class AdaptV2OutputFiles implements MATSimAppCommand {
 				Arrays.fill(defaultValues, -1);
 				DoubleColumn groupSizeMean = DoubleColumn.create("groupSize_mean", defaultValues);
 				customerStats.addColumns(groupSizeMean);
-
-				customerStats.write().csv(customerStatsFile);
 			}
+
+			customerStats.write().csv(CsvWriteOptions.builder(customerStatsFile)
+				.separator(';')
+				.build());
 		});
 
 		return 0;
