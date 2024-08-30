@@ -16,16 +16,16 @@ library(zoo) #for moving averages
 #### read data.
 
 #input files
-requests_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_22/Fahrtanfragen-2024-05-22.csv"
-shifts_file <- "D:/svn/shared-svn/projects/KelRide/data/KEXI/VIA_data_2024_05_22/Fahrerschichten-2024-05-22.csv"
+requests_file <- "D:/shared-svn/projects/KelRide/data/KEXI/VIA_data/raw-data/Fahrtanfragen.csv"
+shifts_file <- "D:/shared-svn/projects/KelRide/data/KEXI/VIA_data/raw-data/Fahrerschichten.csv"
 
 #parse data
-data <- read.csv2(requests_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
+data <- read.csv2(requests_file, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8")
 #data_fahrerschichten  <- read.csv2(shifts_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
 #  mutate(time = ymd_hms(Datum),
 #         date = date(time))
 
-data_fahrerschichten <- read.csv2(shifts_file, sep = ",", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
+data_fahrerschichten <- read.csv2(shifts_file, sep = ";", stringsAsFactors = FALSE, header = TRUE, encoding = "UTF-8") %>% 
   mutate(Start = ymd_hms(Schichtstart),
          Ende = ymd_hms(Schichtende),
          Dauer_h = as.numeric(Ende - Start, units="hours"),

@@ -1,7 +1,7 @@
 library(sf)
 library(matsim)
-
-
+library(tidyverse)
+library(plotly)
 
 drtArea <- st_read("D:/public-svn/matsim/scenarios/countries/de/kelheim/shp/prepare-network/av-and-drt-area.shp")
 
@@ -20,7 +20,9 @@ largeAV_filtered <- largeAVTrips %>%
 
 
 #base
-plot_mainmode_piechart(base_filtered)
+p <- plot_mainmode_piechart(base_filtered)
+p2 <- p %>% layout(title = "Base Case")
+p2
 
 #base vs KEXI
 plot_compare_mainmode_barchart(base_filtered, kexi_filtered)
@@ -33,4 +35,4 @@ plot_compare_mainmode_barchart(base_filtered, largeAV_filtered)
 plot_compare_mainmode_sankey(base_filtered, largeAV_filtered, show_onlychanges = TRUE)
 plot_mainmode_piechart(largeAV_filtered)
 
-
+matsim::plot_map_trips(kexi_filtered, crs = 25832)
