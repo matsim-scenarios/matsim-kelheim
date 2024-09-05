@@ -67,6 +67,7 @@ process_folders <- function(main_folder) {
 #############
 
 mainDir <- "D:/Projekte/KelRide/runs/v3.0.1-fare-experiments/output-KEXI-kexi"
+mainDir <- "E:/matsim-kelheim/v3.0.1-fare-experiments/output-KEXI-kexi/"
 
 #speeds <- list(3.3, 5, 8.3)
 #results <- list()
@@ -95,6 +96,11 @@ write_csv(transposed_result, paste(mainDir, "results.csv", sep=""))
 
 
 
+save <- function(fileName){
+  ggsave(filename = paste(mainDir, "plots/", fileName, ".png", sep = ""),
+         dpi = 600, width = 32, height = 18, units = "cm")
+}
+
 
 ###########################
 plotByConfiguration <- function(parameterStr){
@@ -119,27 +125,26 @@ plotByConfiguration <- function(parameterStr){
          #linetype = "All Day"
          #,shape = "Intermodal"
     ) +
-    theme_dark() +
+    #theme_dark() +
     theme(
-      plot.title = element_text(size = 16, face = "bold"),  # Titelgröße anpassen
-      axis.title.x = element_text(size = 14),  # X-Achsentitelgröße anpassen
-      axis.title.y = element_text(size = 14),  # Y-Achsentitelgröße anpassen
-      axis.text = element_text(size = 12),  # Achsentextgröße anpassen
-      legend.title = element_text(size = 14),  # Legendentitelgröße anpassen
-      legend.text = element_text(size = 12),  # Legendtextgröße anpassen
-      strip.text = element_text(size = 12)  # Facet-Textgröße anpassen
+      plot.title = element_text(size = 20, face = "bold"),  # Titelgröße anpassen
+      axis.title.x = element_text(size = 18),  # X-Achsentitelgröße anpassen
+      axis.title.y = element_text(size = 18),  # Y-Achsentitelgröße anpassen
+      axis.text = element_text(size = 14),  # Achsentextgröße anpassen
+      legend.title = element_text(size = 18),  # Legendentitelgröße anpassen
+      legend.text = element_text(size = 14),  # Legendtextgröße anpassen
+      strip.text = element_text(size = 18, face = "bold")  # Facet-Textgröße anpassen
     )
-  
 }
 
 unique(results$parameter)
 plotByConfiguration("Rides")
 plotByConfiguration("Avg. wait time")
-plotByConfiguration("Avg. ride distance [km]")
-plotByConfiguration("Empty ratio")
-plotByConfiguration("Total vehicle mileage [km]")
-plotByConfiguration("Avg. fare [MoneyUnit]" )
-plotByConfiguration("Pax per veh-km")
+#plotByConfiguration("Avg. ride distance [km]")
+#plotByConfiguration("Empty ratio")
+#plotByConfiguration("Total vehicle mileage [km]")
+#plotByConfiguration("Avg. fare [MoneyUnit]" )
+#plotByConfiguration("Pax per veh-km")
 
 #####################
 ##Zusammenhang wait time und Nachfrage
@@ -155,7 +160,7 @@ avg_wait_time_data <- results %>%
   rename(avg_wait_time = mean)
 
 # Zusammenführen der Daten
-plot_data <- left_join(handled_requests_data, avg_wait_time_data, by = c("fares"))
+  plot_data <- left_join(handled_requests_data, avg_wait_time_data, by = c("fares"))
 
 # Erstellen des Facet-Plots
 facet_plot <- ggplot(plot_data, aes(x = avg_wait_time, y = handled_requests)) +
@@ -163,26 +168,65 @@ facet_plot <- ggplot(plot_data, aes(x = avg_wait_time, y = handled_requests)) +
   geom_point(size = 3
              #,aes(shape = as.factor(intermodal))
   ) +
-  geom_text(aes(label = fares), vjust = -1, hjust = 0.5, size = 3, color = "white") +
+  geom_text(aes(label = fares), vjust = -1, hjust = 0.5, size = 6, color = "black") +
   #facet_wrap(~ speed, scales = "free") +
-  labs(title = "Handled Requests by Avg. Wait Time and Fare System (conv. KEXI)",
-       x = "Avg. Wait Time",
-       y = "Handled Requests",
+  labs(title = "Anzahl Passagiere nach durchschn. Wartezeit und Preisschema",
+       x = "Durchschn. Wartezeit [s]",
+       y = "# Passagiere",
        #color = "Area",
        #linetype = "All Day"
        #,shape = "Intermodal"
   ) +
-  theme_dark() +
+  #theme_dark() +
   theme(
-    plot.title = element_text(size = 16, face = "bold"),  # Titelgröße anpassen
-    axis.title.x = element_text(size = 14),  # X-Achsentitelgröße anpassen
-    axis.title.y = element_text(size = 14),  # Y-Achsentitelgröße anpassen
-    axis.text = element_text(size = 12),  # Achsentextgröße anpassen
-    legend.title = element_text(size = 14),  # Legendentitelgröße anpassen
-    legend.text = element_text(size = 12),  # Legendtextgröße anpassen
-    strip.text = element_text(size = 12)  # Facet-Textgröße anpassen
+    plot.title = element_text(size = 20, face = "bold"),  # Titelgröße anpassen
+    axis.title.x = element_text(size = 18),  # X-Achsentitelgröße anpassen
+    axis.title.y = element_text(size = 18),  # Y-Achsentitelgröße anpassen
+    axis.text = element_text(size = 14),  # Achsentextgröße anpassen
+    legend.title = element_text(size = 18),  # Legendentitelgröße anpassen
+    legend.text = element_text(size = 14),  # Legendtextgröße anpassen
+    strip.text = element_text(size = 18, face = "bold")  # Facet-Textgröße anpassen
   )
 
 # Plot anzeigen
 print(facet_plot)
+save("pax-over-avg-wait-time")
+
+#####################
+##Zusammenhang Durchschnittspreis und Nachfrage
+
+# Filter für die beiden relevanten Parameter
+rides_data <- results %>%
+  filter(parameter == "Rides") %>%
+  select(fares, mean) %>%
+  rename(rides = mean)
+
+avg_fare_data <- results %>%
+  filter(parameter == "Avg. fare [MoneyUnit]") %>%
+  select(fares, mean) %>%
+  rename(avg_fare = mean)
+
+# Zusammenführen der Daten
+plot_data <- left_join(rides_data, avg_fare_data, by = c("fares"))
+
+# Erstellen des Plots
+fare_vs_rides_plot <- ggplot(plot_data, aes(x = avg_fare, y = rides)) +
+  geom_point(size = 3) +
+  geom_text(aes(label = fares), vjust = -1, hjust = 0.5, size = 6, color = "black") +
+  labs(title = "Anzahl Passagiere nach Durchschnittspreis",
+       x = "Durchschnittlicher Preis pro Fahrt [€]",
+       y = "# Passagiere") +
+  theme(
+    plot.title = element_text(size = 20, face = "bold"),
+    axis.title.x = element_text(size = 18),
+    axis.title.y = element_text(size = 18),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 18, face = "bold")
+  )
+
+# Plot anzeigen
+print(fare_vs_rides_plot)
+save("pax-over-avg-fare")
 
