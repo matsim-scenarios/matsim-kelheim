@@ -82,23 +82,23 @@ final class CreateAverageDashboards implements MATSimAppCommand {
 	}
 
 	/**
-	 * A helper method to copy an already existing Geojson network rather than creating it all over again.
+	 * A helper method to copy an already existing Geojson / avro network rather than creating it all over again.
 	 */
-	String copyGeoJsonNetwork(List<String> dirs) {
+	String copyVizNetwork(List<String> dirs, String fileType) {
 
 		for (String dir : dirs) {
-			File networkFile = new File(dir + "/analysis/network/network.geojson");
+			File networkFile = new File(dir + "/analysis/network/network" + fileType);
 			Path target = Path.of(Path.of(dir).getParent() + "/analysis/network");
 
 			if (Files.notExists(target) && networkFile.exists() && networkFile.isFile()) {
 				try {
 					Files.createDirectories(target);
-					Files.copy(networkFile.toPath(), Path.of(target + "/network.geojson"));
+					Files.copy(networkFile.toPath(), Path.of(target + "/network" + fileType));
 				} catch (IOException e) {
 					throw new UncheckedIOException(e);
 				}
 			}
 		}
-		return "analysis/network/network.geojson";
+		return "analysis/network/network" + fileType;
 	}
 }
