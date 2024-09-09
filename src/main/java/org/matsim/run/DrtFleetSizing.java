@@ -22,6 +22,7 @@ import org.matsim.core.utils.io.IOUtils;
 import org.matsim.rebalancing.WaitingPointsBasedRebalancingModule;
 import picocli.CommandLine;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -29,7 +30,7 @@ import static org.matsim.application.ApplicationUtils.globFile;
 
 public class DrtFleetSizing implements MATSimAppCommand {
 	@CommandLine.Option(names = "--run-folder", description = "Output folder of MATsim run", required = true)
-	private String runFolderPath;
+	private String matsimRunFolderPath;
 
 	@CommandLine.Option(names = "--target-wait-time", description = "the target average waiting time", required = true)
 	private double meanWaitTime;
@@ -60,8 +61,13 @@ public class DrtFleetSizing implements MATSimAppCommand {
 
 	@Override
 	public Integer call() throws Exception {
+		// write output root folder
+		if (!Files.exists(Path.of(outputFolderPath))){
+			Files.createDirectories(Path.of(outputFolderPath));
+		}
+
 		// read DRT trips and generate plans
-		Path outputPopulationPath = globFile(Path.of(runFolderPath), "*output_plans.xml.gz*");
+		Path outputPopulationPath = globFile(Path.of(matsimRunFolderPath), "*output_plans.xml.gz*");
 		MainModeIdentifier modeIdentifier = new DefaultAnalysisMainModeIdentifier();
 		Population outputPlans = PopulationUtils.readPopulation(outputPopulationPath.toString());
 		Population avPlans = PopulationUtils.createPopulation(ConfigUtils.createConfig());
@@ -92,7 +98,7 @@ public class DrtFleetSizing implements MATSimAppCommand {
 			}
 		}
 		new PopulationWriter(avPlans).write(outputFolderPath + "/av-plans.xml.gz");
-		
+
 		// run DRT simulations
 		Preconditions.checkArgument(fleetSizing.size() == 3);
 		int fleetFrom = fleetSizing.get(0);
@@ -106,8 +112,7 @@ public class DrtFleetSizing implements MATSimAppCommand {
 			config.controller().setLastIteration(1);
 			config.controller().setOutputDirectory(outputFolderPath + "/" + fleetSize + "-veh");
 			config.vehicles().setVehiclesFile(vehiclesFolderPath + "/" + fleetSize + "-veh.xml");
-
-			String singleRunOutputDirectory = config.controller().getOutputDirectory();
+			String singleDrtRunOutputDirectory = config.controller().getOutputDirectory();
 
 			Controler controler = DrtControlerCreator.createControler(config, false);
 			MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
@@ -119,7 +124,7 @@ public class DrtFleetSizing implements MATSimAppCommand {
 			controler.run();
 
 			// analyze mean waiting time
-			Path waitTimeStatsPath = globFile(Path.of(singleRunOutputDirectory), "*drt_customer_stats_av.csv*");
+			Path waitTimeStatsPath = globFile(Path.of(singleDrtRunOutputDirectory), "*drt_customer_stats_av.csv*");
 			double waitingTime = 0;
 			CSVFormat.Builder format = CSVFormat.DEFAULT.builder().setDelimiter(';').setHeader().setSkipHeaderRecord(true);
 			try (CSVParser parser = new CSVParser(IOUtils.getBufferedReader(waitTimeStatsPath.toString()), format.build())) {
