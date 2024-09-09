@@ -63,12 +63,11 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 				viz.zoom = data.context().mapZoomLevel;
 				viz.minValue = minDb;
 				viz.maxValue = maxDb;
-				viz.setShape(new CreateAverageDashboards().copyVizNetwork(dirs, ".avro"));
+				viz.setShape(new CreateAverageDashboards().copyVizNetwork(dirs, ".avro"), "id");
 				viz.addDataset(NOISE, postProcess(data, "mean_emission_per_day.csv"));
 				viz.display.lineColor.dataset = NOISE;
 				viz.display.lineColor.columnName = "value";
 				viz.display.lineColor.join = "Link Id";
-				viz.display.lineColor.fixedColors = new String[]{DARK_BLUE, LIGHT_BLUE, ORANGE, RED};
 				viz.display.lineColor.setColorRamp(ColorScheme.Oranges, 8, false, "35, 45, 55, 65, 75, 85, 95");
 				viz.display.lineWidth.dataset = NOISE;
 				viz.display.lineWidth.columnName = "value";
