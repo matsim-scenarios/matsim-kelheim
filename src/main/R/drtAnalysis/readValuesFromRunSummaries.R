@@ -24,6 +24,7 @@ extract_parameters <- function(folder_name, speed) {
 
 # Funktion zum Einlesen der CSV-Datei und Extrahieren der "mean"-Werte
 read_stats <- function(folder_path, file_name) {
+  print(paste("reading", folder_path))
   csv_path <- file.path(folder_path, "analysis/drt-drt-av", file_name)
   
   if (file.exists(csv_path)) {
@@ -99,19 +100,32 @@ for (speed in speeds) {
 
 results <- bind_rows(results)
 
-
+#####
 # Transponiere die Tabelle, um Parameter als Spalten zu setzen
 transposed_result <- results %>%
   select(speed, area, fleetSize, intermodal, allDay, parameter, mean) %>%
   spread(key = parameter, value = mean)
 
+###
+#in Realität haben wir eine avg gruppengr0eße von 1.7 gemessen, diese aber nicht simuliert.
+# wir rechnen die jetzt im nachhinein wieder drauf.
+transposed_result <- transposed_result %>% 
+  mutate(`Passengers (Pax)` = `Handled Requests` * 1.7,
+         `Total pax distance [km]` = `Total pax distance [km]` * 1.7) %>% 
+  mutate(`Pax per veh` = `Passengers (Pax)` / Vehicles,
+         `Pax per veh-km` = `Passengers (Pax)` / `Total vehicle mileage [km]`,
+         `Pax per veh-h` = `Passengers (Pax)` / `Total service hours`,
+         `Occupancy rate [pax-km/v-km]` = `Total pax distance [km]` / `Total vehicle mileage [km]`)
+
+#transponiere zurück
+results <- transposed_result %>%
+  gather(key = "parameter", value = "mean", -speed, -area, -fleetSize, -intermodal, -allDay)
 
 # Ergebnisse ausgeben
 print(results)
 print(transposed_result)
 
 write_csv(transposed_result, paste(mainDir, "results.csv", sep=""))
-
 
 #####################################################################
 ######PLOTS####
@@ -138,6 +152,7 @@ plotByConfiguration <- function(parameterStr){
                labeller = labeller(speed = label_function)
                ,scales = "free"
                ) +
+    geom_text(aes(label = fleetSize), vjust = -1, hjust = 0.5, size = 3, color = "black") +
     labs(title = paste(parameterStr, "by Fleet Size, Speed, Area and Service Hours"),
          x = "Fleet Size",
          y = parameterStr,
@@ -213,4 +228,5 @@ plotByConfiguration("Pax per veh-km")
   
   # Plot anzeigen
   print(facet_plot)
+    
   

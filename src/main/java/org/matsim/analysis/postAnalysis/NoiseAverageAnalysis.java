@@ -40,7 +40,8 @@ import static org.matsim.application.ApplicationUtils.globFile;
 @CommandLine.Command(name = "average-noise", description = "Calculates average noise stats based on several sim runs with different random seeds.")
 @CommandSpec(
 	requires = {"runs"},
-	produces = {"mean_emission_per_day.csv", "mean_immission_per_day.avro", "mean_immission_per_hour.avro"}
+	produces = {"mean_emission_per_day.csv", "mean_immission_per_day.avro", "mean_immission_per_hour.avro", "mean_noise_stats.csv",
+		"mean_damages_receiverPoint_per_day.avro", "mean_damages_receiverPoint_per_hour.avro"}
 )
 public class NoiseAverageAnalysis implements MATSimAppCommand {
 	private final Logger log = LogManager.getLogger(NoiseAverageAnalysis.class);
@@ -58,6 +59,10 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 	private List<GenericRecord> imissionsPerHour = new ArrayList<>();
 	private Map<String, List<Double>> emissionsPerDay = new HashMap<>();
 	private Map<String, Double> meanEmissionsPerDay = new HashMap<>();
+	private Map<String, List<Double>> totalStats = new HashMap<>();
+	private Map<String, Double> meanTotalStatsPerDay = new HashMap<>();
+	private List<GenericRecord> damagesPerDay = new ArrayList<>();
+	private List<GenericRecord> damagesPerHour = new ArrayList<>();
 
 
 	public static void main(String[] args) {
@@ -81,6 +86,9 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 			String emissionsCsv = globFile(analysisDir, "*emission_per_day.csv*").toString();
 			String imissionsPerDayAvro = globFile(analysisDir, "*immission_per_day.avro*").toString();
 			String imissionsPerHourAvro = globFile(analysisDir, "*immission_per_hour.avro*").toString();
+			String totalStatsCsv = globFile(analysisDir, "*noise_stats.csv*").toString();
+			String damagesPerDayAvro = globFile(analysisDir, "*damages_receiverPoint_per_day.avro*").toString();
+			String damagesPerHourAvro = globFile(analysisDir, "*damages_receiverPoint_per_hour.avro*").toString();
 
 //			read
 			Table emissions = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(emissionsCsv))
@@ -88,9 +96,17 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 				.sample(false)
 				.separator(CsvOptions.detectDelimiter(emissionsCsv)).build());
 
-//			read avro file
+			Table totalStatsTable = Table.read().csv(CsvReadOptions.builder(IOUtils.getBufferedReader(totalStatsCsv))
+				.columnTypes(new ColumnType[]{ColumnType.STRING, ColumnType.DOUBLE})
+				.header(false)
+				.sample(false)
+				.separator(CsvOptions.detectDelimiter(totalStatsCsv)).build());
+
+//			read avro files
 			readAvroFile(imissionsPerDayAvro, imissionsPerDay);
 			readAvroFile(imissionsPerHourAvro, imissionsPerHour);
+			readAvroFile(damagesPerDayAvro, damagesPerDay);
+			readAvroFile(damagesPerHourAvro, damagesPerHour);
 
 //			get all emission stats
 			for (int i = 0; i < emissions.rowCount(); i++) {
@@ -101,20 +117,28 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 				}
 				emissionsPerDay.get(row.getString(LINK_ID)).add(row.getDouble(VALUE));
 			}
+
+//			get all total stats
+			for (int i = 0; i < totalStatsTable.rowCount(); i++) {
+				Row row = totalStatsTable.row(i);
+
+				if (!totalStats.containsKey(row.getString(0))) {
+					totalStats.put(row.getString(0), new ArrayList<>());
+				}
+				totalStats.get(row.getString(0)).add(row.getDouble(1));
+			}
 		}
 
 //		calc emission means and write to mean map
-		for (Map.Entry<String, List<Double>> e : emissionsPerDay.entrySet()) {
-			AtomicReference<Double> sum = new AtomicReference<>(0.);
-			e.getValue().forEach(d -> sum.set(sum.get() + d));
-
-			meanEmissionsPerDay.put(e.getKey(), sum.get() / e.getValue().size());
-		}
+		calcCsvMeans(emissionsPerDay, meanEmissionsPerDay);
+//		calc mean total stats and write to mean map
+		calcCsvMeans(totalStats, meanTotalStatsPerDay);
 
 //		calc avro means
-		XYTData imissionsPerDayMean = calcAvroMeans(imissionsPerDay);
-		XYTData imissionsPerHourMean = calcAvroMeans(imissionsPerHour);
-
+		XYTData imissionsPerDayMean = calcAvroMeans(imissionsPerDay, "imissions");
+		XYTData imissionsPerHourMean = calcAvroMeans(imissionsPerHour, "imissions");
+		XYTData damagesPerDayMean = calcAvroMeans(damagesPerDay, "damages_receiverPoint");
+		XYTData damagesPerHourMean = calcAvroMeans(damagesPerHour, "damages_receiverPoint");
 
 //		write emission mean stats
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("mean_emission_per_day.csv")), CSVFormat.DEFAULT)) {
@@ -125,15 +149,33 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 			}
 		}
 
+//		write total mean stats
+		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("mean_noise_stats.csv")), CSVFormat.DEFAULT)) {
+			for (Map.Entry<String, Double> e : meanTotalStatsPerDay.entrySet()) {
+				printer.printRecord(e.getKey(), e.getValue());
+			}
+		}
+
 //		write avro mean files
 		writeAvro(imissionsPerDayMean, new File(output.getPath("mean_immission_per_day.avro").toString()));
 		writeAvro(imissionsPerHourMean, new File(output.getPath("mean_immission_per_hour.avro").toString()));
+		writeAvro(damagesPerDayMean, new File(output.getPath("mean_damages_receiverPoint_per_day.avro").toString()));
+		writeAvro(damagesPerHourMean, new File(output.getPath("mean_damages_receiverPoint_per_hour.avro").toString()));
 
 		return 0;
 	}
 
+	private void calcCsvMeans(Map<String, List<Double>> dataMap, Map<String, Double> meanMap) {
+		for (Map.Entry<String, List<Double>> e : dataMap.entrySet()) {
+			AtomicReference<Double> sum = new AtomicReference<>(0.);
+			e.getValue().forEach(d -> sum.set(sum.get() + d));
+
+			meanMap.put(e.getKey(), sum.get() / e.getValue().size());
+		}
+	}
+
 	/**
-	 * write an .avro file containing immission data.
+	 * write an .avro file containing immission / damage data.
 	 */
 	public void writeAvro(XYTData xytData, File outputFile) {
 		DatumWriter<XYTData> datumWriter = new SpecificDatumWriter<>(XYTData.class);
@@ -146,7 +188,7 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 		}
 	}
 
-	private XYTData calcAvroMeans(List<GenericRecord> recordList) {
+	private XYTData calcAvroMeans(List<GenericRecord> recordList, String dataFieldName) {
 		String crs = null;
 		List<Float> xCoords = new ArrayList<>();
 		List<Float> yCoords = new ArrayList<>();
@@ -189,7 +231,7 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 				List<Float> values = new ArrayList<>();
 
 				for (Map.Entry<?, ?> entry : ((HashMap<?, ?>) object4).entrySet()) {
-					if (entry.getKey() instanceof Utf8 && entry.getKey().toString().equals("imissions") && entry.getValue() instanceof GenericData.Array<?>) {
+					if (entry.getKey() instanceof Utf8 && entry.getKey().toString().equals(dataFieldName) && entry.getValue() instanceof GenericData.Array<?>) {
 						values.addAll((GenericData.Array<Float>) entry.getValue());
 
 						String entryString = ((Utf8) entry.getKey()).toString();
@@ -211,7 +253,7 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 //		calc mean values for each datapoint out of sums and number of records (1 record = 1 run seed)
 		data.entrySet()
 			.stream()
-			.filter(entry -> entry.getKey().equals("imissions"))
+			.filter(entry -> entry.getKey().equals(dataFieldName))
 			.forEach(entry -> entry.getValue()
 				.forEach(value -> entry.getValue().set(entry.getValue().indexOf(value), value / recordList.size())));
 
@@ -234,7 +276,7 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 	}
 
 	/**
-	 * read an .avro file containing immissions.
+	 * read an .avro file containing immissions / damages.
 	 */
 	public void readAvroFile(String input, List<GenericRecord> target) {
 		try {

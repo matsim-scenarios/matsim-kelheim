@@ -92,7 +92,7 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 				viz.height = 12.0;
 				viz.datasets.csvFile = postProcess(data, "mean_emissions_per_link_per_m.csv");
 				viz.datasets.csvBase = Path.of(this.dirs.get(0)).getParent().relativize(Path.of(pathToCsvBase)).toString();
-				viz.network = new CreateAverageDashboards().copyGeoJsonNetwork(dirs);
+				viz.network = new CreateAverageDashboards().copyVizNetwork(dirs, ".avro");
 				viz.display.color.columnName = "CO2_TOTAL [g/m]";
 				viz.display.color.dataset = "csvFile";
 				viz.display.width.scaleFactor = 100;

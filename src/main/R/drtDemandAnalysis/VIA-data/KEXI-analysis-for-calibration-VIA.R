@@ -16,7 +16,7 @@ Sys.setlocale("LC_TIME", "en_US.UTF-8")
 ### INPUT DEFINITIONS ###
 
 # set working directory
-setwd("D:/Module/vsp/shared-svn/")
+setwd("D:/shared-svn/projects/KelRide/data/KEXI")
 #setwd("C:/Users/Simon/Documents/shared-svn/projects/KelRide/data/KEXI/")
 
 # read data
@@ -201,17 +201,20 @@ for(dataset in datasets) {
 
 
   boxplot_TravelTime_s <- ggplot(j, aes(y=travelTime_s)) +
-    stat_boxplot(geom="errorbar", width=3) +
+    stat_boxplot(geom="errorbar", width=5) +
     geom_boxplot(width=5) +
     scale_y_continuous(n.breaks = 10) +
     scale_x_discrete() +
     stat_summary(fun=mean, geom="errorbar",aes(ymax=..y.., ymin=..y.., x=0),
-                 width=5, colour="red") +
+                 width=5, colour="red", linewidth =1.5) +
     labs(x="", y="travel time [s]", title=paste("Boxplot KEXI Travel Time for dataset", names[i])) +
+    #labs(x="", y="Reisezeit [s]", title=paste("Verteilung der KEXI Reisezeit\n ab 2022")) +
     # labs(x="", y="travel time [s]") + #for paper only
-    theme(plot.title = element_text(hjust=0.5, size=10, face="bold"), axis.text.y = element_text(size=8),
-          axis.title.y = element_text(size=15, face="bold"))
+    theme(plot.title = element_text(hjust=0.5, size=28, face="bold"),
+          axis.text.y = element_text(size=22),
+          axis.title.y = element_text(size=26, face="bold"))
 
+  boxplot_TravelTime_s
   plotFile = paste0("plots/",names[i],"/boxplot_KEXI_travel_time_s.png")
   paste0("printing plot to ", plotFile)
   ggsave(plotFile, limitsize = FALSE)
@@ -246,12 +249,15 @@ for(dataset in datasets) {
     scale_y_continuous(n.breaks = 10) +
     scale_x_discrete() +
     stat_summary(fun=mean, geom="errorbar",aes(ymax=..y.., ymin=..y.., x=0),
-                 width=5, colour="red") +
-    labs(x="", y="travel distance [m]", title=paste("Boxplot KEXI Travel Distance for dataset", names[i])) +
+                 width=5, colour="red", linewidth =1.5) +
+    #labs(x="", y="travel distance [m]", title=paste("Boxplot KEXI Travel Distance for dataset", names[i])) +
+    labs(x="", y="Haltestellendistanz [m]", title=paste("Verteilung der Haltestellendistanz\n ab 2022")) +
     # labs(x="", y="travel distance [m]") + #for paper only
-    theme(plot.title = element_text(hjust=0.5, size=10, face="bold"), axis.text.y = element_text(size=8),
-          axis.title.y = element_text(size=15, face="bold"))
+    theme(plot.title = element_text(hjust=0.5, size=28, face="bold"),
+          axis.text.y = element_text(size=22),
+          axis.title.y = element_text(size=26, face="bold"))
 
+  boxplot_distance_m
   plotFile = paste0("plots/",names[i],"/boxplot_KEXI_travel_distance_m.png")
   paste0("printing plot to ", plotFile)
   ggsave(plotFile, limitsize = FALSE)
@@ -304,12 +310,15 @@ for(dataset in datasets) {
     scale_y_continuous(n.breaks = 8) +
     scale_x_discrete() +
     stat_summary(fun=mean, geom="errorbar",aes(ymax=..y.., ymin=..y.., x=0),
-                 width=5, colour="red") +
+                 width=5, colour="red", linewidth =1.5) +
     labs(x="", y="bookings", title=paste("Boxplot KEXI bookings per day for dataset", names[i])) +
+    #labs(x="", y="# Buchungen", title=paste("Verteilung der Anzahl beförderter\n Buchungen im konv. KEXI ab 2022")) +
     # labs(x="", y="travel distance [m]") + #for paper only
-    theme(plot.title = element_text(hjust=0.5, size=10, face="bold"), axis.text.y = element_text(size=8),
-          axis.title.y = element_text(size=15, face="bold"))
-
+    theme(plot.title = element_text(hjust=1, size=28, face="bold"),
+          axis.text.y = element_text(size=22),
+          axis.title.y = element_text(size=26, face="bold"))
+  
+  boxplot_daily_bookings
   plotFile = paste0("plots/",names[i],"/boxplot_KEXI_daily_bookings.png")
   paste0("printing plot to ", plotFile)
   ggsave(plotFile, limitsize = FALSE)

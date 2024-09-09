@@ -722,12 +722,18 @@ server <- function(input, output) {
         layout(
           title = list(
             text = "Mittlere Anzahl verfügbarer Fahrzeuge pro Tag",
-            font = list(size = 14, color = "black", family = "Arial", weight = "bold"),
+            font = list(size = 18, color = "black", family = "Arial", weight = "bold"),
             x = 0.5  # Zentriert den Titel
           ),
-          xaxis = list(title = "Datum"),
-          yaxis = list(title = "Mittlere Fahrzeugverfuegbarkeit pro Tag", side = "left"),
+          xaxis = list(title = "Datum",
+                       font = list(size = 16, family = "Arial", color = "black", weight = "bold")  # Größe und Stil der X-Achsenbeschriftung
+                      ),
+          yaxis = list(title = "Mittlere Fahrzeugverfuegbarkeit pro Tag",
+                       font = list(size = 16, family = "Arial", color = "black", weight = "bold"),  # Größe und Stil der Y-Achsenbeschriftung
+
+                       side = "left"),
           yaxis2 = list(title = "Passagiere pro Tag",
+                        font = list(size = 16, family = "Arial", color = "red", weight = "bold"),  # Größe und Stil der zweiten Y-Achsenbeschriftung
                         overlaying = "y",
                         side = "right",
                         color = "red")#,
@@ -739,6 +745,7 @@ server <- function(input, output) {
         )
 
       fig
+      
     
   })
   
