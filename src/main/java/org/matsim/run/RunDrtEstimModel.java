@@ -18,7 +18,7 @@ public class RunDrtEstimModel {
 
 	public static void main(String[] args) throws IOException {
 
-		Path filePath = Path.of("input/v3.0-release/output-KEXI-adequate-vehicles/seed-1-adequate-vehicles/kexi-seed1-adequate-vehicles.output_drt_legs_drt.csv");
+		Path filePath = Path.of("C:/Users/J/Downloads/kexi-seed1.output_drt_legs_drt.csv");
 
 		DoubleList inVehicleTravelTime = new DoubleArrayList();
 		DoubleList directTravelDistance_m = new DoubleArrayList();

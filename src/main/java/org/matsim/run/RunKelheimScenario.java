@@ -68,8 +68,8 @@ import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.ActivityOption;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
-import org.matsim.simwrapper.SimWrapperConfigGroup;
-import org.matsim.simwrapper.SimWrapperModule;
+//import org.matsim.simwrapper.SimWrapperConfigGroup;
+//import org.matsim.simwrapper.SimWrapperModule;
 import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 import playground.vsp.pt.fare.DistanceBasedPtFareParams;
@@ -190,13 +190,13 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		config.global().setRandomSeed(randomSeed);
 
-		SimWrapperConfigGroup sw = ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class);
-
-		// Relative to config
-		sw.defaultParams().shp = "../shp/dilutionArea.shp";
-		sw.defaultParams().mapCenter = "11.89,48.91";
-		sw.defaultParams().mapZoomLevel = 11d;
-		sw.defaultParams().sampleSize = sample.getSample();
+//		SimWrapperConfigGroup sw = ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class);
+//
+//		// Relative to config
+//		sw.defaultParams().shp = "../shp/dilutionArea.shp";
+//		sw.defaultParams().mapCenter = "11.89,48.91";
+//		sw.defaultParams().mapZoomLevel = 11d;
+//		sw.defaultParams().sampleSize = sample.getSample();
 
 		if (intermodal) {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
@@ -246,13 +246,26 @@ public class RunKelheimScenario extends MATSimApplication {
 			//yyyyyyyyy this was neccessary for the RandomizingTimeDistanceTravelDisutility. TODO: is this compatible with the kelheim runs?
 			config.routing().setRoutingRandomness(0);
 
-
-
+// settings for kelheim city
 			double mapCenterX = 712144.17;
 			double mapCenterY = 5422153.87;
 
-			double tileSize = 100;
-			double num_rows = 50;
+			double tileSize = 200;
+			double num_rows = 23;
+
+// settings for east kelheim:
+//			double mapCenterX = 721455;
+//			double mapCenterY = 5410601;
+//
+//			double tileSize = 200;
+//			double num_rows = 50;
+
+// settings for landkreis
+//			double mapCenterX = 711014;
+//			double mapCenterY = 5409253;
+//
+//			double tileSize = 500;
+//			double num_rows = 50;
 
 			accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);
 			accConfig.setBoundingBoxLeft(mapCenterX - num_rows*tileSize - tileSize/2);
@@ -260,12 +273,13 @@ public class RunKelheimScenario extends MATSimApplication {
 			accConfig.setBoundingBoxBottom(mapCenterY - num_rows*tileSize - tileSize/2);
 			accConfig.setBoundingBoxTop(mapCenterY + num_rows*tileSize + tileSize/2);
 			accConfig.setTileSize_m((int) tileSize);
-			accConfig.setTimeOfDay(15.5 * 60 * 60.);
+			accConfig.setTimeOfDay(12 * 60 * 60.);
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // works
 //			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // ??
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
+//			accConfig.setAccessibilityMeasureType(AccessibilityConfigGroup.AccessibilityMeasureType.gravity);
 		}
 
 		// Config is always needed
@@ -347,7 +361,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
 
 			// Use this method if reading facilities from a csv.
-			Path filePath = Path.of("testOsmFacilitiesList.csv");
+			Path filePath = Path.of("pois.csv");
 			try (CSVParser parser = new CSVParser(new BufferedReader(new InputStreamReader(Files.newInputStream(filePath))),
 				CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
 
@@ -393,7 +407,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				install(new KelheimPtFareModule());
 				install(new SwissRailRaptorModule());
 				install(new PersonMoneyEventsAnalysisModule());
-				install(new SimWrapperModule());
+				//install(new SimWrapperModule());
 
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
 				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
@@ -481,13 +495,41 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		if (acc) {
-			final AccessibilityModule moduleTrain = new AccessibilityModule();
-			moduleTrain.setConsideredActivityType("train station");
-			controler.addOverridingModule(moduleTrain);
+//			final AccessibilityModule moduleTrain = new AccessibilityModule();
+//			moduleTrain.setConsideredActivityType("train_station");
+//			controler.addOverridingModule(moduleTrain);
 
-			final AccessibilityModule moduleHosp = new AccessibilityModule();
-			moduleHosp.setConsideredActivityType("hospital");
-			controler.addOverridingModule(moduleHosp);
+//			final AccessibilityModule moduleHealth = new AccessibilityModule();
+//			moduleHealth.setConsideredActivityType("health");
+//			controler.addOverridingModule(moduleHealth);
+//
+//			final AccessibilityModule moduleDoctors = new AccessibilityModule();
+//			moduleDoctors.setConsideredActivityType("doctor");
+//			controler.addOverridingModule(moduleDoctors);
+//
+//			final AccessibilityModule moduleSport = new AccessibilityModule();
+//			moduleSport.setConsideredActivityType("sport");
+//			controler.addOverridingModule(moduleSport);
+
+//			final AccessibilityModule moduleGroceries = new AccessibilityModule();
+//			moduleGroceries.setConsideredActivityType("groceries");
+//			controler.addOverridingModule(moduleGroceries);
+
+//			final AccessibilityModule moduleSupermarkets = new AccessibilityModule();
+//			moduleSupermarkets.setConsideredActivityType("supermarket");
+//			controler.addOverridingModule(moduleSupermarkets);
+
+//			final AccessibilityModule moduleAltstadt = new AccessibilityModule();
+//			moduleAltstadt.setConsideredActivityType("altstadt");
+//			controler.addOverridingModule(moduleAltstadt);
+
+//			final AccessibilityModule moduleBuildings = new AccessibilityModule();
+//			moduleBuildings.setConsideredActivityType("building");
+//			controler.addOverridingModule(moduleBuildings);
+
+			final AccessibilityModule moduleSenioren = new AccessibilityModule();
+			moduleSenioren.setConsideredActivityType("senioren");
+			controler.addOverridingModule(moduleSenioren);
 		}
 	}
 }
