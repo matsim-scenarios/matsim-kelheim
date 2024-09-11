@@ -86,19 +86,20 @@ public class AdaptV2OutputFiles implements MATSimAppCommand {
 //		get all relevant filePaths and save to map for iterating over them
 		modes.forEach(m -> {
 			String legsPath = globFile(Path.of(dir + "/ITERS/it.999"), "*drt_legs_" + m + ".csv").toString();
+			String waitStatsPath = globFile(Path.of(dir + "/ITERS/it.999"), "*waitStats_" + m + ".csv").toString();
 			String vehicleStatsPath = globFile(Path.of(dir), "*drt_vehicle_stats_" + m + ".csv").toString();
 			String customerStatsPath = globFile(Path.of(dir), "*drt_customer_stats_" + m + ".csv").toString();
 
-			filePaths.put(m, List.of(legsPath, vehicleStatsPath, customerStatsPath));
+			filePaths.put(m, List.of(legsPath, vehicleStatsPath, customerStatsPath, waitStatsPath));
 			});
 
 
 //		copy drt and av legs file from iters folder to global output
 		filePaths.values().forEach(v -> {
-			File legsFile = new File(v.getFirst());
-			Path targetLegsPath = Path.of(dir + "/" + legsFile.getName());
+			File itFile = new File(v.getFirst());
+			Path targetPath = Path.of(dir + "/" + itFile.getName().replace("999.", "output_"));
 
-			copyFile(targetLegsPath, legsFile);
+			copyFile(targetPath, itFile);
 		});
 
 //		add totalServiceDuration column to vehicle stats file
