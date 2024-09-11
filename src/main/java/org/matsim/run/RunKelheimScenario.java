@@ -83,8 +83,11 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
+
+//run --1pct --with-drt --accessibility --config input/v3.1/kelheim-v3.1-25pct.kexi.config.xml
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
