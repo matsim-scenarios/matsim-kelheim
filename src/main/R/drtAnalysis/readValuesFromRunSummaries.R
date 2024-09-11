@@ -28,7 +28,7 @@ read_stats <- function(folder_path, file_name) {
   csv_path <- file.path(folder_path, "analysis/drt-drt-av", file_name)
   
   if (file.exists(csv_path)) {
-    df <- read_csv(csv_path)
+    df <- read_csv(csv_path, show_col_types = FALSE)
     mean_values <- df %>% select(parameter, mean)
     return(mean_values)
   } else {
