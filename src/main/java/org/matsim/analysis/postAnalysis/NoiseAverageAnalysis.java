@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -140,19 +142,21 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 		XYTData damagesPerDayMean = calcAvroMeans(damagesPerDay, "damages_receiverPoint");
 		XYTData damagesPerHourMean = calcAvroMeans(damagesPerHour, "damages_receiverPoint");
 
+		DecimalFormat df = new DecimalFormat("#.###", DecimalFormatSymbols.getInstance(Locale.US));
+
 //		write emission mean stats
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("mean_emission_per_day.csv")), CSVFormat.DEFAULT)) {
 			printer.printRecord(LINK_ID, VALUE);
 
 			for (Map.Entry<String, Double> e : meanEmissionsPerDay.entrySet()) {
-				printer.printRecord(e.getKey(), e.getValue());
+				printer.printRecord(e.getKey(), df.format(e.getValue()));
 			}
 		}
 
 //		write total mean stats
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("mean_noise_stats.csv")), CSVFormat.DEFAULT)) {
 			for (Map.Entry<String, Double> e : meanTotalStatsPerDay.entrySet()) {
-				printer.printRecord(e.getKey(), e.getValue());
+				printer.printRecord(e.getKey(), df.format(e.getValue()));
 			}
 		}
 
