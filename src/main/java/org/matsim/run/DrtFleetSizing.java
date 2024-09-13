@@ -4,16 +4,25 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.TransportMode;
+import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.application.MATSimAppCommand;
+import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
+import org.matsim.contrib.drt.optimizer.rebalancing.NoRebalancingStrategy;
+import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingStrategy;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.DrtControlerCreator;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
+import org.matsim.contrib.dvrp.run.AbstractDvrpModeModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.router.DefaultAnalysisMainModeIdentifier;
 import org.matsim.core.router.MainModeIdentifier;
@@ -44,6 +53,9 @@ public class DrtFleetSizing implements MATSimAppCommand {
 	@CommandLine.Option(names = "--vehicles-folder", description = "folders of the vehicles files", required = true)
 	private String vehiclesFolderPath;
 
+	@CommandLine.Option(names = "--transit-stops", description = "transit stops of av service", required = true)
+	private String transitStopFilePath;
+
 	@CommandLine.Option(names = "--rebalancing", description = "enable waiting point based rebalancing strategy or not", defaultValue = "false")
 	private boolean rebalancing;
 
@@ -62,11 +74,13 @@ public class DrtFleetSizing implements MATSimAppCommand {
 	@Override
 	public Integer call() throws Exception {
 		// write output root folder
-		if (!Files.exists(Path.of(outputFolderPath))){
+		if (!Files.exists(Path.of(outputFolderPath))) {
 			Files.createDirectories(Path.of(outputFolderPath));
 		}
 
 		// read DRT trips and generate plans
+		String drtNetworkPath = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.1/input/av-fleet-sizing/kelheim-v3.0-drt-network.xml.gz";
+		Network drtNetwork = NetworkUtils.readNetwork(drtNetworkPath);
 		Path outputPopulationPath = globFile(Path.of(matsimRunFolderPath), "*output_plans.xml.gz*");
 		MainModeIdentifier modeIdentifier = new DefaultAnalysisMainModeIdentifier();
 		Population outputPlans = PopulationUtils.readPopulation(outputPopulationPath.toString());
@@ -82,9 +96,21 @@ public class DrtFleetSizing implements MATSimAppCommand {
 				if (mode.equals("av")) {
 					Person avPerson = pf.createPerson(Id.createPersonId("dummy-" + counter));
 					Plan avPlan = pf.createPlan();
+
 					Activity act0 = trip.getOriginActivity();
+					act0.setType("dummy");
+					Coord fromCoord = act0.getCoord();
+					Link fromLinkOnDrtNetwork = NetworkUtils.getNearestLink(drtNetwork, fromCoord);
+					act0.setLinkId(fromLinkOnDrtNetwork.getId());
+
 					Leg leg = pf.createLeg("av");
+
 					Activity act1 = trip.getDestinationActivity();
+					act1.setType("dummy");
+					act1.setEndTime(30 * 3600);
+					Coord toCoord = act1.getCoord();
+					Link toLinkOnDrtNetwork = NetworkUtils.getNearestLink(drtNetwork, toCoord);
+					act1.setLinkId(toLinkOnDrtNetwork.getId());
 
 					act0.setStartTime(0);
 					avPlan.addActivity(act0);
@@ -107,17 +133,30 @@ public class DrtFleetSizing implements MATSimAppCommand {
 
 		for (int fleetSize = fleetFrom; fleetSize <= fleetMax; fleetSize += fleetInterval) {
 			// setup DRT run
-			Config config = ConfigUtils.loadConfig(drtConfigPath, new MultiModeDrtConfigGroup(), new DvrpConfigGroup());
+			Config config = ConfigUtils.loadConfig(drtConfigPath, new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new), new DvrpConfigGroup());
+			config.network().setInputFile(drtNetworkPath);
 			config.plans().setInputFile(outputFolderPath + "/av-plans.xml.gz");
 			config.controller().setLastIteration(1);
 			config.controller().setOutputDirectory(outputFolderPath + "/" + fleetSize + "-veh");
 			config.vehicles().setVehiclesFile(vehiclesFolderPath + "/" + fleetSize + "-veh.xml");
 			String singleDrtRunOutputDirectory = config.controller().getOutputDirectory();
-
-			Controler controler = DrtControlerCreator.createControler(config, false);
 			MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
+			Controler controler = DrtControlerCreator.createControler(config, false);
+
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-				controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
+				if (drtCfg.getMode().equals("av")) {
+					drtCfg.transitStopFile = transitStopFilePath;
+					controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
+				}
+
+				if (drtCfg.getMode().equals(TransportMode.drt)) {
+					controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.mode) {
+						@Override
+						public void install() {
+							bindModal(RebalancingStrategy.class).to(NoRebalancingStrategy.class).asEagerSingleton();
+						}
+					});
+				}
 			}
 
 			// run simulation
