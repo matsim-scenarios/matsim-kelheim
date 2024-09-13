@@ -4,7 +4,7 @@ library(tidyr)
 
 mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/"
 
-transposed_result <- read.csv(paste(mainDir, "results-deutsch.csv", sep=""), check.names = FALSE, sep =";")
+transposed_result <- read.csv(paste(mainDir, "results-deutsch.csv", sep=""), check.names = FALSE, sep =",")
 #names(transposed_result) <- make.names(names(transposed_result), unique = TRUE, allow_ = FALSE)
 
 # Betriebszeiten umschreiben

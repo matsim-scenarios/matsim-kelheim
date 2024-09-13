@@ -63,12 +63,11 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 				viz.zoom = data.context().mapZoomLevel;
 				viz.minValue = minDb;
 				viz.maxValue = maxDb;
-				viz.setShape(new CreateAverageDashboards().copyVizNetwork(dirs, ".avro"));
+				viz.setShape(new CreateAverageDashboards().copyVizNetwork(dirs, ".avro"), "id");
 				viz.addDataset(NOISE, postProcess(data, "mean_emission_per_day.csv"));
 				viz.display.lineColor.dataset = NOISE;
 				viz.display.lineColor.columnName = "value";
 				viz.display.lineColor.join = "Link Id";
-				viz.display.lineColor.fixedColors = new String[]{DARK_BLUE, LIGHT_BLUE, ORANGE, RED};
 				viz.display.lineColor.setColorRamp(ColorScheme.Oranges, 8, false, "35, 45, 55, 65, 75, 85, 95");
 				viz.display.lineWidth.dataset = NOISE;
 				viz.display.lineWidth.columnName = "value";
@@ -83,6 +82,7 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 				viz.cellSize = 250;
 				viz.opacity = 0.2;
 				viz.maxHeight = 20;
+				viz.projection = "EPSG:25832";
 				viz.center = data.context().getCenter();
 				viz.zoom = data.context().mapZoomLevel;
 				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
@@ -95,6 +95,7 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 				viz.cellSize = 250;
 				viz.opacity = 0.1;
 				viz.maxHeight = 40;
+				viz.projection = "EPSG:25832";
 				viz.center = data.context().getCenter();
 				viz.zoom = data.context().mapZoomLevel;
 				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
@@ -110,6 +111,7 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 				viz.maxHeight = 40;
 				viz.center = data.context().getCenter();
 				viz.zoom = data.context().mapZoomLevel;
+				viz.projection = "EPSG:25832";
 				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
 				viz.file = postProcess(data, "mean_damages_receiverPoint_per_day.avro");
 			})
@@ -120,6 +122,7 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 				viz.cellSize = 250;
 				viz.opacity = 0.2;
 				viz.maxHeight = 40;
+				viz.projection = "EPSG:25832";
 				viz.center = data.context().getCenter();
 				viz.zoom = data.context().mapZoomLevel;
 				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});

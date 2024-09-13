@@ -104,12 +104,14 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 		layout.row("second").el(GridMap.class, (viz, data) -> {
 			viz.title = "CO₂ Emissions";
 			viz.description = "per day. Be aware that CO2 values are provided in the simulation sample size!";
+			viz.projection = "EPSG:25832";
 			viz.height = 12.0;
 			viz.file = postProcess(data, "mean_emissions_grid_per_day.xyt.csv");
 		});
 		layout.row("third")
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "CO₂ Emissions";
+				viz.projection = "EPSG:25832";
 				viz.description = "per hour. Be aware that CO2 values are provided in the simulation sample size!";
 				viz.height = 12.;
 				viz.file = postProcess(data, "mean_emissions_grid_per_hour.csv");

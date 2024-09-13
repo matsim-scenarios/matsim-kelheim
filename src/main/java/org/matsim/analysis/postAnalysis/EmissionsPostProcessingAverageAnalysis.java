@@ -18,6 +18,7 @@ import tech.tablesaw.io.csv.CsvReadOptions;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -168,12 +169,16 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 //		grid per hour means
 		calcGridMeans(gridPerHourStats, meanGridPerHour);
 
+		NumberFormat nf = NumberFormat.getInstance(Locale.US);
+		nf.setMaximumFractionDigits(4);
+		nf.setGroupingUsed(false);
+
 //		write total mean stats
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("mean_emissions_total.csv")), CSVFormat.DEFAULT)) {
 			printer.printRecord(POLLUTANT, "kg");
 
 			for (Map.Entry<String, Double> e : meanTotal.entrySet()) {
-				printer.printRecord("mean-" + e.getKey(), e.getValue());
+				printer.printRecord("" + e.getKey() + " (mean)", nf.format(e.getValue()));
 			}
 		}
 
@@ -221,7 +226,8 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 	private void writeGridFile(String fileName, Map<Map.Entry<Double, Coord>, Double> values) throws IOException {
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath(fileName)), CSVFormat.DEFAULT)) {
 
-			printer.printRecord("# EPSG:25832");
+			//set the projection in the YAML instead, as this is put out with a quote atm...
+			//printer.printRecord("# EPSG:25832");
 			printer.printRecord("time", "x", "y", VALUE);
 
 			for (Map.Entry<Map.Entry<Double, Coord>, Double> e : values.entrySet()) {
