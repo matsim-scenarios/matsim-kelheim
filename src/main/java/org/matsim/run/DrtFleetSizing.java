@@ -37,6 +37,10 @@ import java.util.List;
 
 import static org.matsim.application.ApplicationUtils.globFile;
 
+/***
+ * This run class can identify the actual minimum required fleet size for a given AV demands from the output
+ * of a standard MATSim run (where the fleet is usually more than enough).
+ */
 public class DrtFleetSizing implements MATSimAppCommand {
 	@CommandLine.Option(names = "--run-folder", description = "Output folder of MATsim run", required = true)
 	private String matsimRunFolderPath;
