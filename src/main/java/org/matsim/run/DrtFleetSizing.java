@@ -4,6 +4,8 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -74,6 +76,7 @@ public class DrtFleetSizing implements MATSimAppCommand {
 	@CommandLine.Option(names = "--fleet-sizing", description = "a triplet: [from max interval]. ", arity = "1..*", defaultValue = "10 50 5")
 	private List<Integer> fleetSizing;
 
+	private Logger logger = LogManager.getLogger(DrtFleetSizing.class);
 
 	public static void main(String[] args) {
 		new DrtFleetSizing().execute(args);
@@ -83,6 +86,7 @@ public class DrtFleetSizing implements MATSimAppCommand {
 	public Integer call() throws Exception {
 		// write output root folder
 		if (!Files.exists(Path.of(outputFolderPath))) {
+			logger.info("creating outputFolderPath");
 			Files.createDirectories(Path.of(outputFolderPath));
 		}
 
@@ -101,8 +105,10 @@ public class DrtFleetSizing implements MATSimAppCommand {
 
 	private @NotNull String extractAVDemandFromExistingOutput(String drtNetworkPath, String extractedAVPlansPath) {
 
+
 		Network drtNetwork = NetworkUtils.readNetwork(drtNetworkPath);
 		Path outputPopulationPath = globFile(Path.of(matsimRunFolderPath), "*output_plans.xml.gz*");
+		logger.info("retrieving single-leg av plans from " + outputPopulationPath);
 		MainModeIdentifier modeIdentifier = new DefaultAnalysisMainModeIdentifier();
 		Population outputPlans = PopulationUtils.readPopulation(outputPopulationPath.toString());
 		Population avPlans = PopulationUtils.createPopulation(ConfigUtils.createConfig());
@@ -155,12 +161,14 @@ public class DrtFleetSizing implements MATSimAppCommand {
 		int fleetInterval = fleetSizing.get(2);
 
 		for (int fleetSize = fleetFrom; fleetSize <= fleetMax; fleetSize += fleetInterval) {
+			logger.info("set up run with fleet size = " + fleetSize);
 			// setup DRT run
 			Config config = ConfigUtils.loadConfig(drtConfigPath, new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new), new DvrpConfigGroup());
 			config.network().setInputFile(drtNetworkPath);
 			config.plans().setInputFile(extractedAVPlansPath);
 			config.controller().setLastIteration(1);
 			config.controller().setOutputDirectory(outputFolderPath + "/" + fleetSize + "-veh");
+			logger.info("output will be written to " + outputFolderPath + "/" + fleetSize + "-veh");
 			config.vehicles().setVehiclesFile(vehiclesFolderPath + "/" + fleetSize + "-veh.xml");
 			String singleDrtRunOutputDirectory = config.controller().getOutputDirectory();
 			MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
@@ -206,7 +214,10 @@ public class DrtFleetSizing implements MATSimAppCommand {
 				}
 			}
 
+			logger.info("the obtained waiting time is " + waitingTime);
+
 			if (waitingTime < meanWaitTime) {
+				logger.info("will stop to conduct simulations, as the target waiting time of " + waitingTime + " is higher than the yielded waiting time.");
 				break;
 			}
 		}
