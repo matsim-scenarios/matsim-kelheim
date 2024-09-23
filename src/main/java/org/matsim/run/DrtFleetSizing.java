@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.jetbrains.annotations.NotNull;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
@@ -33,6 +34,7 @@ import org.matsim.rebalancing.WaitingPointsBasedRebalancingModule;
 import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -84,8 +86,21 @@ public class DrtFleetSizing implements MATSimAppCommand {
 			Files.createDirectories(Path.of(outputFolderPath));
 		}
 
-		// read DRT trips and generate plans
+		//input paths for the simulations
 		String drtNetworkPath = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.1/input/av-fleet-sizing/kelheim-v3.0-drt-network.xml.gz";
+		String extractedAVPlansPath = outputFolderPath + "/av-plans.xml.gz";
+
+		// read DRT trips and generate plans
+		extractAVDemandFromExistingOutput(drtNetworkPath, extractedAVPlansPath);
+
+		// run DRT simulations
+		runDRTSimulations(drtNetworkPath, extractedAVPlansPath);
+
+		return 0;
+	}
+
+	private @NotNull String extractAVDemandFromExistingOutput(String drtNetworkPath, String extractedAVPlansPath) {
+
 		Network drtNetwork = NetworkUtils.readNetwork(drtNetworkPath);
 		Path outputPopulationPath = globFile(Path.of(matsimRunFolderPath), "*output_plans.xml.gz*");
 		MainModeIdentifier modeIdentifier = new DefaultAnalysisMainModeIdentifier();
@@ -129,9 +144,11 @@ public class DrtFleetSizing implements MATSimAppCommand {
 				}
 			}
 		}
-		new PopulationWriter(avPlans).write(outputFolderPath + "/av-plans.xml.gz");
+		new PopulationWriter(avPlans).write(extractedAVPlansPath);
+		return drtNetworkPath;
+	}
 
-		// run DRT simulations
+	private void runDRTSimulations(String drtNetworkPath, String extractedAVPlansPath) throws IOException {
 		Preconditions.checkArgument(fleetSizing.size() == 3);
 		int fleetFrom = fleetSizing.get(0);
 		int fleetMax = fleetSizing.get(1);
@@ -141,7 +158,7 @@ public class DrtFleetSizing implements MATSimAppCommand {
 			// setup DRT run
 			Config config = ConfigUtils.loadConfig(drtConfigPath, new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new), new DvrpConfigGroup());
 			config.network().setInputFile(drtNetworkPath);
-			config.plans().setInputFile(outputFolderPath + "/av-plans.xml.gz");
+			config.plans().setInputFile(extractedAVPlansPath);
 			config.controller().setLastIteration(1);
 			config.controller().setOutputDirectory(outputFolderPath + "/" + fleetSize + "-veh");
 			config.vehicles().setVehiclesFile(vehiclesFolderPath + "/" + fleetSize + "-veh.xml");
@@ -193,7 +210,5 @@ public class DrtFleetSizing implements MATSimAppCommand {
 				break;
 			}
 		}
-
-		return 0;
 	}
 }
