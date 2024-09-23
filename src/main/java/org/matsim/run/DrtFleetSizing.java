@@ -19,6 +19,7 @@ import org.matsim.contrib.drt.run.DrtControlerCreator;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.contrib.dvrp.run.AbstractDvrpModeModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
+import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
@@ -29,6 +30,7 @@ import org.matsim.core.router.MainModeIdentifier;
 import org.matsim.core.router.TripStructureUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.rebalancing.WaitingPointsBasedRebalancingModule;
+import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 
 import java.nio.file.Files;
@@ -146,6 +148,16 @@ public class DrtFleetSizing implements MATSimAppCommand {
 			String singleDrtRunOutputDirectory = config.controller().getOutputDirectory();
 			MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
 			Controler controler = DrtControlerCreator.createControler(config, false);
+
+			// Add speed limit to av vehicle
+			double maxSpeed = controler.getScenario()
+				.getVehicles()
+				.getVehicleTypes()
+				.get(Id.create("autonomous_vehicle", VehicleType.class))
+				.getMaximumVelocity();
+			controler.addOverridingModule(
+				new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
+					maxSpeed));
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				if (drtCfg.getMode().equals("av")) {
