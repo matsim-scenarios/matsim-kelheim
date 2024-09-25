@@ -1,4 +1,4 @@
-package org.matsim.analysis.postAnalysis;
+package org.matsim.analysis.postAnalysis.emissions;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;

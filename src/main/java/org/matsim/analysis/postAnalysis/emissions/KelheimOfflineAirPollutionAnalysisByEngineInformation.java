@@ -18,7 +18,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.analysis.emissions;
+package org.matsim.analysis.postAnalysis.emissions;
 
 import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;

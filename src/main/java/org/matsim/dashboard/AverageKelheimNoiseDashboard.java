@@ -23,12 +23,12 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 	private final List<String> dirs;
 	private final Integer noRuns;
 	private static final String NOISE = "noise";
-	private static final String DARK_BLUE = "#1175b3";
-	private static final String LIGHT_BLUE = "#95c7df";
-	private static final String ORANGE = "#f4a986";
-	private static final String RED = "#cc0c27";
-	private static final String SAND = "#dfb095";
-	private static final String YELLOW = "#dfdb95";
+	static final String DARK_BLUE = "#1175b3";
+	static final String LIGHT_BLUE = "#95c7df";
+	static final String ORANGE = "#f4a986";
+	static final String RED = "#cc0c27";
+	static final String SAND = "#dfb095";
+	static final String YELLOW = "#dfdb95";
 
 	public AverageKelheimNoiseDashboard(List<String> dirs, Integer noRuns) {
 		this.dirs = dirs;

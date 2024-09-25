@@ -20,7 +20,7 @@
 
 package org.matsim.dashboard;
 
-import org.matsim.analysis.postAnalysis.EmissionsPostProcessingAverageAnalysis;
+import org.matsim.analysis.postAnalysis.emissions.EmissionsPostProcessingAverageAnalysis;
 import org.matsim.simwrapper.Dashboard;
 import org.matsim.simwrapper.Data;
 import org.matsim.simwrapper.Header;
@@ -32,6 +32,8 @@ import org.matsim.simwrapper.viz.Table;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.matsim.dashboard.AverageKelheimNoiseDashboard.*;
 
 /**
  * Average emissions dashboard for several runs with the same config but a different random seed.
@@ -105,6 +107,7 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 			viz.title = "CO₂ Emissions";
 			viz.description = "per day. Be aware that CO2 values are provided in the simulation sample size!";
 			viz.projection = "EPSG:25832";
+			viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
 			viz.height = 12.0;
 			viz.file = postProcess(data, "mean_emissions_grid_per_day.xyt.csv");
 		});
@@ -112,6 +115,7 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "CO₂ Emissions";
 				viz.projection = "EPSG:25832";
+				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
 				viz.description = "per hour. Be aware that CO2 values are provided in the simulation sample size!";
 				viz.height = 12.;
 				viz.file = postProcess(data, "mean_emissions_grid_per_hour.csv");
