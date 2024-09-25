@@ -240,7 +240,6 @@ public class RunKelheimScenario extends MATSimApplication {
 
 			}
 
-			// TODO: what is a good constant for DRT. The existing one of 2.45 makes drt trips really attractive; you no longer see a difference with stops that are far away and ones that are close.
 //			ScoringConfigGroup.ModeParams drtParams = config.scoring().getOrCreateModeParams(TransportMode.drt);
 //			drtParams.setConstant(0.0);
 
@@ -278,9 +277,9 @@ public class RunKelheimScenario extends MATSimApplication {
 			accConfig.setTileSize_m((int) tileSize);
 			accConfig.setTimeOfDay(12 * 60 * 60.);
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
 //			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // ??
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, false); // works
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
 //			accConfig.setAccessibilityMeasureType(AccessibilityConfigGroup.AccessibilityMeasureType.gravity);
 		}
