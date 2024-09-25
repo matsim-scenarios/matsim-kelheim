@@ -137,8 +137,8 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 		calcCsvMeans(totalStats, meanTotalStatsPerDay);
 
 //		calc avro means
-		XYTData imissionsPerDayMean = calcAvroMeans(imissionsPerDay, "imissions");
-		XYTData imissionsPerHourMean = calcAvroMeans(imissionsPerHour, "imissions");
+		XYTData imissionsPerDayMean = calcAvroMeans(imissionsPerDay, "immission");
+		XYTData imissionsPerHourMean = calcAvroMeans(imissionsPerHour, "immission");
 		XYTData damagesPerDayMean = calcAvroMeans(damagesPerDay, "damages_receiverPoint");
 		XYTData damagesPerHourMean = calcAvroMeans(damagesPerHour, "damages_receiverPoint");
 
