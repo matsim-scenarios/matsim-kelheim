@@ -1,6 +1,5 @@
 package org.matsim.dashboard;
 
-import org.matsim.analysis.emissions.KelheimEmissionsDashboard;
 import org.matsim.core.config.Config;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.simwrapper.Dashboard;

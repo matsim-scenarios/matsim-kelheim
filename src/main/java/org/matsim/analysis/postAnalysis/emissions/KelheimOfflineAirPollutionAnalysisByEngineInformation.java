@@ -18,7 +18,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.analysis.emissions;
+package org.matsim.analysis.postAnalysis.emissions;
 
 import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
@@ -428,14 +428,16 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 	//so we need to do some stupid filtering afterwards, which means that we produce and calculate more data than we dump out....
 	private void writeRaster(Network fullNetwork, Network filteredNetwork, Config config, EmissionsOnLinkEventHandler emissionsEventHandler) {
 
-
-
 		Map<Pollutant, Raster> rasterMap = FastEmissionGridAnalyzer.processHandlerEmissions(emissionsEventHandler.getLink2pollutants(), fullNetwork, gridSize, 20);
 
 		Raster raster = rasterMap.values().stream().findFirst().orElseThrow();
 
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("emissions_grid_per_day.xyt.csv")),
 			CSVFormat.DEFAULT.builder().setCommentMarker('#').build())) {
+
+			NumberFormat nf = NumberFormat.getInstance(Locale.US);
+			nf.setMaximumFractionDigits(4);
+			nf.setGroupingUsed(false);
 
 			String crs = ProjectionUtils.getCRS(fullNetwork);
 			if (crs == null)
@@ -444,7 +446,7 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 				crs = config.global().getCoordinateSystem();
 
 			// print coordinate system
-			printer.printComment(crs);
+//			printer.printComment(crs);
 
 			// print header
 			printer.print("time");
@@ -478,7 +480,7 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 					printer.print(coord.getY());
 
 					double value = rasterMap.get(Pollutant.CO2_TOTAL).getValueByIndex(xi, yi);
-					printer.print(value);
+					printer.print(nf.format(value));
 
 					printer.println();
 				}
@@ -515,14 +517,18 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 		try (CSVPrinter printer = new CSVPrinter(IOUtils.getBufferedWriter(output.getPath("emissions_grid_per_hour.csv").toString()),
 			CSVFormat.DEFAULT.builder().setCommentMarker('#').build())) {
 
+			NumberFormat nf = NumberFormat.getInstance(Locale.US);
+			nf.setMaximumFractionDigits(4);
+			nf.setGroupingUsed(false);
+
 			String crs = ProjectionUtils.getCRS(fullNetwork);
 			if (crs == null)
 				crs = config.network().getInputCRS();
 			if (crs == null)
 				crs = config.global().getCoordinateSystem();
 
-			// print coordinate system
-			printer.printComment(crs);
+//			 print coordinate system
+//			printer.printComment(crs);
 
 			// print header
 			printer.print("time");
@@ -560,7 +566,7 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 						printer.print(coord.getX());
 						printer.print(coord.getY());
 
-						printer.print(value);
+						printer.print(nf.format(value));
 
 						printer.println();
 					}
