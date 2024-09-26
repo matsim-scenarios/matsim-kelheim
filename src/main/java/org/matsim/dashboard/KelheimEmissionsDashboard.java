@@ -96,6 +96,7 @@ public class KelheimEmissionsDashboard implements Dashboard{
 			viz.title = "CO₂ Emissions";
 			viz.description = "per day. Be aware that CO2 values are provided in the simulation sample size!";
 			viz.height = 12.0;
+			viz.projection = "EPSG:25832";
 			viz.file = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_grid_per_day.xyt.csv", new String[0]);
 			viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
 
@@ -105,6 +106,7 @@ public class KelheimEmissionsDashboard implements Dashboard{
 				viz.title = "CO₂ Emissions";
 				viz.description = "per hour. Be aware that CO2 values are provided in the simulation sample size!";
 				viz.height = 12.;
+				viz.projection = "EPSG:25832";
 				viz.file = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_grid_per_hour.csv");
 				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
 			});

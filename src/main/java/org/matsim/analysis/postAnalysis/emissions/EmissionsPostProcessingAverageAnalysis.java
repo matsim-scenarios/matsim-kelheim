@@ -198,8 +198,8 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 		}
 
 //		write grid mean stats
-		writeGridFile("mean_emissions_grid_per_day.xyt.csv", meanGridPerDay);
-		writeGridFile("mean_emissions_grid_per_hour.csv", meanGridPerHour);
+		writeGridFile("mean_emissions_grid_per_day.xyt.csv", meanGridPerDay, nf);
+		writeGridFile("mean_emissions_grid_per_hour.csv", meanGridPerHour, nf);
 
 		return 0;
 	}
@@ -223,7 +223,7 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 		}
 	}
 
-	private void writeGridFile(String fileName, Map<Map.Entry<Double, Coord>, Double> values) throws IOException {
+	private void writeGridFile(String fileName, Map<Map.Entry<Double, Coord>, Double> values, NumberFormat numberFormat) throws IOException {
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath(fileName)), CSVFormat.DEFAULT)) {
 
 			//set the projection in the YAML instead, as this is put out with a quote atm...
@@ -231,7 +231,7 @@ public class EmissionsPostProcessingAverageAnalysis implements MATSimAppCommand 
 			printer.printRecord("time", "x", "y", VALUE);
 
 			for (Map.Entry<Map.Entry<Double, Coord>, Double> e : values.entrySet()) {
-				printer.printRecord(e.getKey().getKey(), e.getKey().getValue().getX(), e.getKey().getValue().getY(), e.getValue());
+				printer.printRecord(e.getKey().getKey(), e.getKey().getValue().getX(), e.getKey().getValue().getY(), numberFormat.format(e.getValue()));
 			}
 		}
 	}
