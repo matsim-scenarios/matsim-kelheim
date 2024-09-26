@@ -23,6 +23,7 @@ package org.matsim.dashboard;
 import org.matsim.analysis.postAnalysis.emissions.KelheimOfflineAirPollutionAnalysisByEngineInformation;
 import org.matsim.application.prepare.network.CreateGeoJsonNetwork;
 import org.matsim.simwrapper.Dashboard;
+import org.matsim.simwrapper.Data;
 import org.matsim.simwrapper.Header;
 import org.matsim.simwrapper.Layout;
 import org.matsim.simwrapper.viz.GridMap;
@@ -30,7 +31,6 @@ import org.matsim.simwrapper.viz.Links;
 import org.matsim.simwrapper.viz.Table;
 
 import static org.matsim.dashboard.AverageKelheimNoiseDashboard.*;
-import static org.matsim.dashboard.AverageKelheimNoiseDashboard.RED;
 
 /**
  * this is basically equivalent to the standard emissions dashboard
@@ -95,20 +95,21 @@ public class KelheimEmissionsDashboard implements Dashboard{
 		layout.row("second").el(GridMap.class, (viz, data) -> {
 			viz.title = "CO₂ Emissions";
 			viz.description = "per day. Be aware that CO2 values are provided in the simulation sample size!";
-			viz.height = 12.0;
-			viz.projection = "EPSG:25832";
-			viz.file = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_grid_per_day.xyt.csv", new String[0]);
-			viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+			setGridMapStandards(viz, 12.0, data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_grid_per_day.xyt.csv", new String[0]));
 
 		});
 		layout.row("third")
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "CO₂ Emissions";
 				viz.description = "per hour. Be aware that CO2 values are provided in the simulation sample size!";
-				viz.height = 12.;
-				viz.projection = "EPSG:25832";
-				viz.file = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_grid_per_hour.csv");
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+				setGridMapStandards(viz, 12., data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_grid_per_hour.csv"));
 			});
+	}
+
+	private static void setGridMapStandards(GridMap viz, double height, String data) {
+		viz.height = height;
+		viz.projection = "EPSG:25832";
+		viz.file = data;
+		viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
 	}
 }

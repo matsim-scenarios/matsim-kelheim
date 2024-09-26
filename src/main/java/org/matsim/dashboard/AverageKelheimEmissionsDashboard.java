@@ -130,19 +130,21 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 		layout.row("second").el(GridMap.class, (viz, data) -> {
 			viz.title = "CO₂ Emissions";
 			viz.description = "per day. Be aware that CO2 values are provided in the simulation sample size!";
-			viz.projection = "EPSG:25832";
-			viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
-			viz.height = 12.0;
+			setGridMapStandards(viz);
 			viz.file = postProcess(data, "mean_emissions_grid_per_day.xyt.csv");
 		});
 		layout.row("third")
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "CO₂ Emissions";
-				viz.projection = "EPSG:25832";
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
 				viz.description = "per hour. Be aware that CO2 values are provided in the simulation sample size!";
-				viz.height = 12.;
+				setGridMapStandards(viz);
 				viz.file = postProcess(data, "mean_emissions_grid_per_hour.csv");
 			});
+	}
+
+	private static void setGridMapStandards(GridMap viz) {
+		viz.projection = "EPSG:25832";
+		viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+		viz.height = 12.0;
 	}
 }

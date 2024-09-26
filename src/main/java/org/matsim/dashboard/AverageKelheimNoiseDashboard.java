@@ -78,55 +78,38 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Noise Immissions (Grid)";
 				viz.description = "Total Noise Immissions per day";
-				viz.height = 12.0;
-				viz.cellSize = 250;
-				viz.opacity = 0.2;
-				viz.maxHeight = 20;
-				viz.projection = "EPSG:25832";
-				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+				setGridMapStandards(viz, data);
 				viz.file = postProcess(data, "mean_immission_per_day.avro");
 			})
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Hourly Noise Immissions (Grid)";
 				viz.description = "Noise Immissions per hour";
-				viz.height = 12.0;
-				viz.cellSize = 250;
-				viz.opacity = 0.1;
-				viz.maxHeight = 40;
-				viz.projection = "EPSG:25832";
-				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+				setGridMapStandards(viz, data);
 				viz.file = postProcess(data, "mean_immission_per_hour.avro");
 			});
 		layout.row("damages")
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Daily Noise Damages (Grid)";
 				viz.description = "Total Noise Damages per day [€]";
-				viz.height = 12.0;
-				viz.cellSize = 250;
-				viz.opacity = 0.1;
-				viz.maxHeight = 40;
-				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
-				viz.projection = "EPSG:25832";
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+				setGridMapStandards(viz, data);
 				viz.file = postProcess(data, "mean_damages_receiverPoint_per_day.avro");
 			})
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Hourly Noise Damages (Grid)";
 				viz.description = "Noise Damages per hour [€]";
-				viz.height = 12.0;
-				viz.cellSize = 250;
-				viz.opacity = 0.2;
-				viz.maxHeight = 40;
-				viz.projection = "EPSG:25832";
-				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+				setGridMapStandards(viz, data);
 				viz.file = postProcess(data, "mean_damages_receiverPoint_per_hour.avro");
 			});
+	}
+
+	private static void setGridMapStandards(GridMap viz, Data data) {
+		viz.height = 12.0;
+		viz.cellSize = 250;
+		viz.opacity = 0.1;
+		viz.maxHeight = 40;
+		viz.projection = "EPSG:25832";
+		viz.center = data.context().getCenter();
+		viz.zoom = data.context().mapZoomLevel;
+		viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
 	}
 }
