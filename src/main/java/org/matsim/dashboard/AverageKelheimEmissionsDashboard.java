@@ -27,7 +27,6 @@ import org.matsim.simwrapper.Header;
 import org.matsim.simwrapper.Layout;
 import org.matsim.simwrapper.viz.*;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,7 +50,7 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 		this.dirs = dirs;
 		this.noRuns = noRuns;
 
-		if(pathToBaseRun == null || pathToBaseRun.equals("null")){
+		if (pathToBaseRun == null || pathToBaseRun.equals("null")){
 			this.pathToCsvBase = null;
 		} else {
 			if (!pathToBaseRun.endsWith("/")) {
@@ -90,7 +89,7 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 				viz.showAllRows = true;
 				viz.width = 1.0;
 			})
-			/**
+			/*
 			 *  Commented out link panel, because the MapPlot can show a legend and seems to be the development head.
 			 *  However, it doesn't seem to have the pointer to the base case
 			 */
