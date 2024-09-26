@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shows emission in the scenario.
+ * Averages and displays the noise outcome of single runs.
  */
 public class AverageKelheimNoiseDashboard implements Dashboard {
 

@@ -24,18 +24,14 @@ final class CreateAverageDashboards implements MATSimAppCommand {
 	private String inputPath;
 	@CommandLine.Option(names = "--no-runs", defaultValue = "5", description = "Number of simulation runs to be averaged.")
 	private Integer noRuns;
-	@CommandLine.Option(names = "--base-run", description = "Path to directory base run.", defaultValue = "/net/ils/matsim-kelheim/v3.0-release/output-base/25pct")
+	@CommandLine.Option(names = "--base-run", description = "Path to directory base run.")
 	private String pathToBaseRun;
 
 	public static void main(String[] args) {
 		new CreateAverageDashboards().execute(args);
 	}
 
-	CreateAverageDashboards() {
-
-	}
-
-
+	CreateAverageDashboards() {}
 
 	@Override
 	public Integer call() throws Exception {

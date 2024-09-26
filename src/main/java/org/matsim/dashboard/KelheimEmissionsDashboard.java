@@ -57,10 +57,10 @@ public class KelheimEmissionsDashboard implements Dashboard{
 	 */
 	public void configure(Header header, Layout layout) {
 
-		header.title = "Emissions";
-		header.description = "Shows the emissions footprint and spatial distribution.";
+		header.title = "Air Pollution";
+		header.description = "Shows the air pollution and spatial distribution.";
 
-		String linkDescription = "Displays the emissions for each link per meter. Be aware that emission values are provided in the simulation sample size!";
+		String linkDescription = "Displays the emitted pair pollutants for each link per meter. Be aware that pollutant values are provided in the simulation sample size!";
 		if (pathToCsvBase != null){
 			linkDescription += String.format("%n Base is %s", pathToCsvBase);
 		}
@@ -68,7 +68,7 @@ public class KelheimEmissionsDashboard implements Dashboard{
 
 		layout.row("links")
 			.el(Table.class, (viz, data) -> {
-				viz.title = "Emissions";
+				viz.title = "Air Pollution";
 				viz.description = "by pollutant. Total values are scaled from the simulation sample size to 100%.";
 				viz.dataset = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_total.csv", new String[0]);
 				viz.enableFilter = false;
@@ -76,7 +76,7 @@ public class KelheimEmissionsDashboard implements Dashboard{
 				viz.width = 1.0;
 			})
 			.el(Links.class, (viz, data) -> {
-				viz.title = "Emissions per Link per Meter";
+				viz.title = "Emitted Pollutant in Gram per Meter";
 				viz.description = finalLinkDescription;
 				viz.height = 12.0;
 				viz.datasets.csvFile = data.compute(KelheimOfflineAirPollutionAnalysisByEngineInformation.class, "emissions_per_link_per_m.csv", new String[0]);
