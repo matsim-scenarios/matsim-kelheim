@@ -20,18 +20,17 @@
 
 package org.matsim.dashboard;
 
-import org.matsim.analysis.postAnalysis.EmissionsPostProcessingAverageAnalysis;
+import org.matsim.analysis.postAnalysis.emissions.EmissionsPostProcessingAverageAnalysis;
 import org.matsim.simwrapper.Dashboard;
 import org.matsim.simwrapper.Data;
 import org.matsim.simwrapper.Header;
 import org.matsim.simwrapper.Layout;
-import org.matsim.simwrapper.viz.GridMap;
-import org.matsim.simwrapper.viz.Links;
-import org.matsim.simwrapper.viz.Table;
+import org.matsim.simwrapper.viz.*;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.matsim.dashboard.AverageKelheimNoiseDashboard.*;
 
 /**
  * Average emissions dashboard for several runs with the same config but a different random seed.
@@ -51,10 +50,14 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 		this.dirs = dirs;
 		this.noRuns = noRuns;
 
-		if (!pathToBaseRun.endsWith("/")) {
-			pathToBaseRun += "/";
+		if (pathToBaseRun == null || pathToBaseRun.equals("null")){
+			this.pathToCsvBase = null;
+		} else {
+			if (!pathToBaseRun.endsWith("/")) {
+				pathToBaseRun += "/";
+			}
+			this.pathToCsvBase = pathToBaseRun + "analysis/emissions/emissions_per_link_per_m.csv";
 		}
-		this.pathToCsvBase = pathToBaseRun + "analysis/emissions/emissions_per_link_per_m.csv";
 	}
 
 	private String postProcess(Data data, String outputFile) {
@@ -68,8 +71,8 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 	 * Produces the dashboard.
 	 */
 	public void configure(Header header, Layout layout) {
-		header.title = "Average Emissions";
-		header.description = "Shows the average emissions footprint and spatial distribution for several simulation runs.";
+		header.title = "Average Air Pollution";
+		header.description = "Shows the average air pollution and spatial distribution for several simulation runs.";
 
 		String linkDescription = "Displays the emissions for each link per meter. Be aware that emission values are provided in the simulation sample size!";
 		if (pathToCsvBase != null){
@@ -86,12 +89,16 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 				viz.showAllRows = true;
 				viz.width = 1.0;
 			})
-			.el(Links.class, (viz, data) -> {
-				viz.title = "Emissions per Link per Meter";
+			/*
+			 *  Commented out link panel, because the MapPlot can show a legend and seems to be the development head.
+			 *  However, it doesn't seem to have the pointer to the base case
+			 */
+			/*.el(Links.class, (viz, data) -> {
+				viz.title = "Emitted Pollutant in Gram per Meter";
 				viz.description = finalLinkDescription;
 				viz.height = 12.0;
 				viz.datasets.csvFile = postProcess(data, "mean_emissions_per_link_per_m.csv");
-				viz.datasets.csvBase = Path.of(this.dirs.get(0)).getParent().relativize(Path.of(pathToCsvBase)).toString();
+				viz.datasets.csvBase = pathToCsvBase == null ? "" : Path.of(this.dirs.get(0)).getParent().relativize(Path.of(pathToCsvBase)).toString();
 				viz.network = new CreateAverageDashboards().copyVizNetwork(dirs, ".avro");
 				viz.display.color.columnName = "CO2_TOTAL [g/m]";
 				viz.display.color.dataset = "csvFile";
@@ -99,22 +106,45 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 				viz.display.width.columnName = "CO2_TOTAL [g/m]";
 				viz.display.width.dataset = "csvFile";
 				viz.center = data.context().getCenter();
+				viz.width = 1.0;
+			})*/
+			.el(MapPlot.class, (viz, data) -> {
+				viz.title = "Emitted Pollutant in Gram per Meter";
+				viz.description = finalLinkDescription;
+				viz.height = 12.0;
+				viz.center = data.context().getCenter();
+				viz.zoom = data.context().mapZoomLevel;
+				viz.setShape(new CreateAverageDashboards().copyVizNetwork(dirs, ".avro"), "id");
+				viz.addDataset("emissions_per_m", postProcess(data, "mean_emissions_per_link_per_m.csv"));
+				viz.display.lineColor.dataset = "emissions_per_m";
+				viz.display.lineColor.columnName = "CO2_TOTAL [g/m]";
+				viz.display.lineColor.join = "linkId";
+				viz.display.lineColor.setColorRamp(ColorScheme.Oranges, 8, false, "35, 45, 55, 65, 75, 85, 95");
+				viz.display.lineWidth.dataset = "emissions_per_m";
+				viz.display.lineWidth.columnName = "CO2_TOTAL [g/m]";
+				viz.display.lineWidth.scaleFactor = 100d;
+				viz.display.lineWidth.join = "linkId";
 				viz.width = 3.0;
-		});
+			});
+
 		layout.row("second").el(GridMap.class, (viz, data) -> {
 			viz.title = "CO₂ Emissions";
 			viz.description = "per day. Be aware that CO2 values are provided in the simulation sample size!";
-			viz.projection = "EPSG:25832";
-			viz.height = 12.0;
+			setGridMapStandards(viz);
 			viz.file = postProcess(data, "mean_emissions_grid_per_day.xyt.csv");
 		});
 		layout.row("third")
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "CO₂ Emissions";
-				viz.projection = "EPSG:25832";
 				viz.description = "per hour. Be aware that CO2 values are provided in the simulation sample size!";
-				viz.height = 12.;
+				setGridMapStandards(viz);
 				viz.file = postProcess(data, "mean_emissions_grid_per_hour.csv");
 			});
+	}
+
+	private static void setGridMapStandards(GridMap viz) {
+		viz.projection = "EPSG:25832";
+		viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+		viz.height = 12.0;
 	}
 }

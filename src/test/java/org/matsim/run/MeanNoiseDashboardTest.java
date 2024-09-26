@@ -67,7 +67,7 @@ class MeanNoiseDashboardTest {
 
 			timeStamps.add(28800);
 
-			immissionData.put("imissions", List.of((float) i));
+			immissionData.put("immission", List.of((float) i));
 			damageData.put("damages_receiverPoint", List.of((float) i));
 
 			String seedDir = path + i + "seed/";

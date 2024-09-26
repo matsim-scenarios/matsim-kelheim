@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shows emission in the scenario.
+ * Averages and displays the noise outcome of single runs.
  */
 public class AverageKelheimNoiseDashboard implements Dashboard {
 
@@ -23,12 +23,12 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 	private final List<String> dirs;
 	private final Integer noRuns;
 	private static final String NOISE = "noise";
-	private static final String DARK_BLUE = "#1175b3";
-	private static final String LIGHT_BLUE = "#95c7df";
-	private static final String ORANGE = "#f4a986";
-	private static final String RED = "#cc0c27";
-	private static final String SAND = "#dfb095";
-	private static final String YELLOW = "#dfdb95";
+	static final String DARK_BLUE = "#1175b3";
+	static final String LIGHT_BLUE = "#95c7df";
+	static final String ORANGE = "#f4a986";
+	static final String RED = "#cc0c27";
+	static final String SAND = "#dfb095";
+	static final String YELLOW = "#dfdb95";
 
 	public AverageKelheimNoiseDashboard(List<String> dirs, Integer noRuns) {
 		this.dirs = dirs;
@@ -78,55 +78,38 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Noise Immissions (Grid)";
 				viz.description = "Total Noise Immissions per day";
-				viz.height = 12.0;
-				viz.cellSize = 250;
-				viz.opacity = 0.2;
-				viz.maxHeight = 20;
-				viz.projection = "EPSG:25832";
-				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+				setGridMapStandards(viz, data);
 				viz.file = postProcess(data, "mean_immission_per_day.avro");
 			})
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Hourly Noise Immissions (Grid)";
 				viz.description = "Noise Immissions per hour";
-				viz.height = 12.0;
-				viz.cellSize = 250;
-				viz.opacity = 0.1;
-				viz.maxHeight = 40;
-				viz.projection = "EPSG:25832";
-				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+				setGridMapStandards(viz, data);
 				viz.file = postProcess(data, "mean_immission_per_hour.avro");
 			});
 		layout.row("damages")
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Daily Noise Damages (Grid)";
 				viz.description = "Total Noise Damages per day [€]";
-				viz.height = 12.0;
-				viz.cellSize = 250;
-				viz.opacity = 0.1;
-				viz.maxHeight = 40;
-				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
-				viz.projection = "EPSG:25832";
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+				setGridMapStandards(viz, data);
 				viz.file = postProcess(data, "mean_damages_receiverPoint_per_day.avro");
 			})
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Hourly Noise Damages (Grid)";
 				viz.description = "Noise Damages per hour [€]";
-				viz.height = 12.0;
-				viz.cellSize = 250;
-				viz.opacity = 0.2;
-				viz.maxHeight = 40;
-				viz.projection = "EPSG:25832";
-				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
-				viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
+				setGridMapStandards(viz, data);
 				viz.file = postProcess(data, "mean_damages_receiverPoint_per_hour.avro");
 			});
+	}
+
+	private static void setGridMapStandards(GridMap viz, Data data) {
+		viz.height = 12.0;
+		viz.cellSize = 250;
+		viz.opacity = 0.1;
+		viz.maxHeight = 40;
+		viz.projection = "EPSG:25832";
+		viz.center = data.context().getCenter();
+		viz.zoom = data.context().mapZoomLevel;
+		viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
 	}
 }
