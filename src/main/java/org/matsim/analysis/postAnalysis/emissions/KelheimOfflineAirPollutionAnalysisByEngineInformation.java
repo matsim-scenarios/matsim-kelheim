@@ -114,7 +114,7 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 	//dump out all pollutants. to include only a subset of pollutants, adjust!
 	static List<Pollutant> pollutants2Output = Arrays.asList(Pollutant.values());
 
-	KelheimOfflineAirPollutionAnalysisByEngineInformation(){
+	public KelheimOfflineAirPollutionAnalysisByEngineInformation(){
 		numberFormat = NumberFormat.getInstance(Locale.US);
 		numberFormat.setMaximumFractionDigits(4);
 		numberFormat.setGroupingUsed(false);
