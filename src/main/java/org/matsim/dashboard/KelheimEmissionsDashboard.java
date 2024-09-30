@@ -23,7 +23,6 @@ package org.matsim.dashboard;
 import org.matsim.analysis.postAnalysis.emissions.KelheimOfflineAirPollutionAnalysisByEngineInformation;
 import org.matsim.application.prepare.network.CreateGeoJsonNetwork;
 import org.matsim.simwrapper.Dashboard;
-import org.matsim.simwrapper.Data;
 import org.matsim.simwrapper.Header;
 import org.matsim.simwrapper.Layout;
 import org.matsim.simwrapper.viz.GridMap;

@@ -109,9 +109,16 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 	@CommandLine.Option(names = "--grid-size", description = "Grid size in meter", defaultValue = "250")
 	private double gridSize;
 
+	private final NumberFormat numberFormat;
 
 	//dump out all pollutants. to include only a subset of pollutants, adjust!
 	static List<Pollutant> pollutants2Output = Arrays.asList(Pollutant.values());
+
+	KelheimOfflineAirPollutionAnalysisByEngineInformation(){
+		numberFormat = NumberFormat.getInstance(Locale.US);
+		numberFormat.setMaximumFractionDigits(4);
+		numberFormat.setGroupingUsed(false);
+	}
 
 	@Override
 	public Integer call() throws Exception {
@@ -139,7 +146,6 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 		//------------------------------------------------------------------------------
 		// the following is copied from the example and supplemented...
 		//------------------------------------------------------------------------------
-
 
 		NetworkUtils.writeNetwork(scenario.getNetwork(), output.getPath( "emissionNetwork.xml.gz").toString());
 
@@ -301,10 +307,6 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 
 		log.info("Writing output...");
 
-		NumberFormat nf = NumberFormat.getInstance(Locale.US);
-		nf.setMaximumFractionDigits(4);
-		nf.setGroupingUsed(false);
-
 		{
 			//dump link-based output files
 			File absolutFile = new File(linkEmissionAnalysisFile);
@@ -340,14 +342,14 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 					if (link2pollutants.get(linkId).get(pollutant) != null) {
 						emissionValue = link2pollutants.get(linkId).get(pollutant);
 					}
-					absolutWriter.write(";" + nf.format(emissionValue));
+					absolutWriter.write(";" + numberFormat.format(emissionValue));
 
 					double emissionPerM = Double.NaN;
 					Link link = network.getLinks().get(linkId);
 					if (link != null) {
 						emissionPerM = emissionValue / link.getLength();
 					}
-					perMeterWriter.write(";" + nf.format(emissionPerM));
+					perMeterWriter.write(";" + numberFormat.format(emissionPerM));
 
 				}
 				absolutWriter.newLine();
@@ -435,18 +437,7 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.getPath("emissions_grid_per_day.xyt.csv")),
 			CSVFormat.DEFAULT.builder().setCommentMarker('#').build())) {
 
-			NumberFormat nf = NumberFormat.getInstance(Locale.US);
-			nf.setMaximumFractionDigits(4);
-			nf.setGroupingUsed(false);
-
-			String crs = ProjectionUtils.getCRS(fullNetwork);
-			if (crs == null)
-				crs = config.network().getInputCRS();
-			if (crs == null)
-				crs = config.global().getCoordinateSystem();
-
-			// print coordinate system
-//			printer.printComment(crs);
+//			printCrsComment(fullNetwork, config, printer);
 
 			// print header
 			printer.print("time");
@@ -480,7 +471,7 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 					printer.print(coord.getY());
 
 					double value = rasterMap.get(Pollutant.CO2_TOTAL).getValueByIndex(xi, yi);
-					printer.print(nf.format(value));
+					printer.print(numberFormat.format(value));
 
 					printer.println();
 				}
@@ -517,18 +508,7 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 		try (CSVPrinter printer = new CSVPrinter(IOUtils.getBufferedWriter(output.getPath("emissions_grid_per_hour.csv").toString()),
 			CSVFormat.DEFAULT.builder().setCommentMarker('#').build())) {
 
-			NumberFormat nf = NumberFormat.getInstance(Locale.US);
-			nf.setMaximumFractionDigits(4);
-			nf.setGroupingUsed(false);
-
-			String crs = ProjectionUtils.getCRS(fullNetwork);
-			if (crs == null)
-				crs = config.network().getInputCRS();
-			if (crs == null)
-				crs = config.global().getCoordinateSystem();
-
-//			 print coordinate system
-//			printer.printComment(crs);
+//			printCrsComment(fullNetwork, config, printer);
 
 			// print header
 			printer.print("time");
@@ -566,7 +546,7 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 						printer.print(coord.getX());
 						printer.print(coord.getY());
 
-						printer.print(nf.format(value));
+						printer.print(numberFormat.format(value));
 
 						printer.println();
 					}
@@ -577,6 +557,17 @@ public class KelheimOfflineAirPollutionAnalysisByEngineInformation implements MA
 			log.error("Error writing results", e);
 		}
 
+	}
+
+	private static void printCrsComment(Network fullNetwork, Config config, CSVPrinter printer) throws IOException {
+		String crs = ProjectionUtils.getCRS(fullNetwork);
+		if (crs == null)
+			crs = config.network().getInputCRS();
+		if (crs == null)
+			crs = config.global().getCoordinateSystem();
+
+			//print coordinate system
+			printer.printComment(crs);
 	}
 
 }
