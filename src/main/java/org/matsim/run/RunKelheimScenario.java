@@ -43,6 +43,7 @@ import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
+import org.matsim.contrib.vsp.pt.fare.PtFareModule;
 import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
@@ -62,8 +63,8 @@ import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.SimWrapperModule;
 import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
-import playground.vsp.pt.fare.DistanceBasedPtFareParams;
-import playground.vsp.pt.fare.PtFareConfigGroup;
+import org.matsim.contrib.vsp.pt.fare.DistanceBasedPtFareParams;
+import org.matsim.contrib.vsp.pt.fare.PtFareConfigGroup;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import javax.annotation.Nullable;
@@ -221,16 +222,18 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		// Minimum fare (e.g. short trip or 1 zone ticket)
 		distanceBasedPtFareParams.setMinFare(2.0);
-		// Division between long trip and short trip (unit: m)
-		distanceBasedPtFareParams.setLongDistanceTripThreshold(50000);
-		// y = ax + b --> a value, for short trips
-		distanceBasedPtFareParams.setNormalTripSlope(0.00017);
-		// y = ax + b --> b value, for short trips
-		distanceBasedPtFareParams.setNormalTripIntercept(1.6);
-		// y = ax + b --> a value, for long trips
-		distanceBasedPtFareParams.setLongDistanceTripSlope(0.00025);
-		// y = ax + b --> b value, for long trips
-		distanceBasedPtFareParams.setLongDistanceTripIntercept(30);
+
+		distanceBasedPtFareParams.setTransactionPartner("pt-operator");
+		DistanceBasedPtFareParams.DistanceClassLinearFareFunctionParams shortDistance = distanceBasedPtFareParams.getOrCreateDistanceClassFareParams(50000);
+		shortDistance.setFareIntercept(1.6);
+		shortDistance.setFareSlope(0.00017);
+
+		DistanceBasedPtFareParams.DistanceClassLinearFareFunctionParams longDistance = distanceBasedPtFareParams.getOrCreateDistanceClassFareParams(Double.POSITIVE_INFINITY);
+		longDistance.setFareIntercept(30);
+		longDistance.setFareSlope(0.00025);
+		distanceBasedPtFareParams.setOrder(1);
+
+		ptFareConfigGroup.addParameterSet(distanceBasedPtFareParams);
 
 		//enable plan inheritance analysis
 		config.planInheritance().setEnabled(true);
@@ -291,7 +294,8 @@ public class RunKelheimScenario extends MATSimApplication {
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
-				install(new KelheimPtFareModule());
+//				install(new KelheimPtFareModule());
+				install(new PtFareModule());
 				install(new SwissRailRaptorModule());
 				install(new PersonMoneyEventsAnalysisModule());
 				install(new SimWrapperModule());

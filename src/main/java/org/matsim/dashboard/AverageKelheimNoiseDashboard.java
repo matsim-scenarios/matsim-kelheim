@@ -1,10 +1,8 @@
 package org.matsim.dashboard;
 
 import org.matsim.analysis.postAnalysis.NoiseAverageAnalysis;
-import org.matsim.simwrapper.Dashboard;
-import org.matsim.simwrapper.Data;
-import org.matsim.simwrapper.Header;
-import org.matsim.simwrapper.Layout;
+import org.matsim.run.RunKelheimScenario;
+import org.matsim.simwrapper.*;
 import org.matsim.simwrapper.viz.ColorScheme;
 import org.matsim.simwrapper.viz.GridMap;
 import org.matsim.simwrapper.viz.MapPlot;
@@ -23,12 +21,7 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 	private final List<String> dirs;
 	private final Integer noRuns;
 	private static final String NOISE = "noise";
-	static final String DARK_BLUE = "#1175b3";
-	static final String LIGHT_BLUE = "#95c7df";
-	static final String ORANGE = "#f4a986";
-	static final String RED = "#cc0c27";
-	static final String SAND = "#dfb095";
-	static final String YELLOW = "#dfdb95";
+
 
 	public AverageKelheimNoiseDashboard(List<String> dirs, Integer noRuns) {
 		this.dirs = dirs;
@@ -78,38 +71,28 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Noise Immissions (Grid)";
 				viz.description = "Total Noise Immissions per day";
-				setGridMapStandards(viz, data);
+				DashboardUtils.setGridMapStandards(viz, data, "EPSG:25832");
 				viz.file = postProcess(data, "mean_immission_per_day.avro");
 			})
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Hourly Noise Immissions (Grid)";
 				viz.description = "Noise Immissions per hour";
-				setGridMapStandards(viz, data);
+				DashboardUtils.setGridMapStandards(viz, data, "EPSG:25832");
 				viz.file = postProcess(data, "mean_immission_per_hour.avro");
 			});
 		layout.row("damages")
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Daily Noise Damages (Grid)";
 				viz.description = "Total Noise Damages per day [€]";
-				setGridMapStandards(viz, data);
+				DashboardUtils.setGridMapStandards(viz, data, "EPSG:25832");
 				viz.file = postProcess(data, "mean_damages_receiverPoint_per_day.avro");
 			})
 			.el(GridMap.class, (viz, data) -> {
 				viz.title = "Hourly Noise Damages (Grid)";
 				viz.description = "Noise Damages per hour [€]";
-				setGridMapStandards(viz, data);
+				DashboardUtils.setGridMapStandards(viz, data, "EPSG:25832");
 				viz.file = postProcess(data, "mean_damages_receiverPoint_per_hour.avro");
 			});
 	}
 
-	private static void setGridMapStandards(GridMap viz, Data data) {
-		viz.height = 12.0;
-		viz.cellSize = 250;
-		viz.opacity = 0.1;
-		viz.maxHeight = 40;
-		viz.projection = "EPSG:25832";
-		viz.center = data.context().getCenter();
-		viz.zoom = data.context().mapZoomLevel;
-		viz.setColorRamp(new double[]{30, 40, 50, 60, 70}, new String[]{DARK_BLUE, LIGHT_BLUE, YELLOW, SAND, ORANGE, RED});
-	}
 }
