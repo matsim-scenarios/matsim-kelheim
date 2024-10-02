@@ -1,7 +1,6 @@
 package org.matsim.dashboard;
 
 import org.matsim.analysis.postAnalysis.NoiseAverageAnalysis;
-import org.matsim.run.RunKelheimScenario;
 import org.matsim.simwrapper.*;
 import org.matsim.simwrapper.viz.ColorScheme;
 import org.matsim.simwrapper.viz.GridMap;

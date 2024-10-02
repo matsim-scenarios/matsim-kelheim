@@ -294,7 +294,6 @@ public class RunKelheimScenario extends MATSimApplication {
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
-//				install(new KelheimPtFareModule());
 				install(new PtFareModule());
 				install(new SwissRailRaptorModule());
 				install(new PersonMoneyEventsAnalysisModule());
@@ -381,17 +380,6 @@ public class RunKelheimScenario extends MATSimApplication {
 			// TODO: when to include AV?
 			//estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));
 
-
-//            if (intermodal){
-//                controler.addOverridingModule(new IntermodalTripFareCompensatorsModule());
-//                controler.addOverridingModule(new PtIntermodalRoutingModesModule());
-//                controler.addOverridingModule(new AbstractModule() {
-//                    @Override
-//                    public void install() {
-//                        bind(RaptorIntermodalAccessEgress.class).to(EnhancedRaptorIntermodalAccessEgress.class);
-//                    }
-//                });
-//            }
 		}
 	}
 }
