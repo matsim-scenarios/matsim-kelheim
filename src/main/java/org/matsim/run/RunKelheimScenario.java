@@ -403,6 +403,21 @@ public class RunKelheimScenario extends MATSimApplication {
 		Config config = controler.getConfig();
 		Network network = controler.getScenario().getNetwork();
 
+//
+//			controler.addOverridingModule(new AbstractModule() {
+//				@Override
+//				public void install() {
+//					DrtEstimatorModule.bindEstimator(binder(), drtConfigGroup.mode).toInstance(
+//						new DirectTripBasedDrtEstimator.Builder()
+//							.setWaitingTimeEstimator(new ConstantWaitingTimeEstimator(300))
+//							.setWaitingTimeDistributionGenerator(new NormalDistributionGenerator(1, 0.4))
+//							.setRideDurationEstimator(new ConstantRideDurationEstimator(1.25, 300))
+//							.setRideDurationDistributionGenerator(new NormalDistributionGenerator(2, 0.3))
+//							.build()
+//					);
+//				}
+//			});
+
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
