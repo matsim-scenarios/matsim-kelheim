@@ -106,7 +106,7 @@ final class KelheimSimWrapperRunner implements MATSimAppCommand {
 				new DrtDashboardProvider().getDashboards(config, sw).forEach(sw::addDashboard);
 			}
 			if (noise){
-				sw.addDashboard(new NoiseDashboard());
+				sw.addDashboard(new NoiseDashboard(config.global().getCoordinateSystem()));
 			}
 
 			try {
