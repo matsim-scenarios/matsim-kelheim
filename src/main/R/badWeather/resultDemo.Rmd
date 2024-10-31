@@ -1,5 +1,5 @@
 ---
-title: "Linear regression model on Kelheim weather data"
+title: "DEPRECATED! PLEASE CONSIDER TO LOOK AT FILE regressionAnalysis.R IN THIS FOLDER. Linear regression model on Kelheim weather data"
 author: "Oleksandr Soboliev, Simon Meinhardt, Tilmann Schlenther (VSP @ TU Berlin)"
 output:
   html_document:
