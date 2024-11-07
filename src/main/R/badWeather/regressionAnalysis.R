@@ -7,8 +7,8 @@ library(modelr)
 library(splines)
 library(forecast)
 library(fitdistrplus)
-library(rjson)
-
+library(jsonlite)
+library(httr)
 
 # colors for model plots
 colors <- c("predicted" = "red", "Mon" = "darkblue", "Tue" = "deepskyblue4", "Wed" = "deepskyblue2", "Thu" = "cadetblue4", "Fri" = "chartreuse4")
@@ -24,8 +24,9 @@ colnames(ingolstadt_weather) <- c("date", "tavg", "tmin", "tmax", "prcp", "snow"
 weatherstack_kelheim <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/Kelheim_weather_since_july_2008.csv",delim = ",")
 
 # Stringency
-json <- fromJSON(file = "../../shared-svn/projects/KelRide/data/badWeather/data/2022-12-31.json")
+json <- fromJSON(txt = "../../shared-svn/projects/KelRide/data/badWeather/data/2022-12-31.json")
 json <- unlist(json)
+
 #Mobility
 demand <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate.csv")
 
@@ -33,18 +34,33 @@ demand <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/all
 holidays2020 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
 holidays2021 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2021.csv") %>% dplyr::select(1,2,3)
 holidays2022 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2022.csv") %>% dplyr::select(1,2,3)
-holidays2023 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2023.csv") %>% dplyr::select(1,2,3)
-holidays <- rbind(holidays2020,holidays2021,holidays2022,holidays2023)
+holidays <- rbind(holidays2020,holidays2021,holidays2022)
 holidays <- holidays %>% mutate(EndDateTime1 = as.Date(as.POSIXct(EndDateTime1, format = "%m.%d.%Y %H:%M")),
                                StartDateTime1 = as.Date(as.POSIXct(StartDateTime1, format = "%m.%d.%Y %H:%M")))
 
-holiday_days <- unique(c(seq(holidays$StartDateTime1[1],holidays$EndDateTime1[1],by = "days")))
 
-for(i in 1:nrow(holidays)){
-  holiday_days = append(holiday_days,seq(holidays$StartDateTime1[i],holidays$EndDateTime1[i],by = "days"))
-}
+# holidays are saved in format: startDate day before holiday, endDate day after holiday..
+df_holidays <- holidays %>% 
+  mutate(date = StartDateTime1 + 1,
+         dateComp = EndDateTime1 - 1)
 
-df_holidays <- data.frame(date = holiday_days,isHoliday = TRUE)
+df_holidays <- df_holidays %>% 
+  filter(date == dateComp) %>% 
+  dplyr::select(date) %>% 
+  mutate(isHoliday = TRUE)
+
+# get school holidays data from openholidaysapi (feierte-api only has information about official holidays)
+response <- GET("https://openholidaysapi.org/SchoolHolidays?countryIsoCode=DE&subdivisionCode=DE-BY&languageIsoCode=DE&validFrom=2020-01-01&validTo=2022-12-31")
+schoolHolidays <- fromJSON(content(response, "text")) %>%
+  mutate(startDate = as.Date(as.POSIXct(startDate, format = "%Y-%m-%d")),
+         endDate = as.Date(as.POSIXct(endDate, format = "%Y-%m-%d")))
+
+df_schoolHolidays <- schoolHolidays %>%
+  rowwise() %>%
+  mutate(date = list(seq(startDate, endDate, by = "day"))) %>%
+  unnest(cols = date) %>% 
+  dplyr::select(date) %>% 
+  mutate(isSchoolHoliday = TRUE)
 
 # Weatherstack
 weatherstack_kelheim_daily <- weatherstack_kelheim %>%
@@ -104,8 +120,11 @@ result_data <- result_data %>%
   mutate(trend = as.integer(date) - as.integer(min(result_data$date)))
 
 #Append holidays
-result_data <- result_data %>% left_join(df_holidays, by = "date") %>% replace_na(list(isHoliday = FALSE,snow = 0)) %>% 
-#%>% filter(noRides != 0) 
+result_data <- result_data %>% 
+  left_join(df_holidays, by = "date") %>% 
+  left_join(df_schoolHolidays, by = "date") %>%
+  replace_na(list(isHoliday = FALSE,snow = 0, isSchoolHoliday = FALSE)) %>%
+#%>% filter(noRides != 0)
  filter(date <= as.Date("2022-12-31"))
 
 sundays <- result_data %>% 
@@ -158,6 +177,9 @@ ggplotly(wday_plot)
 ggplotly(holiday_plot)
 
 ############################################## filter data for different time periods ###############################################################################################################################
+result_data_incl_holidays <- result_data %>% 
+  filter(wday!=1 & wday!=5 & wday!=6 & wday!=7,
+         noRides!=0)
 
 result_data <- result_data %>% 
   filter(wday!=1 & wday!=5 & wday!=6 & wday!=7,
@@ -168,9 +190,276 @@ result_data <- result_data %>%
 before_sep_21 <- result_data %>%
   filter(date < ymd("2021-09-18"))
 
-result_data <- result_data %>% filter(wday!=6 & wday!=7,isHoliday == FALSE, noRides!=0) #%>%
+ioki_data <- result_data %>%
+  filter(date <= ymd("2021-04-30"))
+
+via_data <- result_data %>%
+  filter(date > ymd("2021-04-30"))
+
+# result_data <- result_data %>% filter(wday!=6 & wday!=7,isHoliday == FALSE, noRides!=0) #%>%
 # new after discussion on 31.10.24
   # filter(date %within% interval(ymd("2021-09-18"), ymd("2022-12-18")))
+
+
+############################################## more exploratory plots #########################################################################################################################################
+
+year_breaks <- unique(format(result_data$date, "%Y"))
+year_breaks <- as.Date(paste(year_breaks, "-01-01", sep = ""))  # Convert to Date objects for proper placement
+
+noRides_time <- ggplot(result_data) +
+  geom_point(data = result_data %>% filter(wday_char == "Mon"), mapping = aes(x = date, y = noRides, color = "Mon")) +
+  geom_point(data = result_data %>% filter(wday_char == "Tue"), mapping = aes(x = date, y = noRides, color = "Tue")) +
+  geom_point(data = result_data %>% filter(wday_char == "Wed"), mapping = aes(x = date, y = noRides, color = "Wed")) +
+  geom_point(data = result_data %>% filter(wday_char == "Thu"), mapping = aes(x = date, y = noRides, color = "Thu")) +
+  geom_point(data = result_data %>% filter(wday_char == "Fri"), mapping = aes(x = date, y = noRides, color = "Fri")) +
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(
+    legend.position = "bottom", legend.title = element_blank(),
+    axis.ticks.x = element_line(), 
+    axis.ticks.y = element_line(),
+    axis.ticks.length = unit(5, "pt"),
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    text = element_text(size = 12)
+  ) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  scale_color_manual(values = colors) +
+  ggtitle("noRides over time")
+
+tmin_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = tmin))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("tmin over time")
+
+tavg_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = tavg))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("tavg over time")
+
+tmax_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = tmax))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("tmax over time")
+
+tdiff_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = tdiff))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("tdiff over time")
+
+stringency_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = stringency))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("stringency over time")
+
+snow_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = snow))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("snow over time")
+
+prcp_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = prcp))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("prcp over time")
+
+pres_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = pres))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("pres over time")
+
+wdir_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = wdir))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("wdir over time")
+
+wpgt_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = wpgt))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("wpgt over time")
+
+wspd_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = wspd))+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("wspd over time")
+
+# plot data including holidays:
+noRides_time_incl_holidays <- ggplot(result_data_incl_holidays) +
+  geom_point(data = result_data_incl_holidays %>% filter(wday_char == "Mon"), mapping = aes(x = date, y = noRides, color = "Mon"), size=1) +
+  geom_point(data = result_data_incl_holidays %>% filter(wday_char == "Tue"), mapping = aes(x = date, y = noRides, color = "Tue"), size=1) +
+  geom_point(data = result_data_incl_holidays %>% filter(wday_char == "Wed"), mapping = aes(x = date, y = noRides, color = "Wed"), size=1) +
+  geom_point(data = result_data_incl_holidays %>% filter(wday_char == "Thu"), mapping = aes(x = date, y = noRides, color = "Thu"), size=1) +
+  geom_point(data = result_data_incl_holidays %>% filter(wday_char == "Fri"), mapping = aes(x = date, y = noRides, color = "Fri"), size=1) +
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data_incl_holidays$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(
+    legend.position = "bottom", legend.title = element_blank(),
+    axis.ticks.x = element_line(), 
+    axis.ticks.y = element_line(),
+    axis.ticks.length = unit(5, "pt"),
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    text = element_text(size = 12)
+  ) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  scale_color_manual(values = colors) +
+  ggtitle("noRides over time incl holidays")
+
+holidays_time_incl_holidays <- ggplot(result_data_incl_holidays) +
+  geom_point(mapping=aes(x = date,y = isHoliday), size=1)+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data_incl_holidays$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("holidays over time incl holidays")
+
+schoolHolidays_time_incl_holidays <- ggplot(result_data_incl_holidays) +
+  geom_point(mapping=aes(x = date,y = isSchoolHoliday), size=1)+
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data_incl_holidays$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(axis.ticks.x = element_line(), 
+        axis.ticks.y = element_line(),
+        axis.ticks.length = unit(5, "pt"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("school holidays over time incl holidays")
+schoolHolidays_time_incl_holidays
+
+# add all plots to list
+plots <- list(noRides_time, tmin_time, tavg_time, tmax_time, tdiff_time, stringency_time, snow_time, prcp_time,
+              pres_time, wdir_time, wpgt_time, wspd_time, noRides_time_incl_holidays, holidays_time_incl_holidays, schoolHolidays_time_incl_holidays)
+
+# iterate through list and plot each plot as ggplotly (interactive)
+i <- 0
+for(plot in plots) {
+  ggsave(paste0("C:/Users/Simon/Desktop/wd/2024-11-06/bad-weather-exploratory-plot-",i,".png"), plot)
+  print(ggplotly(plot))
+  i <- i + 1
+}
 
 ############################################## Pearson correlation coefficients ###############################################################################################################################
 
@@ -184,20 +473,62 @@ result_sum  = data.frame(c("noRides","description","weather_impact","tavg","tmin
 colnames(result_sum) = c("Variable","Description","Stat")
 
 correlations <- result_data  %>% ungroup() %>%
-  dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char) %>%
+  dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday) %>%
   map_dbl(cor,y = result_data$noRides) %>%
   sort(decreasing = TRUE)
 print(correlations)
 
-correlations <- data.frame(correlation = correlations) %>%
-  rownames_to_column("variable") %>%
-  mutate(correlation = round(correlation,2))
+correlations_incl_holidays <- result_data_incl_holidays  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday) %>%
+  map_dbl(cor,y = result_data_incl_holidays$noRides) %>%
+  sort(decreasing = TRUE)
+print(correlations_incl_holidays)
 
-barplot <- ggplot(correlations, aes(x=variable, y=correlation)) +
+# correlations for 2 time periods separately:
+correlations_ioki <- ioki_data  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday) %>%
+  map_dbl(cor,y = ioki_data$noRides) %>%
+  sort(decreasing = TRUE)
+print(correlations_ioki)
+
+correlations_via <- via_data  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday) %>%
+  map_dbl(cor,y = via_data$noRides) %>%
+  sort(decreasing = TRUE)
+print(correlations_via)
+
+constant_vars <- result_data %>%
+  dplyr::select(-noRides, -description, -date, -season, -wday, -wday_char, -weather_impact, -isHoliday) %>%
+  summarise(across(everything(), ~ sd(.x, na.rm = TRUE))) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "std_dev") %>%
+  filter(std_dev == 0)
+
+correlations <- data.frame(correlation_general = round(correlations,2),
+                           correlation_ioki = round(correlations_ioki,2),
+                           correlation_via = round(correlations_via,2)) %>%
+  rownames_to_column("variable")
+
+
+barplot <- ggplot(correlations, aes(x=variable, y=correlation_general)) +
   geom_bar(fill="white",color="black",stat = "identity") +
-  geom_text(aes(label=correlation),size = 3, position = position_stack(vjust = 0.5)) +
-  ggtitle("corrielation with noRides per ind. variable")
+  geom_text(aes(label=correlation_general),size = 3, position = position_stack(vjust = 0.5)) +
+  ggtitle("correlation with noRides per ind. variable for whole time period")
 barplot
+
+############################################## first regression models for different time periods ####################################################################################################
+first_model_general <- lm(noRides ~ tavg+trend,data = result_data)
+summary(first_model_general)
+confint(first_model_general)
+
+first_model_ioki <- lm(noRides ~ tavg+trend,data = ioki_data)
+summary(first_model_ioki)
+confint(first_model_ioki)
+
+first_model_via <- lm(noRides ~ tavg+trend,data = via_data)
+summary(first_model_via)
+confint(first_model_via)
+
+
 
 ############################################## first regression model ###############################################################################################################################
 
@@ -217,7 +548,7 @@ ggplot(test_data %>% filter(year(date)>=2020)) +
   geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = date,y = noRides,color="Wed"))+
   geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = date,y = noRides,color="Thu"))+
   geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = date,y = noRides,color="Fri"))+
-  # geom_line(mapping=aes(x = date,y = pred,color="predicted"), size = 1.2)+
+  geom_line(mapping=aes(x = date,y = pred,color="predicted"), size = 1.2)+
   theme_minimal() +
   xlab("Date") +
   theme(legend.position = "bottom", legend.title = element_blank()) +
@@ -228,45 +559,6 @@ ggplot(test_data %>% filter(year(date)>=2020)) +
   theme(text = element_text(size = 17)) +
   scale_color_manual(values = colors) +
   ggtitle("First Linear regression model")
-
-ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(data=test_data,mapping=aes(x = date,y = tmin))+
-  theme_minimal() +
-  xlab("Date") +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  theme(axis.ticks.x = element_line(), 
-        axis.ticks.y = element_line(),
-        axis.ticks.length = unit(5, "pt")) +
-  scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
-  theme(text = element_text(size = 17)) +
-  scale_color_manual(values = colors) +
-  ggtitle("temperature vs time")
-
-ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(data=test_data,mapping=aes(x = date,y = stringency))+
-  theme_minimal() +
-  xlab("Date") +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  theme(axis.ticks.x = element_line(), 
-        axis.ticks.y = element_line(),
-        axis.ticks.length = unit(5, "pt")) +
-  scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
-  theme(text = element_text(size = 17)) +
-  scale_color_manual(values = colors) +
-  ggtitle("stringency vs time")
-
-ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(data=test_data,mapping=aes(x = date,y = snow))+
-  theme_minimal() +
-  xlab("Date") +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  theme(axis.ticks.x = element_line(), 
-        axis.ticks.y = element_line(),
-        axis.ticks.length = unit(5, "pt")) +
-  scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
-  theme(text = element_text(size = 17)) +
-  scale_color_manual(values = colors) +
-  ggtitle("snow vs time")
 
 #ggsave("C:/Users/Simon/Desktop/wd/2023-07-31/first-regression-model.png", modelPlot)
 
