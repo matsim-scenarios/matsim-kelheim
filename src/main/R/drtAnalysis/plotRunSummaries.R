@@ -2,6 +2,9 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 
+### this script needs input that is produced with readValuesFromRunSummaries.R
+###which then needs to get manually copied into a file with German headers...
+
 mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/"
 
 #set to true for AV and FALSE for conv. KEXI
@@ -74,7 +77,7 @@ plotByConfiguration <- function(parameterStr, scales = "free"){
          linetype = "Betriebszeiten"
          #,shape = "Intermodal"
     ) +
-    #geom_text(aes(label = Flottengroeße), vjust = -1, hjust = 0.5, size = 3, color = "black") +
+    #geom_text(aes(label = mean), vjust = -1, hjust = 0.5, size = 3, color = "black") +
     #theme_dark() +
     theme(
       plot.title = element_text(size = 20, face = "bold"),  # Titelgröße anpassen
@@ -110,6 +113,8 @@ plotByConfiguration("Bediente Anfragen")
 save("bedienteAnfragen")
 plotByConfiguration("Anzahl Passagiere", "fixed")
 save("passagiere")
+plotByConfiguration("Anzahl Passagiere")
+save("passagiere_yAxesDiff")
 plotByConfiguration("Mittl. Wartezeit [s]", "fixed")
 save("wartezeit")
 plotByConfiguration("Mittl. Gesamtreisezeit [s]", "fixed")

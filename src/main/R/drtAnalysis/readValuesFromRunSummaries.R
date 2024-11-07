@@ -146,6 +146,9 @@ write_csv(transposed_result, paste(mainDir, output_file, sep=""))
 #####################################################################
 ######PLOTS####
 
+### !!! the plot for the final project report in German
+### are produced with plotRunSummaries.R !!!
+
 plotByConfiguration <- function(parameterStr){
   
   # Filtern der Daten für die gewünschten Parameter
