@@ -29,6 +29,8 @@ json <- unlist(json)
 
 #Mobility
 demand <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate.csv")
+requests <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/allRequestsByDate.csv")
+rejections <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/rejectionsByDate.csv")
 
 #Holidays
 holidays2020 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
@@ -151,6 +153,67 @@ result_data <- result_data %>%
        locale = "USA"))
 
 ############################################## exploratory plots ###############################################################################################################################
+year_breaks <- unique(format(result_data$date, "%Y"))
+year_breaks <- as.Date(paste(year_breaks, "-01-01", sep = ""))  # Convert to Date objects for proper placement
+
+requests_time <- ggplot() +
+  geom_point(data = requests %>% mutate(wday = as.character(wday(date,week_start = 1))) %>% filter(date <= as.Date("2022-12-31")) %>% filter(wday!=1 & wday!=5 & wday!=6 & wday!=7), mapping = aes(x = date, y = noRequests), color = "black") +
+  geom_point(data = rejections %>% mutate(wday = as.character(wday(date,week_start = 1))) %>% filter(date <= as.Date("2022-12-31")) %>% filter(wday!=1 & wday!=5 & wday!=6 & wday!=7), mapping = aes(x = date, y = noRejections), color = "purple2") +
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  ggtitle("noRequests over time")
+
+requests_rejections_time <- ggplot() +
+  # Add requests points with legend label "Requests"
+  geom_point(data = requests %>% 
+               mutate(wday = as.character(wday(date, week_start = 1)), label = "Requests") %>% 
+               filter(date <= as.Date("2022-12-31")) %>% 
+               filter(wday != 1 & wday != 5 & wday != 6 & wday != 7),
+             mapping = aes(x = date, y = noRequests, color = label)) +
+  # Add rejections points with legend label "Rejections"
+  geom_point(data = rejections %>% 
+               mutate(wday = as.character(wday(date, week_start = 1)), label = "Rejections") %>% 
+               filter(date <= as.Date("2022-12-31")) %>% 
+               filter(wday != 1 & wday != 5 & wday != 6 & wday != 7),
+             mapping = aes(x = date, y = noRejections, color = label)) +
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), 
+                              year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  scale_color_manual(values = c("Requests" = "black", "Rejections" = "blue2")) + # Define colors for legend
+  labs(color = "Legend") + # Add legend title
+  ggtitle("noRequests / noRejections over time")
+
+requests_rejections_time
+
+rejections_time <- ggplot() +
+  geom_point(data = rejections %>% mutate(wday = as.character(wday(date,week_start = 1))) %>% filter(date <= as.Date("2022-12-31")) %>% filter(wday!=1 & wday!=5 & wday!=6 & wday!=7), mapping = aes(x = date, y = noRejections)) +
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(
+    legend.position = "bottom", legend.title = element_blank(),
+    axis.ticks.x = element_line(),
+    axis.ticks.y = element_line(),
+    axis.ticks.length = unit(5, "pt"),
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    text = element_text(size = 12)
+  ) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  ggtitle("noRejections over time")
+rejections_time
+
+
+
 
 plot_data <- result_data
   
@@ -202,10 +265,6 @@ via_data <- result_data %>%
 
 
 ############################################## more exploratory plots #########################################################################################################################################
-
-year_breaks <- unique(format(result_data$date, "%Y"))
-year_breaks <- as.Date(paste(year_breaks, "-01-01", sep = ""))  # Convert to Date objects for proper placement
-
 noRides_time <- ggplot(result_data) +
   geom_point(data = result_data %>% filter(wday_char == "Mon"), mapping = aes(x = date, y = noRides, color = "Mon")) +
   geom_point(data = result_data %>% filter(wday_char == "Tue"), mapping = aes(x = date, y = noRides, color = "Tue")) +
