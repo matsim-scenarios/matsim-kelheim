@@ -32,6 +32,11 @@ demand <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/all
 requests <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/allRequestsByDate.csv")
 rejections <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/rejectionsByDate.csv")
 
+df_requests_rejections <- requests %>% 
+  left_join(rejections, by="date") %>% 
+  replace_na(list(noRejections = 0)) %>% 
+  mutate(rejectionShare = round(noRejections / noRequests, 2))
+
 #Holidays
 holidays2020 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
 holidays2021 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2021.csv") %>% dplyr::select(1,2,3)
@@ -79,7 +84,7 @@ stringency2022 <- df_stringency %>% filter(date > as.Date("2021-12-31"))
 meanStringency2022 <- mean(stringency2022$stringency)
 
 # dates of missing covid data since 2023.
-stringency2023 <- data.frame(date = as.Date(c(ymd("2023-01-01"):ymd("2023-07-08")), origin = "1970-01-01")) %>% 
+stringency2023 <- data.frame(date = as.Date(c(ymd("2023-01-01"):ymd("2023-12-31")), origin = "1970-01-01")) %>% 
   mutate(stringency = 11.11)
 
 df_stringency <- rbind(df_stringency,stringency2023)
@@ -112,7 +117,11 @@ day_description_impact <- day_description_impact %>% group_by(date)%>%
   top_n(n = 1,value) %>% group_by(date) %>% top_n(n = 1,description) %>% rename(weather_impact = value)
 
 #####Join the data#####
-result_data <- demand %>% left_join(day_description_impact, by = "date") %>% inner_join(ingolstadt_weather,by = "date") %>% inner_join(df_stringency,by = "date") %>% mutate(date = as.Date(date,format = "%Y-%m-%d"))
+result_data <- demand %>% 
+  left_join(day_description_impact, by = "date") %>% 
+  inner_join(ingolstadt_weather,by = "date") %>% 
+  inner_join(df_stringency,by = "date") %>%
+  mutate(date = as.Date(date,format = "%Y-%m-%d"))
 
 #Also need to be added: weekday and simplified date variable
 result_data <- result_data %>% 
@@ -120,6 +129,17 @@ result_data <- result_data %>%
   dplyr::arrange(result_data, result_data$date) %>%
   distinct() %>%
   mutate(trend = as.integer(date) - as.integer(min(result_data$date)))
+
+# join requests to also calc regression for requests and weather data
+result_data <- result_data %>% 
+  left_join(requests, by="date")
+
+result_data_incl_2023 <- result_data %>% 
+  left_join(df_holidays, by = "date") %>% 
+  left_join(df_schoolHolidays, by = "date") %>%
+  replace_na(list(isHoliday = FALSE,snow = 0, isSchoolHoliday = FALSE)) %>%
+  #%>% filter(noRides != 0)
+  filter(date <= as.Date("2023-12-31"))
 
 #Append holidays
 result_data <- result_data %>% 
@@ -153,7 +173,7 @@ result_data <- result_data %>%
        locale = "USA"))
 
 ############################################## exploratory plots ###############################################################################################################################
-year_breaks <- unique(format(result_data$date, "%Y"))
+year_breaks <- unique(format(result_data_incl_2023$date, "%Y"))
 year_breaks <- as.Date(paste(year_breaks, "-01-01", sep = ""))  # Convert to Date objects for proper placement
 
 requests_time <- ggplot() +
@@ -214,7 +234,6 @@ rejections_time
 
 
 
-
 plot_data <- result_data
   
 plot_data$isHoliday[plot_data$isHoliday==TRUE] <- "Holiday"
@@ -256,8 +275,17 @@ before_sep_21 <- result_data %>%
 ioki_data <- result_data %>%
   filter(date <= ymd("2021-04-30"))
 
+requests_rejections_ioki <- df_requests_rejections %>% 
+  filter(date <= ymd("2021-04-30"))
+
 via_data <- result_data %>%
   filter(date > ymd("2021-04-30"))
+
+requests_rejections_via <- df_requests_rejections %>% 
+  filter(date > ymd("2021-04-30") & date <= ymd("2022-12-31"))
+
+result_data_2023 <- result_data_incl_2023 %>% 
+  filter(date >= ymd("2023-01-01") & date < ymd("2024-01-01"))
 
 # result_data <- result_data %>% filter(wday!=6 & wday!=7,isHoliday == FALSE, noRides!=0) #%>%
 # new after discussion on 31.10.24
@@ -287,6 +315,30 @@ noRides_time <- ggplot(result_data) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b") +
   scale_color_manual(values = colors) +
   ggtitle("noRides over time")
+
+noRides_time_incl_2023 <- ggplot(result_data_incl_2023) +
+  geom_point(data = result_data %>% filter(wday_char == "Mon"), mapping = aes(x = date, y = noRides, color = "Mon")) +
+  geom_point(data = result_data %>% filter(wday_char == "Tue"), mapping = aes(x = date, y = noRides, color = "Tue")) +
+  geom_point(data = result_data %>% filter(wday_char == "Wed"), mapping = aes(x = date, y = noRides, color = "Wed")) +
+  geom_point(data = result_data %>% filter(wday_char == "Thu"), mapping = aes(x = date, y = noRides, color = "Thu")) +
+  geom_point(data = result_data %>% filter(wday_char == "Fri"), mapping = aes(x = date, y = noRides, color = "Fri")) +
+  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_light() +
+  xlab("Date") +
+  theme(
+    legend.position = "bottom", legend.title = element_blank(),
+    axis.ticks.x = element_line(), 
+    axis.ticks.y = element_line(),
+    axis.ticks.length = unit(5, "pt"),
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    text = element_text(size = 12)
+  ) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  scale_color_manual(values = colors) +
+  ggtitle("noRides over time incl 2023")
+
 
 tmin_time <- ggplot(result_data) +
   geom_point(mapping=aes(x = date,y = tmin))+
@@ -508,9 +560,22 @@ schoolHolidays_time_incl_holidays <- ggplot(result_data_incl_holidays) +
   ggtitle("school holidays over time incl holidays")
 schoolHolidays_time_incl_holidays
 
+boxplot_rejectionShare_ioki <- ggplot(requests_rejections_ioki, aes(y = rejectionShare)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of rejectionShare 0620-0421",
+       y = "rejectionShare") +
+  theme_minimal()
+
+boxplot_rejectionShare_via <- ggplot(requests_rejections_via, aes(y = rejectionShare)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of rejectionShare 0521-1222",
+       y = "rejectionShare") +
+  theme_minimal()
+
 # add all plots to list
-plots <- list(noRides_time, tmin_time, tavg_time, tmax_time, tdiff_time, stringency_time, snow_time, prcp_time,
-              pres_time, wdir_time, wpgt_time, wspd_time, noRides_time_incl_holidays, holidays_time_incl_holidays, schoolHolidays_time_incl_holidays)
+plots <- list(noRides_time_incl_2023, noRides_time, tmin_time, tavg_time, tmax_time, tdiff_time, stringency_time, snow_time, prcp_time,
+              pres_time, wdir_time, wpgt_time, wspd_time, noRides_time_incl_holidays, holidays_time_incl_holidays,
+              schoolHolidays_time_incl_holidays, boxplot_rejectionShare_ioki, boxplot_rejectionShare_via)
 
 # iterate through list and plot each plot as ggplotly (interactive)
 i <- 0
@@ -531,48 +596,90 @@ result_sum  = data.frame(c("noRides","description","weather_impact","tavg","tmin
                          c("Mean: 80.2","Clear, Cloudy, Heavy, Light, Medium, Sunny","Mean: 12 °C","Mean: 10.37 °C","Mean: 5.81 °C","Mean: 15.06","Mean: 1.76","Mean: 0.2348","Mean: 8.6 km/h","Mean: 32.75 km/h","Mean: 1019.3 hPa","Mean: 0.12701 °C"))
 colnames(result_sum) = c("Variable","Description","Stat")
 
+correlations_requests <- result_data  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday, -noRides) %>%
+  map_dbl(cor,y = result_data$noRequests) %>%
+  sort()
+print((correlations_requests))
+
 correlations <- result_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday) %>%
   map_dbl(cor,y = result_data$noRides) %>%
-  sort(decreasing = TRUE)
+  sort()
 print(correlations)
 
 correlations_incl_holidays <- result_data_incl_holidays  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday) %>%
   map_dbl(cor,y = result_data_incl_holidays$noRides) %>%
-  sort(decreasing = TRUE)
+  sort()
 print(correlations_incl_holidays)
 
 # correlations for 2 time periods separately:
 correlations_ioki <- ioki_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday) %>%
   map_dbl(cor,y = ioki_data$noRides) %>%
-  sort(decreasing = TRUE)
+  sort()
 print(correlations_ioki)
 
 correlations_via <- via_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday) %>%
   map_dbl(cor,y = via_data$noRides) %>%
-  sort(decreasing = TRUE)
+  sort()
 print(correlations_via)
 
-constant_vars <- result_data %>%
-  dplyr::select(-noRides, -description, -date, -season, -wday, -wday_char, -weather_impact, -isHoliday) %>%
-  summarise(across(everything(), ~ sd(.x, na.rm = TRUE))) %>%
-  pivot_longer(everything(), names_to = "variable", values_to = "std_dev") %>%
-  filter(std_dev == 0)
+correlations_incl_2023 <- result_data_incl_2023  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-wday, -weather_impact, -isHoliday, -tsun) %>%
+  map_dbl(cor,y = result_data_incl_2023$noRides)
+print(correlations_incl_2023)
 
-correlations <- data.frame(correlation_general = round(correlations,2),
-                           correlation_ioki = round(correlations_ioki,2),
-                           correlation_via = round(correlations_via,2)) %>%
-  rownames_to_column("variable")
+correlations_incl_2023["tdiff"] <- NA
+correlations_incl_2023 <- sort(correlations_incl_2023, na.last=TRUE)
+print(correlations_incl_2023)
+
+correlations_2023 <- result_data_2023  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-wday, -weather_impact, -isHoliday, -stringency, -tsun) %>%
+  map_dbl(cor,y = result_data_2023$noRides)
+print(correlations_2023)
+
+correlations_2023["stringency"] <- NA
+correlations_2023["tdiff"] <- NA
+correlations_2023 <- sort(correlations_2023, na.last=TRUE)
+print(correlations_2023)
+
+# Use 'correlations' as the reference order
+variable_order <- names(correlations)
+
+# Reorder all correlation vectors to match 'variable_order'
+correlations <- round(correlations, 2)
+correlations_incl_holidays <- round(correlations_incl_holidays[variable_order], 2)
+correlations_ioki <- round(correlations_ioki[variable_order], 2)
+correlations_via <- round(correlations_via[variable_order], 2)
+correlations_incl_2023 <- round(correlations_incl_2023[variable_order], 2)
+correlations_2023 <- round(correlations_2023[variable_order], 2)
+
+# Create the final data frame with consistent ordering
+correlations_df <- data.frame(
+  variable = variable_order,
+  correlation_excl_2023 = correlations,
+  correlation_incl_holidays = correlations_incl_holidays,
+  correlation_ioki = correlations_ioki,
+  correlation_via = correlations_via,
+  correlation_incl_2023 = correlations_incl_2023,
+  correlation_2023 = correlations_2023,
+  stringsAsFactors = FALSE  # Ensures 'variable' is treated as a character vector
+)
 
 
-barplot <- ggplot(correlations, aes(x=variable, y=correlation_general)) +
-  geom_bar(fill="white",color="black",stat = "identity") +
-  geom_text(aes(label=correlation_general),size = 3, position = position_stack(vjust = 0.5)) +
-  ggtitle("correlation with noRides per ind. variable for whole time period")
-barplot
+# barplot <- ggplot(as.data.frame(correlations), aes(x=variable, y=correlation_general)) +
+#   geom_bar(fill="white",color="black",stat = "identity") +
+#   geom_text(aes(label=correlation_general),size = 3, position = position_stack(vjust = 0.5)) +
+#   ggtitle("correlation with noRides per ind. variable for whole time period")
+# barplot
+
+############################################## first regression model requests ############################################################################
+test <- lm(noRequests ~ tavg+trend+prcp+snow,data = result_data)
+summary(test)
+confint(test)
 
 ############################################## first regression models for different time periods ####################################################################################################
 first_model_general <- lm(noRides ~ tavg+trend,data = result_data)
@@ -586,6 +693,124 @@ confint(first_model_ioki)
 first_model_via <- lm(noRides ~ tavg+trend,data = via_data)
 summary(first_model_via)
 confint(first_model_via)
+
+model_trend_only <- lm(noRides ~ trend, data = result_data)
+summary(model_trend_only)
+confint(first_model_general)
+
+
+
+#in the following: 2 different databases: including 2023: 0620-1223, 2023:0123-1223
+
+# R^2 0.417, alle var ***, Res std err 29.08, no confint around 0
+first_model_incl_2023_tavg <- lm(noRides ~ tavg+trend,data = result_data_incl_2023)
+summary(first_model_incl_2023_tavg)
+confint(first_model_incl_2023_tavg)
+
+# R^2 0.3983, intercept, trend ***, snow non-sign, Res std err 29.54, snow confint around 0
+first_model_incl_2023_snow <- lm(noRides ~ snow+trend,data = result_data_incl_2023)
+summary(first_model_incl_2023_snow)
+confint(first_model_incl_2023_snow)
+
+# R^2 0.4165, intercept, trend, tavg ***, snow non-sign, Res std err 29.09, snow confint around 0
+first_model_incl_2023_tavg_snow <- lm(noRides ~ tavg+snow+trend,data = result_data_incl_2023)
+summary(first_model_incl_2023_tavg_snow)
+confint(first_model_incl_2023_tavg_snow)
+
+# R^2 0.0168
+first_model_incl_2023_weather_only <- lm(noRides ~ tavg+snow,data = result_data_incl_2023)
+summary(first_model_incl_2023_weather_only)
+confint(first_model_incl_2023_weather_only)
+
+
+# R^2 0.1778, tavg, trend ***, intercept non-sign, Res std err 27.2, intercept confint around 0
+first_model_2023_tavg <- lm(noRides ~ tavg+trend,data = result_data_2023)
+summary(first_model_2023_tavg)
+confint(first_model_2023_tavg)
+
+# R^2 0.1142, trend ***, snow, intercept non-sign, Res std err 28.23, snow, intercept confint around 0
+first_model_2023_snow <- lm(noRides ~ snow+trend,data = result_data_2023)
+summary(first_model_2023_snow)
+confint(first_model_2023_snow)
+
+# R^2 0.1118, trend ***, pres, intercept non-sign, Res std err 28.27, pres, intercept confint around 0
+first_model_2023_pres <- lm(noRides ~ pres+trend,data = result_data_2023)
+summary(first_model_2023_pres)
+confint(first_model_2023_pres)
+
+# R^2 0.1755, trend, tavg ***, snow, pres, intercept non-sign, Res std err 27.24, pres, snow, intercept confint around 0
+first_model_2023_tavg_snow_pres <- lm(noRides ~ tavg+snow+pres+trend,data = result_data_2023)
+summary(first_model_2023_tavg_snow_pres)
+confint(first_model_2023_tavg_snow_pres)
+
+# R^2 0.04848
+first_model_2023_weather_only <- lm(noRides ~ tavg+snow+pres,data = result_data_2023)
+summary(first_model_2023_weather_only)
+confint(first_model_2023_weather_only)
+
+############################################## calc Mean squared error (MSE) for trend ##############################################################################################################
+# the noRides over time plot (until 12-22) shows, that the relation between trend and noRides is rather described
+# by a MSE funtion than a linear one. Thus, MSE for trend will be calculated
+# basic idea for function: f(x)=alpha*(1-exp(-x/beta))
+# with alpha = y value to which f(x) converges and beta = intercept
+
+# result_data <- result_data %>% 
+#   filter(date <= ymd("2022-12-31") & date >= ymd("2022-01-01"))
+
+rows <- nrow(result_data)
+
+input <- c(1,1)
+err <- rep(1, nrow(result_data))
+
+calcMSE <- function(input) {
+  alpha <- input[1]
+  beta <- input[2]
+  
+  for (i in 1:rows) {
+    est_demand <- alpha * (1 - exp(-result_data$trend[i] / beta))
+    
+    if (is.nan(est_demand) || is.infinite(est_demand)) {
+      cat("Invalid value at iteration", i, "\n", "est_demand=", est_demand, " alpha=", alpha, " beta=", beta, " trend=", result_data$trend[i], " ")
+      return(Inf)
+    }
+    
+    err[i] <- result_data$noRides[i] - est_demand
+  }
+  return(sum(err^2) / length(err))
+}
+
+# apparently it is ok if est_demand turns out to be |Inf| but not in the first iteration fo optimization
+optParams <- optim(input, calcMSE)
+optParams
+
+#calc adjustedNoRides = noRides - alpha * (1 - exp(-trend / beta)) with optimized alpha and beta
+result_data <- result_data %>% 
+  mutate(adjustedNoRides = noRides - as.integer(optParams$par[1] * (1 - exp(-trend / optParams$par[2]))))
+
+result_data  %>% ungroup() %>%
+  dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday, -adjustedNoRides) %>%
+  map_dbl(cor,y = result_data$adjustedNoRides) %>%
+  sort()
+
+# R^2 0.00401...
+test_model <- lm(adjustedNoRides ~ prcp+isSchoolHoliday,data = result_data)
+summary(test_model)
+
+adjustedNoRides_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = adjustedNoRides))+
+  # geom_line(mapping=aes(x = date,y = snow-50), color="red")+
+  theme_light() +
+  xlab("Date") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("adjusted nor rides over time")
+adjustedNoRides_time
+
+
+
+
+
+
+
 
 
 
