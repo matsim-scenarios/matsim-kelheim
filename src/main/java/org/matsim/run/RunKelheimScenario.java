@@ -238,6 +238,8 @@ public class RunKelheimScenario extends MATSimApplication {
 				//TODO: temp, allow accessibility computations to occur more than 1.5km away from drt stops.
 				drtConfigGroup.maxWalkDistance = 100000.;
 
+				drtConfigGroup.transitStopFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-drt-stops.xml";
+
 			}
 
 			// TODO: what is a good constant for DRT. The existing one of 2.45 makes drt trips really attractive; you no longer see a difference with stops that are far away and ones that are close.
@@ -276,7 +278,7 @@ public class RunKelheimScenario extends MATSimApplication {
 			accConfig.setBoundingBoxBottom(mapCenterY - num_rows*tileSize - tileSize/2);
 			accConfig.setBoundingBoxTop(mapCenterY + num_rows*tileSize + tileSize/2);
 			accConfig.setTileSize_m((int) tileSize);
-			accConfig.setTimeOfDay(12 * 60 * 60.);
+			accConfig.setTimeOfDay(19 * 60 * 60.);
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // works
 //			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // ??
@@ -364,7 +366,7 @@ public class RunKelheimScenario extends MATSimApplication {
 
 
 			// Use this method if reading facilities from a csv.
-			Path filePath = Path.of("pois.csv");
+			Path filePath = Path.of("supermarkets_LK.csv");
 			try (CSVParser parser = new CSVParser(new BufferedReader(new InputStreamReader(Files.newInputStream(filePath))),
 				CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
 
@@ -509,7 +511,7 @@ public class RunKelheimScenario extends MATSimApplication {
 //			final AccessibilityModule moduleDoctors = new AccessibilityModule();
 //			moduleDoctors.setConsideredActivityType("doctor");
 //			controler.addOverridingModule(moduleDoctors);
-//
+
 //			final AccessibilityModule moduleSport = new AccessibilityModule();
 //			moduleSport.setConsideredActivityType("sport");
 //			controler.addOverridingModule(moduleSport);
@@ -518,10 +520,10 @@ public class RunKelheimScenario extends MATSimApplication {
 //			moduleGroceries.setConsideredActivityType("groceries");
 //			controler.addOverridingModule(moduleGroceries);
 
-//			final AccessibilityModule moduleSupermarkets = new AccessibilityModule();
-//			moduleSupermarkets.setConsideredActivityType("supermarket");
-//			controler.addOverridingModule(moduleSupermarkets);
-
+			final AccessibilityModule moduleSupermarkets = new AccessibilityModule();
+			moduleSupermarkets.setConsideredActivityType("supermarket");
+			controler.addOverridingModule(moduleSupermarkets);
+//
 //			final AccessibilityModule moduleAltstadt = new AccessibilityModule();
 //			moduleAltstadt.setConsideredActivityType("altstadt");
 //			controler.addOverridingModule(moduleAltstadt);
@@ -530,9 +532,9 @@ public class RunKelheimScenario extends MATSimApplication {
 //			moduleBuildings.setConsideredActivityType("building");
 //			controler.addOverridingModule(moduleBuildings);
 
-			final AccessibilityModule moduleSenioren = new AccessibilityModule();
-			moduleSenioren.setConsideredActivityType("senioren");
-			controler.addOverridingModule(moduleSenioren);
+//			final AccessibilityModule moduleSenioren = new AccessibilityModule();
+//			moduleSenioren.setConsideredActivityType("senioren");
+//			controler.addOverridingModule(moduleSenioren);
 		}
 	}
 }

@@ -175,7 +175,7 @@
             </parameterset>
 
             <parameterset type="modeParams" >
-                <param name="constant" value="0.10908902922956654" />
+                <param name="constant" value="0" />
                 <param name="dailyMonetaryConstant" value="-5.3" />
                 <param name="dailyUtilityConstant" value="0.0" />
                 <param name="marginalUtilityOfDistance_util_m" value="0.0" />
@@ -193,7 +193,7 @@
                 <param name="monetaryDistanceRate" value="-2.0E-4" />
             </parameterset>
             <parameterset type="modeParams" >
-                <param name="constant" value="0.0449751479497542" />
+                <param name="constant" value="0" />
                 <param name="dailyMonetaryConstant" value="0.0" />
                 <param name="dailyUtilityConstant" value="0.0" />
                 <param name="marginalUtilityOfDistance_util_m" value="0.0" />
