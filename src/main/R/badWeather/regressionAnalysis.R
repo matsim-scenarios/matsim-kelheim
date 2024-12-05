@@ -785,7 +785,8 @@ optParams
 
 #calc adjustedNoRides = noRides - alpha * (1 - exp(-trend / beta)) with optimized alpha and beta
 result_data <- result_data %>% 
-  mutate(adjustedNoRides = noRides - as.integer(optParams$par[1] * (1 - exp(-trend / optParams$par[2]))))
+  mutate(adjustedNoRides = noRides - as.integer(optParams$par[1] * (1 - exp(-trend / optParams$par[2]))),
+         trend_est = as.integer(optParams$par[1] * (1 - exp(-trend / optParams$par[2]))))
 
 result_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday, -adjustedNoRides) %>%
@@ -796,14 +797,24 @@ result_data  %>% ungroup() %>%
 test_model <- lm(adjustedNoRides ~ prcp+isSchoolHoliday,data = result_data)
 summary(test_model)
 
-adjustedNoRides_time <- ggplot(result_data) +
+noRides_time_trend_est <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = noRides))+
+  geom_line(mapping = aes(x=date, y = trend_est), color="red") +
+  theme_light() +
+  xlab("Date") +
+  theme(text = element_text(size = 12)) +
+  ggtitle("noRides over time + estimated trend (red)")
+noRides_time_trend_est
+
+adjustedNoRides_time_2 <- ggplot(result_data) +
   geom_point(mapping=aes(x = date,y = adjustedNoRides))+
-  # geom_line(mapping=aes(x = date,y = snow-50), color="red")+
+  geom_line(mapping=aes(x = date,y = snow-50), color="red")+
+  # geom_line(mapping = aes(x=date, y = trend_est), color="red") +
   theme_light() +
   xlab("Date") +
   theme(text = element_text(size = 12)) +
   ggtitle("adjusted nor rides over time")
-adjustedNoRides_time
+adjustedNoRides_time_2
 
 
 
