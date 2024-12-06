@@ -80,6 +80,10 @@ import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -238,7 +242,8 @@ public class RunKelheimScenario extends MATSimApplication {
 				//TODO: temp, allow accessibility computations to occur more than 1.5km away from drt stops.
 				drtConfigGroup.maxWalkDistance = 100000.;
 
-				drtConfigGroup.transitStopFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-drt-stops.xml";
+				drtConfigGroup.transitStopFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-land.xml";
+				//transit stop file town Kelheim "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-drt-stops.xml"
 
 			}
 
@@ -252,18 +257,18 @@ public class RunKelheimScenario extends MATSimApplication {
 			config.routing().setRoutingRandomness(0);
 
 // settings for kelheim city
-			double mapCenterX = 712144.17;
-			double mapCenterY = 5422153.87;
-
-			double tileSize = 200;
-			double num_rows = 23;
-
-// settings for east kelheim:
-//			double mapCenterX = 721455;
-//			double mapCenterY = 5410601;
+//			double mapCenterX = 712144.17;
+//			double mapCenterY = 5422153.87;
 //
 //			double tileSize = 200;
-//			double num_rows = 50;
+//			double num_rows = 23;
+
+// settings for east kelheim:
+			double mapCenterX = 721455;
+			double mapCenterY = 5410601;
+
+			double tileSize = 200;
+			double num_rows = 50;
 
 // settings for landkreis
 //			double mapCenterX = 711014;
@@ -278,7 +283,10 @@ public class RunKelheimScenario extends MATSimApplication {
 			accConfig.setBoundingBoxBottom(mapCenterY - num_rows*tileSize - tileSize/2);
 			accConfig.setBoundingBoxTop(mapCenterY + num_rows*tileSize + tileSize/2);
 			accConfig.setTileSize_m((int) tileSize);
-			accConfig.setTimeOfDay(19 * 60 * 60.);
+
+			//random numbers generated for time slots between 8:00 and 17:00: 8.68, 14.26, 10.09, 9.43, 13.69, 15.94, 11.89, 13.98, 16.43
+			//random numbers generated for time slots between 15:00 and 20:00: 15.20, 15.85, 16.78, 18.07, 19.61
+			accConfig.setTimeOfDay(12 * 60 * 60.);
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // works
 //			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // ??
@@ -366,8 +374,18 @@ public class RunKelheimScenario extends MATSimApplication {
 
 
 			// Use this method if reading facilities from a csv.
-			Path filePath = Path.of("supermarkets_LK.csv");
-			try (CSVParser parser = new CSVParser(new BufferedReader(new InputStreamReader(Files.newInputStream(filePath))),
+			String filePath = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/pois_complete.csv";
+            HttpURLConnection connection = null;
+            try {
+				connection = (HttpURLConnection) new URL(filePath).openConnection();
+                connection.setRequestMethod("GET");
+            } catch (ProtocolException | MalformedURLException e) {
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            try (CSVParser parser = new CSVParser(new BufferedReader(new InputStreamReader(connection.getInputStream())),
+
 				CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
 
 				for (CSVRecord record : parser) {
@@ -504,9 +522,9 @@ public class RunKelheimScenario extends MATSimApplication {
 //			moduleTrain.setConsideredActivityType("train_station");
 //			controler.addOverridingModule(moduleTrain);
 
-//			final AccessibilityModule moduleHealth = new AccessibilityModule();
-//			moduleHealth.setConsideredActivityType("health");
-//			controler.addOverridingModule(moduleHealth);
+//			final AccessibilityModule modulePharmacy = new AccessibilityModule();
+//			modulePharmacy.setConsideredActivityType("pharmacy");
+//			controler.addOverridingModule(modulePharmacy);
 //
 //			final AccessibilityModule moduleDoctors = new AccessibilityModule();
 //			moduleDoctors.setConsideredActivityType("doctor");
@@ -516,13 +534,13 @@ public class RunKelheimScenario extends MATSimApplication {
 //			moduleSport.setConsideredActivityType("sport");
 //			controler.addOverridingModule(moduleSport);
 
-//			final AccessibilityModule moduleGroceries = new AccessibilityModule();
-//			moduleGroceries.setConsideredActivityType("groceries");
-//			controler.addOverridingModule(moduleGroceries);
+//			final AccessibilityModule moduleAmenity = new AccessibilityModule();
+//			moduleAmenity.setConsideredActivityType("amenity");
+//			controler.addOverridingModule(moduleAmenity);
 
-			final AccessibilityModule moduleSupermarkets = new AccessibilityModule();
-			moduleSupermarkets.setConsideredActivityType("supermarket");
-			controler.addOverridingModule(moduleSupermarkets);
+//			final AccessibilityModule moduleSupermarkets = new AccessibilityModule();
+//			moduleSupermarkets.setConsideredActivityType("supermarket");
+//			controler.addOverridingModule(moduleSupermarkets);
 //
 //			final AccessibilityModule moduleAltstadt = new AccessibilityModule();
 //			moduleAltstadt.setConsideredActivityType("altstadt");
@@ -535,6 +553,10 @@ public class RunKelheimScenario extends MATSimApplication {
 //			final AccessibilityModule moduleSenioren = new AccessibilityModule();
 //			moduleSenioren.setConsideredActivityType("senioren");
 //			controler.addOverridingModule(moduleSenioren);
+
+			final AccessibilityModule moduleChurch = new AccessibilityModule();
+			moduleChurch.setConsideredActivityType("church");
+			controler.addOverridingModule(moduleChurch);
 		}
 	}
 }
