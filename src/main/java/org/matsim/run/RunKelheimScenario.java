@@ -48,7 +48,7 @@ import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
-import org.matsim.contrib.vsp.scenario.SnzActivities;
+import org.matsim.contrib.vsp.scenario.*;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -242,14 +242,18 @@ public class RunKelheimScenario extends MATSimApplication {
 				//TODO: temp, allow accessibility computations to occur more than 1.5km away from drt stops.
 				drtConfigGroup.maxWalkDistance = 100000.;
 
-				drtConfigGroup.transitStopFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-land.xml";
-				//transit stop file town Kelheim "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-drt-stops.xml"
+
+				// CHOSE STOP FILE
+				//stop file for land Kelheim
+//				drtConfigGroup.transitStopFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-land.xml";
+				//transit stop file town Kelheim
+				drtConfigGroup.transitStopFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-drt-stops.xml";
 
 			}
 
 			// TODO: what is a good constant for DRT. The existing one of 2.45 makes drt trips really attractive; you no longer see a difference with stops that are far away and ones that are close.
-//			ScoringConfigGroup.ModeParams drtParams = config.scoring().getOrCreateModeParams(TransportMode.drt);
-//			drtParams.setConstant(0.0);
+			ScoringConfigGroup.ModeParams drtParams = config.scoring().getOrCreateModeParams(TransportMode.drt);
+			drtParams.setConstant(0.0); // corresponds to DRT-ambivalent subpopulation
 
 
 			AccessibilityConfigGroup accConfig = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
@@ -257,18 +261,18 @@ public class RunKelheimScenario extends MATSimApplication {
 			config.routing().setRoutingRandomness(0);
 
 // settings for kelheim city
-//			double mapCenterX = 712144.17;
-//			double mapCenterY = 5422153.87;
-//
-//			double tileSize = 200;
-//			double num_rows = 23;
+			double mapCenterX = 712144.17;
+			double mapCenterY = 5422153.87;
+
+			double tileSize = 100;
+			double num_rows = 40;
 
 // settings for east kelheim:
-			double mapCenterX = 721455;
-			double mapCenterY = 5410601;
-
-			double tileSize = 200;
-			double num_rows = 50;
+//			double mapCenterX = 721455;
+//			double mapCenterY = 5410601;
+//
+//			double tileSize = 200;
+//			double num_rows = 50;
 
 // settings for landkreis
 //			double mapCenterX = 711014;
@@ -288,9 +292,9 @@ public class RunKelheimScenario extends MATSimApplication {
 			//random numbers generated for time slots between 15:00 and 20:00: 15.20, 15.85, 16.78, 18.07, 19.61
 			accConfig.setTimeOfDay(12 * 60 * 60.);
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false); // works
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.car, false); // works
 //			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.bike, false); // ??
-			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, true); // works
+			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.pt, false); // works
 			accConfig.setComputingAccessibilityForMode(Modes4Accessibility.estimatedDrt, true); // works
 //			accConfig.setAccessibilityMeasureType(AccessibilityConfigGroup.AccessibilityMeasureType.gravity);
 		}
@@ -374,7 +378,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
 
 			// Use this method if reading facilities from a csv.
-			String filePath = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/pois_complete.csv";
+//			String filePath = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/pois_complete.csv";
+			// includes only train station and supermarkets in Kelheim city
+			String filePath = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/pois_shortened.csv";
             HttpURLConnection connection = null;
             try {
 				connection = (HttpURLConnection) new URL(filePath).openConnection();
@@ -518,9 +524,9 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		if (acc) {
-//			final AccessibilityModule moduleTrain = new AccessibilityModule();
-//			moduleTrain.setConsideredActivityType("train_station");
-//			controler.addOverridingModule(moduleTrain);
+			final AccessibilityModule moduleTrain = new AccessibilityModule();
+			moduleTrain.setConsideredActivityType("train_station");
+			controler.addOverridingModule(moduleTrain);
 
 //			final AccessibilityModule modulePharmacy = new AccessibilityModule();
 //			modulePharmacy.setConsideredActivityType("pharmacy");
@@ -554,9 +560,9 @@ public class RunKelheimScenario extends MATSimApplication {
 //			moduleSenioren.setConsideredActivityType("senioren");
 //			controler.addOverridingModule(moduleSenioren);
 
-			final AccessibilityModule moduleChurch = new AccessibilityModule();
-			moduleChurch.setConsideredActivityType("church");
-			controler.addOverridingModule(moduleChurch);
+//			final AccessibilityModule moduleChurch = new AccessibilityModule();
+//			moduleChurch.setConsideredActivityType("church");
+//			controler.addOverridingModule(moduleChurch);
 		}
 	}
 }
