@@ -22,16 +22,16 @@ ingolstadt_weather <- read_delim("https://bulk.meteostat.net/v2/daily/10860.csv.
 colnames(ingolstadt_weather) <- c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
 
 # Weatherstack data
-weatherstack_kelheim <- read_delim("/Users/sydney/root/svn/shared-svn/projects/KelRide/data/badWeather/data/Kelheim_weather_since_july_2008.csv",delim = ",")
+weatherstack_kelheim <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/Kelheim_weather_since_july_2008.csv",delim = ",")
 
 # Stringency
-json <- fromJSON(txt = "/Users/sydney/root/svn/shared-svn/projects/KelRide/data/badWeather/data/2022-12-31.json")
+json <- fromJSON(txt = "../../shared-svn/projects/KelRide/data/badWeather/data/2022-12-31.json")
 json <- unlist(json)
 
 #Mobility
-demand <- read_delim("/Users/sydney/root/svn/shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate.csv")
-requests <- read_delim("/Users/sydney/root/svn/shared-svn/projects/KelRide/data/badWeather/data/allRequestsByDate.csv")
-rejections <- read_delim("/Users/sydney/root/svn/shared-svn/projects/KelRide/data/badWeather/data/rejectionsByDate.csv")
+demand <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/allDemandByDate.csv")
+requests <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/allRequestsByDate.csv")
+rejections <- read_delim("../../shared-svn/projects/KelRide/data/badWeather/data/rejectionsByDate.csv")
 
 df_requests_rejections <- requests %>% 
   left_join(rejections, by="date") %>% 
@@ -39,9 +39,9 @@ df_requests_rejections <- requests %>%
   mutate(rejectionShare = round(noRejections / noRequests, 2))
 
 #Holidays
-holidays2020 <- read_csv2("/Users/sydney/root/svn/shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
-holidays2021 <- read_csv2("/Users/sydney/root/svn/shared-svn/projects/KelRide/data/badWeather/data/Holidays2021.csv") %>% dplyr::select(1,2,3)
-holidays2022 <- read_csv2("/Users/sydney/root/svn/shared-svn/projects/KelRide/data/badWeather/data/Holidays2022.csv") %>% dplyr::select(1,2,3)
+holidays2020 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2020.csv") %>% dplyr::select(1,2,3)
+holidays2021 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2021.csv") %>% dplyr::select(1,2,3)
+holidays2022 <- read_csv2("../../shared-svn/projects/KelRide/data/badWeather/data/Holidays2022.csv") %>% dplyr::select(1,2,3)
 holidays <- rbind(holidays2020,holidays2021,holidays2022)
 holidays <- holidays %>% mutate(EndDateTime1 = as.Date(as.POSIXct(EndDateTime1, format = "%m.%d.%Y %H:%M")),
                                StartDateTime1 = as.Date(as.POSIXct(StartDateTime1, format = "%m.%d.%Y %H:%M")))
@@ -243,7 +243,7 @@ plot_data$isHoliday[plot_data$isHoliday==FALSE] <- "Non-holiday"
 wday_plot <- ggplot(plot_data %>% mutate(wday_char = factor(wday_char, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))), aes(x=wday_char,y=noRides))+
   geom_boxplot(aes(color=wday_char), lwd=1.5) +
   xlab("Weekday") + 
-  ylab("Number of Rides") +
+  ylab("nRides") +
   # labs(title="Daily no of KEXI rides per weekday") +
   theme_minimal() +
   theme(plot.title = element_text(hjust=0.5), legend.title = element_blank(), legend.position = "none") +
@@ -259,7 +259,7 @@ ggsave("daily-kexi-rides-per-weekday.pdf", wday_plot, dpi = 500, w = 12, h = 9)
 holiday_plot <- ggplot(plot_data) +
   geom_boxplot(aes(x = isHoliday, y = noRides)) +
     xlab(NULL) +
-    ylab("Number of rides") +
+    ylab("nRides") +
     labs(title="Daily no of KEXI rides per holiday / non-holiday") +
   theme(plot.title = element_text(hjust=0.5))
 
@@ -312,6 +312,7 @@ noRides_time <- ggplot(result_data) +
   #          aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
   theme_minimal() +
   xlab("Date") +
+  ylab("nRides") +
   scale_x_date(breaks= seq(as.Date("2020-03-01"), as.Date("2022-12-31"), by = "3 months"), date_labels = "%m/%y") +
   theme(text = element_text(size = 50), legend.position = "bottom", legend.title=element_blank()) +
   theme(axis.ticks.x = element_line(size = 1), 
@@ -414,7 +415,7 @@ stringency_time <- ggplot(result_data) +
   theme(axis.ticks.x = element_line(size = 1), 
                    axis.ticks.y = element_line(size = 1),
                    axis.ticks.length = unit(15, "pt")) +
-  ylab("Stringency Index") +
+  ylab("stringency") +
   xlab("Date")
 
 snow_time <- ggplot(result_data) +
@@ -432,7 +433,26 @@ snow_time <- ggplot(result_data) +
                    axis.ticks.length = unit(15, "pt"))
   #ggtitle("snow over time")
 
-ggarrange(noRides_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), tavg_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), snow_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), stringency_time, labels = c("A", "B", "", "C", "", "D", ""), align="v", nrow = 7, ncol = 1, font.label = list(size = 37), legend = "bottom", heights = c(1.2,0.1,1,0.1,1,0.1,1))
+wdir_time <- ggplot(result_data) +
+  geom_point(mapping=aes(x = date,y = wdir), size = 3)+
+  # geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
+  # geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
+            # aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
+  theme_minimal() +
+  xlab("Date") +
+  ylab("wdir (°)") +
+  scale_x_date(breaks= seq(as.Date("2020-03-01"), as.Date("2022-12-31"), by = "3 months"), date_labels = "%m/%y") +
+  theme(text = element_text(size = 50)) +
+  theme(axis.ticks.x = element_line(size=1), 
+        axis.ticks.y = element_line(size=1),
+        axis.ticks.length = unit(15, "pt"))
+  # ggtitle("wdir over time")
+
+ggarrange(noRides_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
+          tavg_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
+          snow_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
+          stringency_time,
+          labels = c("A", "B", "", "C", "", "D", ""), align="v", nrow = 7, ncol = 1, font.label = list(size = 37), legend = "bottom", heights = c(1.2,0.1,1,0.1,1,0.1,1))
 
 ggsave("ExploratoryAnalysis_BadWeather.png", dpi = 500, w = 24, h = 30)
 ggsave("ExploratoryAnalysis_BadWeather.pdf", dpi = 500, w = 24, h = 30)
@@ -468,21 +488,6 @@ pres_time <- ggplot(result_data) +
   theme(text = element_text(size = 12)) +
   ggtitle("pres over time")
 
-wdir_time <- ggplot(result_data) +
-  geom_point(mapping=aes(x = date,y = wdir))+
-  geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
-  geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
-            aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
-  theme_light() +
-  xlab("Date") +
-  theme(axis.ticks.x = element_line(), 
-        axis.ticks.y = element_line(),
-        axis.ticks.length = unit(5, "pt"),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-  theme(text = element_text(size = 12)) +
-  ggtitle("wdir over time")
-
 wpgt_time <- ggplot(result_data) +
   geom_point(mapping=aes(x = date,y = wpgt))+
   geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
@@ -513,9 +518,9 @@ wspd_time <- ggplot(result_data) +
   theme(text = element_text(size = 12)) +
   ggtitle("wspd over time")
 
-ggarange(stringency, snow, wdir, wpsd, tavg, tmin, tmax, tdiff, pres, wpgt, 
-labels = c("(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)", "(i)", "(j)"), 
-nrow = 5, ncol = 2,font.label = list(size = 37), legend = "bottom"))
+# ggarrange(stringency, snow, wdir, wpsd, tavg, tmin, tmax, tdiff, pres, wpgt, 
+# labels = c("(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)", "(i)", "(j)"), 
+# nrow = 5, ncol = 2,font.label = list(size = 37), legend = "bottom")
 
 # plot data including holidays:
 noRides_time_incl_holidays <- ggplot(result_data_incl_holidays) +
@@ -695,6 +700,7 @@ confint(test)
 
 ############################################## first regression models for different time periods ####################################################################################################
 first_model_general <- lm(noRides ~ wdir+tmax+tavg+tmin+snow+trend, data = result_data)
+# first_model_general <- lm(noRides ~ wdir+tavg+snow+trend, data = result_data)
 summary(first_model_general)
 confint(first_model_general)
 
@@ -710,6 +716,17 @@ summary(first_model_tmax)
 first_model_tmin <- lm(noRides ~ wdir+tmin+snow+trend, data = result_data)
 summary(first_model_tmin)
 
+# cross correlation of trend and stringency and first model with stringency replacing trend
+cross_cor <- result_data %>% 
+  dplyr::select(trend, stringency)
+print(cor(cross_cor))
+
+first_model_stringency <- lm(noRides ~ wdir+tmax+tavg+tmin+snow+stringency, data = result_data)
+summary(first_model_stringency)
+confint(first_model_stringency)
+
+AIC(first_model_stringency)
+BIC(first_model_stringency)
 
 
 
@@ -775,6 +792,30 @@ first_model_2023_weather_only <- lm(noRides ~ tavg+snow+pres,data = result_data_
 summary(first_model_2023_weather_only)
 confint(first_model_2023_weather_only)
 
+############################################## backwards elimination ##############################################################################################################
+# first_mode_general with elimination of single parameters
+# wdir eliminated
+wdir_eliminated <- lm(noRides ~ tmax+tavg+tmin+snow+trend, data = result_data)
+summary(wdir_eliminated)
+confint(wdir_eliminated)
+AIC(wdir_eliminated)
+BIC(wdir_eliminated)
+
+# wdir eliminated + only one temperature var
+wdir_tmax_tmin_eliminated <- lm(noRides ~ tavg+snow+trend, data = result_data)
+summary(wdir_tmax_tmin_eliminated)
+confint(wdir_tmax_tmin_eliminated)
+AIC(wdir_tmax_tmin_eliminated)
+BIC(wdir_tmax_tmin_eliminated)
+
+# wdir eliminated + only one temperature var + snow eliminated
+wdir_tmax_tmin_snow_eliminated <- lm(noRides ~ tavg+trend, data = result_data)
+summary(wdir_tmax_tmin_snow_eliminated)
+confint(wdir_tmax_tmin_snow_eliminated)
+AIC(wdir_tmax_tmin_snow_eliminated)
+BIC(wdir_tmax_tmin_snow_eliminated)
+
+
 ############################################## calc Mean squared error (MSE) for trend ##############################################################################################################
 # the noRides over time plot (until 12-22) shows, that the relation between trend and noRides is rather described
 # by a MSE funtion than a linear one. Thus, MSE for trend will be calculated
@@ -813,7 +854,7 @@ optParams
 #calc adjustedNoRides = noRides - alpha * (1 - exp(-trend / beta)) with optimized alpha and beta
 result_data <- result_data %>% 
   mutate(adjustedNoRides = noRides - as.integer(optParams$par[1] * (1 - exp(-trend / optParams$par[2]))),
-         trend_est = as.integer(optParams$par[1] * (1 - exp(-trend / optParams$par[2]))))
+         est_demand = as.integer(optParams$par[1] * (1 - exp(-trend / optParams$par[2]))))
 
 result_data  %>% ungroup() %>%
   dplyr::select(-noRides,-description ,-date,-season,-wday,-wday_char, -weather_impact, -isHoliday, -adjustedNoRides) %>%
@@ -821,22 +862,24 @@ result_data  %>% ungroup() %>%
   sort()
 
 # R^2 0.00401...
-test_model <- lm(adjustedNoRides ~ prcp+isSchoolHoliday,data = result_data)
+test_model <- lm(adjustedNoRides ~ tavg, data = result_data)
 summary(test_model)
 
-noRides_time_trend_est <- ggplot(result_data) +
+noRides_time_est_demand <- ggplot(result_data) +
   geom_point(mapping=aes(x = date,y = noRides))+
-  geom_line(mapping = aes(x=date, y = trend_est), color="red") +
+  geom_line(mapping = aes(x=date, y = est_demand), color="red") +
   theme_light() +
-  xlab("Date") +
-  theme(text = element_text(size = 12)) +
-  ggtitle("noRides over time + estimated trend (red)")
-noRides_time_trend_est
+  xlab("date") +
+  ylab("nRides") +
+  scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
+  theme(text = element_text(size = 12), legend.position = "bottom", legend.title = element_blank()) #+
+  # ggtitle("noRides over time + estimated trend (red)")
+noRides_time_est_demand
 
 adjustedNoRides_time_2 <- ggplot(result_data) +
   geom_point(mapping=aes(x = date,y = adjustedNoRides))+
   geom_line(mapping=aes(x = date,y = snow-50), color="red")+
-  # geom_line(mapping = aes(x=date, y = trend_est), color="red") +
+  # geom_line(mapping = aes(x=date, y = est_demand), color="red") +
   theme_light() +
   xlab("Date") +
   theme(text = element_text(size = 12)) +
@@ -844,178 +887,175 @@ adjustedNoRides_time_2 <- ggplot(result_data) +
 adjustedNoRides_time_2
 
 
-
-
-
-
-
-
-
-
 ############################################## first regression model ###############################################################################################################################
-
-data <- result_data
-
-omega_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres,data = data)
-
-summary(omega_model)
-confint(omega_model)
-
-model <- omega_model
-test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
-
-ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = date,y = noRides,color="Mon"))+
-  geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = date,y = noRides,color="Tue"))+
-  geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = date,y = noRides,color="Wed"))+
-  geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = date,y = noRides,color="Thu"))+
-  geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = date,y = noRides,color="Fri"))+
-  geom_line(mapping=aes(x = date,y = pred,color="predicted"), size = 1.2)+
-  theme_minimal() +
-  xlab("Date") +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  theme(axis.ticks.x = element_line(), 
-                   axis.ticks.y = element_line(),
-                   axis.ticks.length = unit(5, "pt")) +
-  scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
-  theme(text = element_text(size = 17)) +
-  scale_color_manual(values = colors) +
-  ggtitle("First Linear regression model")
-
-#ggsave("C:/Users/Simon/Desktop/wd/2023-07-31/first-regression-model.png", modelPlot)
-
-
-ggplot(test_data %>% filter(year(date)>=2020))+
-            geom_line(aes(x = date,y = resid,color = "gray"))+
-          #  geom_ref_line(h = 0)+
-           xlab("Date") +
-           ylab("Residuals") +
-           theme_minimal() +
-  theme(text = element_text(size = 17)) +
-           theme(axis.ticks.x = element_line(), 
-      axis.ticks.y = element_line(),
-      axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-            ggtitle("Residuals over time for first linear regression model")
-
-
-omega_date_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres+trend,data = data)
-summary(omega_date_model)
-
-omega_date_model_prcp <- lm(noRides ~ wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres+trend+prcp,data = data)
-summary(omega_date_model_prcp)
-
-omega_date_model_prcp_tavg <- lm(noRides ~ wspd+wpgt+wdir+snow+tmin+pres+trend+prcp,data = data)
-summary(omega_date_model_prcp_tavg)
-
-omega_model_trend_tmin <- lm(noRides ~ tmin+trend,data = data)
-summary(omega_model_trend_tmin)
-
-omega_model_trend_tmin_beforeSep21 <- lm(noRides ~ tmin+trend,data = before_sep_21)
-summary(omega_model_trend_tmin_beforeSep21)
-
-print(cor(before_sep_21$noRides, before_sep_21$tmin))
-
-print(cor(before_sep_21$noRides, before_sep_21$tmax))
-
-
-
-omega_date_model_prcp_before_sep21 <- lm(noRides ~ stringency+wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres+trend+prcp,data = before_sep_21)
-summary(omega_date_model_prcp_before_sep21)
-
-omega_date_only_model <- lm(noRides ~ wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres+trend,data = data)
-summary(omega_date_only_model)
-
-
-model <- omega_date_only_model
-test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
-
-cor_stringency_noRides <- cor(test_data$stringency, test_data$noRides)
-cor_trend_noRides <- cor(test_data$trend, test_data$noRides)
-cor_stringency_trend <- cor(test_data$stringency, test_data$trend)
-
-print(paste("correlation of stringency and trend:",cor_stringency_trend))
-print(paste("correlation of stringency and noRides:",cor_stringency_noRides))
-print(paste("correlation of trend and noRides:",cor_trend_noRides))
-
-ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = date,y = noRides,color="Mon"))+
-  geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = date,y = noRides,color="Tue"))+
-  geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = date,y = noRides,color="Wed"))+
-  geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = date,y = noRides,color="Thu"))+
-  geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = date,y = noRides,color="Fri"))+
-  geom_point(aes(x = date,y = pred,color="predicted"))+
-  scale_color_manual(values = colors)+
-  ggtitle("Linear regression model with date parameter"))
-ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
-            geom_line(aes(x = date,y = resid,color = "gray50"))+
-            geom_ref_line(h = 0)+
-            ggtitle("Residuals over time"))
-
-barplot <- ggplot(test_data, aes(x = resid ))+
-  geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=7)+
-  ggtitle("Residuals histogram")
+# 
+# data <- result_data
+# 
+# omega_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres,data = data)
+# 
+# summary(omega_model)
+# confint(omega_model)
+# 
+# model <- omega_model
+# test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+# 
+# ggplot(test_data %>% filter(year(date)>=2020)) +
+#   geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = date,y = noRides,color="Mon"))+
+#   geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = date,y = noRides,color="Tue"))+
+#   geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = date,y = noRides,color="Wed"))+
+#   geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = date,y = noRides,color="Thu"))+
+#   geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = date,y = noRides,color="Fri"))+
+#   geom_line(mapping=aes(x = date,y = pred,color="predicted"), size = 1.2)+
+#   theme_minimal() +
+#   xlab("Date") +
+#   theme(legend.position = "bottom", legend.title = element_blank()) +
+#   theme(axis.ticks.x = element_line(), 
+#                    axis.ticks.y = element_line(),
+#                    axis.ticks.length = unit(5, "pt")) +
+#   scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
+#   theme(text = element_text(size = 17)) +
+#   scale_color_manual(values = colors) +
+#   ggtitle("First Linear regression model")
+# 
+# #ggsave("C:/Users/Simon/Desktop/wd/2023-07-31/first-regression-model.png", modelPlot)
+# 
+# 
+# ggplot(test_data %>% filter(year(date)>=2020))+
+#             geom_line(aes(x = date,y = resid,color = "gray"))+
+#           #  geom_ref_line(h = 0)+
+#            xlab("Date") +
+#            ylab("Residuals") +
+#            theme_minimal() +
+#   theme(text = element_text(size = 17)) +
+#            theme(axis.ticks.x = element_line(), 
+#       axis.ticks.y = element_line(),
+#       axis.ticks.length = unit(5, "pt"), legend.position = "none") +
+#             ggtitle("Residuals over time for first linear regression model")
+# 
+# 
+# omega_date_model <- lm(noRides ~ stringency+wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres+trend,data = data)
+# summary(omega_date_model)
+# 
+# omega_date_model_prcp <- lm(noRides ~ wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres+trend+prcp,data = data)
+# summary(omega_date_model_prcp)
+# 
+# omega_date_model_prcp_tavg <- lm(noRides ~ wspd+wpgt+wdir+snow+tmin+pres+trend+prcp,data = data)
+# summary(omega_date_model_prcp_tavg)
+# 
+# omega_model_trend_tmin <- lm(noRides ~ tmin+trend,data = data)
+# summary(omega_model_trend_tmin)
+# 
+# omega_model_trend_tmin_beforeSep21 <- lm(noRides ~ tmin+trend,data = before_sep_21)
+# summary(omega_model_trend_tmin_beforeSep21)
+# 
+# print(cor(before_sep_21$noRides, before_sep_21$tmin))
+# 
+# print(cor(before_sep_21$noRides, before_sep_21$tmax))
+# 
+# 
+# 
+# omega_date_model_prcp_before_sep21 <- lm(noRides ~ stringency+wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres+trend+prcp,data = before_sep_21)
+# summary(omega_date_model_prcp_before_sep21)
+# 
+# omega_date_only_model <- lm(noRides ~ wspd+wpgt+wdir+snow+tmax+tavg+tmin+tdiff+pres+trend,data = data)
+# summary(omega_date_only_model)
+# 
+# 
+# model <- omega_date_only_model
+# test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+# 
+# cor_stringency_noRides <- cor(test_data$stringency, test_data$noRides)
+# cor_trend_noRides <- cor(test_data$trend, test_data$noRides)
+# cor_stringency_trend <- cor(test_data$stringency, test_data$trend)
+# 
+# print(paste("correlation of stringency and trend:",cor_stringency_trend))
+# print(paste("correlation of stringency and noRides:",cor_stringency_noRides))
+# print(paste("correlation of trend and noRides:",cor_trend_noRides))
+# 
+# ggplotly(ggplot(test_data %>% filter(year(date)>=2020)) +
+#   geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = date,y = noRides,color="Mon"))+
+#   geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = date,y = noRides,color="Tue"))+
+#   geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = date,y = noRides,color="Wed"))+
+#   geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = date,y = noRides,color="Thu"))+
+#   geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = date,y = noRides,color="Fri"))+
+#   geom_point(aes(x = date,y = pred,color="predicted"))+
+#   scale_color_manual(values = colors)+
+#   ggtitle("Linear regression model with date parameter"))
+# ggplotly(ggplot(test_data %>% filter(year(date)>=2020))+
+#             geom_line(aes(x = date,y = resid,color = "gray50"))+
+#             geom_ref_line(h = 0)+
+#             ggtitle("Residuals over time"))
+# 
+# barplot <- ggplot(test_data, aes(x = resid ))+
+#   geom_histogram(aes(y = stat(density)),colour="black", fill="white", binwidth=7)+
+#   ggtitle("Residuals histogram")
 
 ############################################## reduced regression models ###############################################################################################################################
 
-reduced_1_model <- lm(noRides ~ snow+tavg+trend, data = data)
-summary(reduced_1_model)
-
-model <- reduced_1_model
-test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+  # reduced_1_model <- lm(noRides ~ snow+tavg+trend, data = data)
+  # summary(reduced_1_model)
+  # 
+  # model <- reduced_1_model
+  # test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 ############################################## cross-correlation check ###############################################################################################################################
 
-cor_check <- data %>%
-  dplyr::select(tavg,trend,snow)
+cor_check <- result_data %>%
+  dplyr::select(tavg,trend)
 print(cor(cor_check))
 
-data <- data %>%
-  mutate(snowDependentTemperature = tavg * snow,
-         trendDependentSnow = snow * trend)
+data <- result_data %>%
+  mutate(trendDependentTemperature = trend * tavg)
 
-reduced_3_model <- lm(noRides ~ snow+tavg+trend+snowDependentTemperature+trendDependentSnow, data = data)
+reduced_3_model <- lm(noRides ~ tavg+trend+trendDependentTemperature, data = data)
 summary(reduced_3_model)
 confint(reduced_3_model) #95% confidence interval
 
+AIC(reduced_3_model)
+BIC(reduced_3_model)
+
 ############################################## final linear regression model ###############################################################################################################################
 
-final_model <- lm(noRides ~ snow+tavg+trend, data = data)
+final_model <- wdir_tmax_tmin_snow_eliminated
 summary(final_model)
 confint(final_model) #95% confidence interval
 
 model <- final_model
 
-test_data <- data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
+test_data <- result_data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
-ggplot(test_data %>% filter(year(date)>=2020)) +
-  geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = date,y = noRides,color="Mon"))+
+plot_final_model <- ggplot(test_data %>% filter(year(date)>=2020)) +
+  # geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = date,y = noRides,color="Mon"))+
   geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = date,y = noRides,color="Tue"))+
   geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = date,y = noRides,color="Wed"))+
   geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = date,y = noRides,color="Thu"))+
-  geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = date,y = noRides,color="Fri"))+
+  # geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = date,y = noRides,color="Fri"))+
   geom_line(aes(x = date,y = pred,color="predicted"), size = 1.2)+
   theme_minimal() +
   xlab("Date") +
+  ylab("nRides") +
   theme(legend.position = "bottom", legend.title = element_blank()) +
   theme(axis.ticks.x = element_line(), 
                    axis.ticks.y = element_line(),
                    axis.ticks.length = unit(5, "pt")) +
   scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
   theme(text = element_text(size = 17)) +
-  scale_color_manual(values = colors) +
-  ggtitle("Linear regression model with independent variables snow, tavg and trend")
+  scale_color_manual(values = colors)
+  # ggtitle("Linear regression model with independent variables snow, tavg and trend")
+
+plot_final_model
 
 ggplot(test_data %>% filter(year(date)>=2020)) +
 # geom_point(aes(x = pred,y = noRides)) +
-  geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = pred,y = noRides,color="Mon"))+
+  # geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = pred,y = noRides,color="Mon"))+
   geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = pred,y = noRides,color="Tue"))+
   geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = pred,y = noRides,color="Wed"))+
   geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = pred,y = noRides,color="Thu"))+
-  geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = pred,y = noRides,color="Fri"))+
+  # geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = pred,y = noRides,color="Fri"))+
 geom_abline(aes(intercept = 0, slope = 1,color="Identity line"), size = 1.5) +
 theme_minimal() +
-xlab("Predicted noRides") +
-ylab("Observed noRides") +
+xlab("Predicted nRides") +
+ylab("Observed nRides") +
 theme(axis.ticks.x = element_line(), 
       axis.ticks.y = element_line(),
       axis.ticks.length = unit(5, "pt")) +
