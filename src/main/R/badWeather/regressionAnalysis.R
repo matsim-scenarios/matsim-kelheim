@@ -866,15 +866,21 @@ test_model <- lm(adjustedNoRides ~ tavg, data = result_data)
 summary(test_model)
 
 noRides_time_est_demand <- ggplot(result_data) +
-  geom_point(mapping=aes(x = date,y = noRides))+
-  geom_line(mapping = aes(x=date, y = est_demand), color="red") +
-  theme_light() +
+  geom_point(mapping=aes(x = date,y = noRides), size=3)+
+  geom_line(mapping = aes(x=date, y = est_demand), color="red", size=1.5) +
+  theme_minimal() +
   xlab("date") +
   ylab("nRides") +
-  scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
-  theme(text = element_text(size = 12), legend.position = "bottom", legend.title = element_blank()) #+
+  scale_x_date(breaks= seq(as.Date("2020-03-01"), as.Date("2022-12-31"), by = "3 months"), date_labels = "%m/%y") +
+  theme(text = element_text(size = 50), legend.position = "bottom", legend.title=element_blank()) +
+  theme(axis.ticks.x = element_line(size = 1), 
+        axis.ticks.y = element_line(size = 1),
+        axis.ticks.length = unit(15, "pt"),
+        axis.text = element_text(size=25))
   # ggtitle("noRides over time + estimated trend (red)")
 noRides_time_est_demand
+
+ggsave("nRides_est_demand_time.pdf", noRides_time_est_demand, dpi = 500, w = 12, h = 9) 
 
 adjustedNoRides_time_2 <- ggplot(result_data) +
   geom_point(mapping=aes(x = date,y = adjustedNoRides))+
@@ -1026,22 +1032,24 @@ test_data <- result_data %>% add_predictions(model = model) %>% add_residuals(mo
 
 plot_final_model <- ggplot(test_data %>% filter(year(date)>=2020)) +
   # geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = date,y = noRides,color="Mon"))+
-  geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = date,y = noRides,color="Tue"))+
-  geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = date,y = noRides,color="Wed"))+
-  geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = date,y = noRides,color="Thu"))+
+  geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = date,y = noRides,color="Tue"), size=3)+
+  geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = date,y = noRides,color="Wed"), size=3)+
+  geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = date,y = noRides,color="Thu"), size=3)+
   # geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = date,y = noRides,color="Fri"))+
   geom_line(aes(x = date,y = pred,color="predicted"), size = 1.2)+
   theme_minimal() +
   xlab("Date") +
   ylab("nRides") +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  theme(axis.ticks.x = element_line(), 
-                   axis.ticks.y = element_line(),
-                   axis.ticks.length = unit(5, "pt")) +
-  scale_x_date(date_breaks = "4 month", date_labels = "%b/%y") +
-  theme(text = element_text(size = 17)) +
+  scale_x_date(breaks= seq(as.Date("2020-03-01"), as.Date("2022-12-31"), by = "3 months"), date_labels = "%m/%y") +
+  theme(text = element_text(size = 50), legend.position = "bottom", legend.title=element_blank()) +
+  theme(axis.ticks.x = element_line(size = 1.5), 
+        axis.ticks.y = element_line(size = 1),
+        axis.ticks.length = unit(15, "pt"),
+        axis.text = element_text(size=25)) +
   scale_color_manual(values = colors)
   # ggtitle("Linear regression model with independent variables snow, tavg and trend")
+
+ggsave("scatterplot-final-linear-regression-model.pdf", plot_final_model, dpi = 500, w = 12, h = 9) 
 
 plot_final_model
 
@@ -1075,20 +1083,22 @@ ggplot(test_data %>% filter(year(date)>=2020))+
       axis.ticks.length = unit(5, "pt"), legend.position = "none") +
             ggtitle("Residuals over time for linear regression model with independent variables snow, tavg and trend")
 
-ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
-            geom_point()+
+residuals_predicted_nRides <- ggplot(test_data %>% filter(year(date)>=2020), aes(x = pred,y = resid))+
+            geom_point(size=3)+
           #  geom_ref_line(h = 0)+
-            scale_color_manual(values = colors)+
+            # scale_color_manual(values = colors)+
   geom_smooth(method ="loess", se = FALSE, color = "#666666", size = 1.5) +
-           xlab("Predicted noRides") +
-           ylab("Residuals") +
-           theme_minimal() +
-           theme(axis.ticks.x = element_line(), 
-      axis.ticks.y = element_line(),
-      axis.ticks.length = unit(5, "pt"), legend.position = "none") +
-  theme(text = element_text(size = 17)) + 
-  ggtitle("Residuals over predicted values for linear regression model with independent variables snow, tavg and trend")
+  theme_minimal() +
+  xlab("Predicted nRides") +
+  ylab("Residuals") +
+  theme(text = element_text(size = 50)) +
+  theme(axis.ticks.x = element_line(size=1), 
+        axis.ticks.y = element_line(size=1),
+        axis.ticks.length = unit(5, "pt"), legend.position = "none",
+        axis.text = element_text(size=25))
+  # ggtitle("Residuals over predicted values for linear regression model with independent variables snow, tavg and trend")
 
+ggsave("residuals-predictedValues-final-linear-regression-model.pdf", residuals_predicted_nRides, dpi = 500, w = 12, h = 9) 
 
 barplot <- ggplot(test_data, aes(x = resid ))+
   geom_histogram(aes(y = after_stat(density)),colour="black", fill="white", binwidth=9)+
@@ -1101,14 +1111,21 @@ n <- nrow(test_data)
 p <- (1 : n) / n - 0.5 / n
 
 plot1 <- ggplot(test_data) +
-  geom_qq(aes(sample=rnorm(resid,10,4)))+
+  geom_qq(aes(sample=rnorm(resid,10,4)),size=3)+
   geom_abline(intercept = 10, slope = 4,color = "red", size = 1.5, alpha = 0.8)+
   theme_minimal() +
-  theme(text = element_text(size = 17)) +
-  ggtitle("Normal QQ-Plot for the final linear regression model") +
   xlab("Theoretical Quantiles") +
-  ylab("Model Residual Quantiles")
+  ylab("Model Residual Quantiles") +
+  theme(text = element_text(size = 50)) +
+  theme(axis.ticks.x = element_line(size=1), 
+        axis.ticks.y = element_line(size=1),
+        axis.ticks.length = unit(5, "pt"), legend.position = "none",
+        axis.text = element_text(size=25))
+  # ggtitle("Normal QQ-Plot for the final linear regression model")
 
+plot1
+
+ggsave("qq-plot-final-linear-regression-model.pdf", plot1, dpi = 500, w = 12, h = 9) 
 
 anno <- list( 
   list( 
