@@ -694,9 +694,24 @@ summary(test)
 confint(test)
 
 ############################################## first regression models for different time periods ####################################################################################################
-first_model_general <- lm(noRides ~ tavg+trend,data = result_data)
+first_model_general <- lm(noRides ~ wdir+tmax+tavg+tmin+snow+trend, data = result_data)
 summary(first_model_general)
 confint(first_model_general)
+
+AIC_first_model_general <- AIC(first_model_general)
+BIC_first_model_general <- BIC(first_model_general)
+
+first_model_tavg <- lm(noRides ~ wdir+tavg+snow+trend, data = result_data)
+summary(first_model_tavg)
+
+first_model_tmax <- lm(noRides ~ wdir+tmax+snow+trend, data = result_data)
+summary(first_model_tmax)
+
+first_model_tmin <- lm(noRides ~ wdir+tmin+snow+trend, data = result_data)
+summary(first_model_tmin)
+
+
+
 
 first_model_ioki <- lm(noRides ~ tavg+trend,data = ioki_data)
 summary(first_model_ioki)
