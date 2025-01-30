@@ -851,6 +851,9 @@ calcMSE <- function(input) {
 optParams <- optim(input, calcMSE)
 optParams
 
+alpha <- optParams$par[1]
+beta <- optParams$par[2]
+
 #calc adjustedNoRides = noRides - alpha * (1 - exp(-trend / beta)) with optimized alpha and beta
 result_data <- result_data %>% 
   mutate(adjustedNoRides = noRides - as.integer(optParams$par[1] * (1 - exp(-trend / optParams$par[2]))),
@@ -866,7 +869,7 @@ test_model <- lm(adjustedNoRides ~ tavg, data = result_data)
 summary(test_model)
 
 noRides_time_est_demand <- ggplot(result_data) +
-  geom_point(mapping=aes(x = date,y = noRides), size=3)+
+  geom_point(mapping=aes(x = date,y = noRides), size=4)+
   geom_line(mapping = aes(x=date, y = est_demand), color="red", size=1.5) +
   theme_minimal() +
   xlab("date") +
@@ -876,11 +879,11 @@ noRides_time_est_demand <- ggplot(result_data) +
   theme(axis.ticks.x = element_line(size = 1), 
         axis.ticks.y = element_line(size = 1),
         axis.ticks.length = unit(15, "pt"),
-        axis.text = element_text(size=25))
+        axis.text = element_text(size=45))
   # ggtitle("noRides over time + estimated trend (red)")
 noRides_time_est_demand
 
-ggsave("nRides_est_demand_time.pdf", noRides_time_est_demand, dpi = 500, w = 12, h = 9) 
+ggsave("nRides_est_demand_time.pdf", noRides_time_est_demand, dpi = 500, w = 24, h = 9) 
 
 adjustedNoRides_time_2 <- ggplot(result_data) +
   geom_point(mapping=aes(x = date,y = adjustedNoRides))+
@@ -1031,11 +1034,7 @@ model <- final_model
 test_data <- result_data %>% add_predictions(model = model) %>% add_residuals(model = model) %>% mutate(error = ifelse(abs(resid)>=20,"extreme","normal"))
 
 plot_final_model <- ggplot(test_data %>% filter(year(date)>=2020)) +
-  # geom_point(data=test_data %>% filter(wday_char=="Mon"),mapping=aes(x = date,y = noRides,color="Mon"))+
-  geom_point(data=test_data %>% filter(wday_char=="Tue"),mapping=aes(x = date,y = noRides,color="Tue"), size=3)+
-  geom_point(data=test_data %>% filter(wday_char=="Wed"),mapping=aes(x = date,y = noRides,color="Wed"), size=3)+
-  geom_point(data=test_data %>% filter(wday_char=="Thu"),mapping=aes(x = date,y = noRides,color="Thu"), size=3)+
-  # geom_point(data=test_data %>% filter(wday_char=="Fri"),mapping=aes(x = date,y = noRides,color="Fri"))+
+  geom_point(mapping=aes(x = date,y = noRides), size=4)+
   geom_line(aes(x = date,y = pred,color="predicted"), size = 1.2)+
   theme_minimal() +
   xlab("Date") +
@@ -1045,11 +1044,11 @@ plot_final_model <- ggplot(test_data %>% filter(year(date)>=2020)) +
   theme(axis.ticks.x = element_line(size = 1.5), 
         axis.ticks.y = element_line(size = 1),
         axis.ticks.length = unit(15, "pt"),
-        axis.text = element_text(size=25)) +
+        axis.text = element_text(size=45)) +
   scale_color_manual(values = colors)
   # ggtitle("Linear regression model with independent variables snow, tavg and trend")
 
-ggsave("scatterplot-final-linear-regression-model.pdf", plot_final_model, dpi = 500, w = 12, h = 9) 
+ggsave("scatterplot-final-linear-regression-model.pdf", plot_final_model, dpi = 500, w = 24, h = 9) 
 
 plot_final_model
 
@@ -1091,11 +1090,11 @@ residuals_predicted_nRides <- ggplot(test_data %>% filter(year(date)>=2020), aes
   theme_minimal() +
   xlab("Predicted nRides") +
   ylab("Residuals") +
-  theme(text = element_text(size = 50)) +
+  theme(text = element_text(size = 45)) +
   theme(axis.ticks.x = element_line(size=1), 
         axis.ticks.y = element_line(size=1),
         axis.ticks.length = unit(5, "pt"), legend.position = "none",
-        axis.text = element_text(size=25))
+        axis.text = element_text(size=45))
   # ggtitle("Residuals over predicted values for linear regression model with independent variables snow, tavg and trend")
 
 ggsave("residuals-predictedValues-final-linear-regression-model.pdf", residuals_predicted_nRides, dpi = 500, w = 12, h = 9) 
@@ -1116,11 +1115,11 @@ plot1 <- ggplot(test_data) +
   theme_minimal() +
   xlab("Theoretical Quantiles") +
   ylab("Model Residual Quantiles") +
-  theme(text = element_text(size = 50)) +
+  theme(text = element_text(size = 45)) +
   theme(axis.ticks.x = element_line(size=1), 
         axis.ticks.y = element_line(size=1),
         axis.ticks.length = unit(5, "pt"), legend.position = "none",
-        axis.text = element_text(size=25))
+        axis.text = element_text(size=45))
   # ggtitle("Normal QQ-Plot for the final linear regression model")
 
 plot1
