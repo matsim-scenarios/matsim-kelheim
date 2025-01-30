@@ -274,7 +274,8 @@ result_data_incl_holidays <- result_data %>%
 result_data <- result_data %>% 
   filter(wday!=1 & wday!=5 & wday!=6 & wday!=7,
          isHoliday == FALSE,
-         noRides!=0)
+         noRides!=0) %>% 
+  filter(!(date %within% interval(ymd("2021-05-18"), ymd("2021-06-30"))))
 
 # new after discussion on 31.10.24
 before_sep_21 <- result_data %>%
@@ -302,11 +303,22 @@ result_data_2023 <- result_data_incl_2023 %>%
 
 ############################################## more exploratory plots #########################################################################################################################################
 noRides_time <- ggplot(result_data) +
-  geom_point(data = result_data %>% filter(wday_char == "Mon"), mapping = aes(x = date, y = noRides, color = "Mon"), size = 3) +
-  geom_point(data = result_data %>% filter(wday_char == "Tue"), mapping = aes(x = date, y = noRides, color = "Tue"), size = 3) +
-  geom_point(data = result_data %>% filter(wday_char == "Wed"), mapping = aes(x = date, y = noRides, color = "Wed"), size = 3) +
-  geom_point(data = result_data %>% filter(wday_char == "Thu"), mapping = aes(x = date, y = noRides, color = "Thu"), size = 3) +
-  geom_point(data = result_data %>% filter(wday_char == "Fri"), mapping = aes(x = date, y = noRides, color = "Fri"), size = 3) +
+  geom_point(mapping=aes(x = date,y = noRides), size=4)+
+  annotate("rect",
+           xmin = as.Date("2021-05-01"), xmax = as.Date("2021-06-30"), 
+           ymin = -Inf, ymax = Inf,  fill = "#D55E00", alpha=.3) +
+  annotate("text", 
+           x = as.Date("2021-05-31"),
+           y = mean(range(result_data$noRides)),
+           label = "Change of operator,\nperiod removed",
+           color = "black", 
+           size = 11,
+           angle = 90) +
+  # geom_point(data = result_data %>% filter(wday_char == "Mon"), mapping = aes(x = date, y = noRides, color = "Mon"), size = 3) +
+  # geom_point(data = result_data %>% filter(wday_char == "Tue"), mapping = aes(x = date, y = noRides, color = "Tue"), size = 3) +
+  # geom_point(data = result_data %>% filter(wday_char == "Wed"), mapping = aes(x = date, y = noRides, color = "Wed"), size = 3) +
+  # geom_point(data = result_data %>% filter(wday_char == "Thu"), mapping = aes(x = date, y = noRides, color = "Thu"), size = 3) +
+  # geom_point(data = result_data %>% filter(wday_char == "Fri"), mapping = aes(x = date, y = noRides, color = "Fri"), size = 3) +
   #geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
   #geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
   #          aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
@@ -318,7 +330,7 @@ noRides_time <- ggplot(result_data) +
   theme(axis.ticks.x = element_line(size = 1), 
                    axis.ticks.y = element_line(size = 1),
                    axis.ticks.length = unit(15, "pt")) +
-  scale_color_manual(values = colors) 
+  scale_color_manual(values = colors)
 
 noRides_time_incl_2023 <- ggplot(result_data_incl_2023) +
   geom_point(data = result_data %>% filter(wday_char == "Mon"), mapping = aes(x = date, y = noRides, color = "Mon")) +
@@ -360,7 +372,17 @@ tmin_time <- ggplot(result_data) +
   ggtitle("tmin over time")
 
 tavg_time <- ggplot(result_data) +
-  geom_point(mapping=aes(x = date,y = tavg), size =3)+
+  geom_point(mapping=aes(x = date,y = tavg), size =4)+
+  annotate("rect",
+           xmin = as.Date("2021-05-01"), xmax = as.Date("2021-06-30"), 
+           ymin = -Inf, ymax = Inf,  fill = "#D55E00", alpha=.3) +
+  annotate("text", 
+           x = as.Date("2021-05-31"),
+           y = mean(range(result_data$tavg)),
+           label = "Change of operator,\nperiod removed",
+           color = "black", 
+           size = 11,
+           angle = 90) +
   #geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
   #geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
   #          aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
@@ -405,7 +427,17 @@ tdiff_time <- ggplot(result_data) +
   ggtitle("tdiff over time")
 
 stringency_time <- ggplot(result_data) +
-  geom_point(mapping=aes(x = date,y = stringency), size = 3)+
+  geom_point(mapping=aes(x = date,y = stringency), size = 4)+
+  annotate("rect",
+           xmin = as.Date("2021-05-01"), xmax = as.Date("2021-06-30"), 
+           ymin = -Inf, ymax = Inf,  fill = "#D55E00", alpha=.3) +
+  annotate("text", 
+           x = as.Date("2021-05-31"),
+           y = mean(range(result_data$stringency)),
+           label = "Change of operator,\nperiod removed",
+           color = "black", 
+           size = 11,
+           angle = 90) +
   #geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
   #geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
   #          aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
@@ -419,7 +451,17 @@ stringency_time <- ggplot(result_data) +
   xlab("Date")
 
 snow_time <- ggplot(result_data) +
-  geom_point(mapping=aes(x = date,y = snow), size = 3)+
+  geom_point(mapping=aes(x = date,y = snow), size = 4)+
+  annotate("rect",
+           xmin = as.Date("2021-05-01"), xmax = as.Date("2021-06-30"), 
+           ymin = -Inf, ymax = Inf,  fill = "#D55E00", alpha=.3) +
+  annotate("text", 
+           x = as.Date("2021-05-31"),
+           y = mean(range(result_data$snow)),
+           label = "Change of operator,\nperiod removed",
+           color = "black", 
+           size = 11,
+           angle = 90) +
   #geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
   #geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
   #          aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
@@ -434,7 +476,17 @@ snow_time <- ggplot(result_data) +
   #ggtitle("snow over time")
 
 wdir_time <- ggplot(result_data) +
-  geom_point(mapping=aes(x = date,y = wdir), size = 3)+
+  geom_point(mapping=aes(x = date,y = wdir), size = 4)+
+  annotate("rect",
+           xmin = as.Date("2021-05-01"), xmax = as.Date("2021-06-30"), 
+           ymin = -Inf, ymax = Inf,  fill = "#D55E00", alpha=.3) +
+  annotate("text", 
+           x = as.Date("2021-05-31"),
+           y = mean(range(result_data$wdir)),
+           label = "Change of operator,\nperiod removed",
+           color = "black", 
+           size = 11,
+           angle = 90) +
   # geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
   # geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
             # aes(x = x, y = y, label = year), color = "red", size = 5, vjust = -1) +
@@ -448,13 +500,20 @@ wdir_time <- ggplot(result_data) +
         axis.ticks.length = unit(15, "pt"))
   # ggtitle("wdir over time")
 
-ggarrange(noRides_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
-          tavg_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
-          snow_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
-          stringency_time,
-          labels = c("A", "B", "", "C", "", "D", ""), align="v", nrow = 7, ncol = 1, font.label = list(size = 37), legend = "bottom", heights = c(1.2,0.1,1,0.1,1,0.1,1))
+ggarrange(
+  noRides_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
+  tavg_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
+  snow_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
+  wdir_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
+  stringency_time,
+  labels = c("A", "B", "", "C", "", "D", "", "E", "", "F"), 
+  align = "v", 
+  nrow = 11, ncol = 1, 
+  font.label = list(size = 37), 
+  legend = "bottom", 
+  heights = c(1.2, 0.1, 1, 0.1, 1, 0.1, 1, 0.1, 1, 0.1, 1)
+)
 
-ggsave("ExploratoryAnalysis_BadWeather.png", dpi = 500, w = 24, h = 30)
 ggsave("ExploratoryAnalysis_BadWeather.pdf", dpi = 500, w = 24, h = 30)
 
 
@@ -815,6 +874,13 @@ confint(wdir_tmax_tmin_snow_eliminated)
 AIC(wdir_tmax_tmin_snow_eliminated)
 BIC(wdir_tmax_tmin_snow_eliminated)
 
+# if we remove trend, R^2=0
+wdir_tmax_tmin_snow_trend_eliminated <- lm(noRides ~ tavg, data = result_data)
+summary(wdir_tmax_tmin_snow_trend_eliminated)
+confint(wdir_tmax_tmin_snow_trend_eliminated)
+AIC(wdir_tmax_tmin_snow_trend_eliminated)
+BIC(wdir_tmax_tmin_snow_trend_eliminated)
+
 
 ############################################## calc Mean squared error (MSE) for trend ##############################################################################################################
 # the noRides over time plot (until 12-22) shows, that the relation between trend and noRides is rather described
@@ -867,10 +933,22 @@ result_data  %>% ungroup() %>%
 # R^2 0.00401...
 test_model <- lm(adjustedNoRides ~ tavg, data = result_data)
 summary(test_model)
+AIC(test_model)
+BIC(test_model)
 
 noRides_time_est_demand <- ggplot(result_data) +
   geom_point(mapping=aes(x = date,y = noRides), size=4)+
   geom_line(mapping = aes(x=date, y = est_demand), color="red", size=1.5) +
+  annotate("rect",
+           xmin = as.Date("2021-05-01"), xmax = as.Date("2021-06-30"), 
+           ymin = -Inf, ymax = Inf,  fill = "#D55E00", alpha=.3) +
+  annotate("text", 
+           x = as.Date("2021-05-31"),
+           y = mean(range(result_data$noRides)),
+           label = "Change of operator,\nperiod removed",
+           color = "black", 
+           size = 11,
+           angle = 90) +
   theme_minimal() +
   xlab("date") +
   ylab("nRides") +
@@ -886,14 +964,32 @@ noRides_time_est_demand
 ggsave("nRides_est_demand_time.pdf", noRides_time_est_demand, dpi = 500, w = 24, h = 9) 
 
 adjustedNoRides_time_2 <- ggplot(result_data) +
-  geom_point(mapping=aes(x = date,y = adjustedNoRides))+
-  geom_line(mapping=aes(x = date,y = snow-50), color="red")+
+  geom_point(mapping=aes(x = date,y = adjustedNoRides), size=4)+
+  # geom_line(mapping=aes(x = date,y = snow-50), color="red")+
   # geom_line(mapping = aes(x=date, y = est_demand), color="red") +
-  theme_light() +
-  xlab("Date") +
-  theme(text = element_text(size = 12)) +
-  ggtitle("adjusted nor rides over time")
+  annotate("rect",
+           xmin = as.Date("2021-05-01"), xmax = as.Date("2021-06-30"), 
+           ymin = -Inf, ymax = Inf,  fill = "#D55E00", alpha=.3) +
+  annotate("text", 
+           x = as.Date("2021-05-31"),
+           y = mean(range(result_data$adjustedNoRides)),
+           label = "Change of operator,\nperiod removed",
+           color = "black", 
+           size = 11,
+           angle = 90) +
+  theme_minimal() +
+  xlab("date") +
+  ylab("adjusted nRides") +
+  scale_x_date(breaks= seq(as.Date("2020-03-01"), as.Date("2022-12-31"), by = "3 months"), date_labels = "%m/%y") +
+  theme(text = element_text(size = 50), legend.position = "bottom", legend.title=element_blank()) +
+  theme(axis.ticks.x = element_line(size = 1), 
+        axis.ticks.y = element_line(size = 1),
+        axis.ticks.length = unit(15, "pt"),
+        axis.text = element_text(size=45))
+  # ggtitle("adjusted nor rides over time")
 adjustedNoRides_time_2
+
+ggsave("adjusted_nRides_time.pdf", adjustedNoRides_time_2, dpi = 500, w = 24, h = 9) 
 
 
 ############################################## first regression model ###############################################################################################################################
@@ -1036,6 +1132,16 @@ test_data <- result_data %>% add_predictions(model = model) %>% add_residuals(mo
 plot_final_model <- ggplot(test_data %>% filter(year(date)>=2020)) +
   geom_point(mapping=aes(x = date,y = noRides), size=4)+
   geom_line(aes(x = date,y = pred,color="predicted"), size = 1.2)+
+  annotate("rect",
+           xmin = as.Date("2021-05-01"), xmax = as.Date("2021-06-30"), 
+           ymin = -Inf, ymax = Inf,  fill = "#D55E00", alpha=.3) +
+  annotate("text", 
+           x = as.Date("2021-05-31"),
+           y = mean(range(result_data$noRides)),
+           label = "Change of operator,\nperiod removed",
+           color = "black", 
+           size = 11,
+           angle = 90) +
   theme_minimal() +
   xlab("Date") +
   ylab("nRides") +
