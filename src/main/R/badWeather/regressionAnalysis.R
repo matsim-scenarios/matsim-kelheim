@@ -148,7 +148,7 @@ result_data <- result_data %>%
   left_join(df_schoolHolidays, by = "date") %>%
   replace_na(list(isHoliday = FALSE,snow = 0, isSchoolHoliday = FALSE)) %>%
 #%>% filter(noRides != 0)
- filter(date <= as.Date("2022-12-31"))
+filter(date <= as.Date("2022-12-31"))
 
 sundays <- result_data %>% 
   filter(wday == 7)
@@ -312,7 +312,7 @@ noRides_time <- ggplot(result_data) +
            y = mean(range(result_data$noRides)),
            label = "Change of operator,\nperiod removed",
            color = "black", 
-           size = 11,
+           size = 9,
            angle = 90) +
   # geom_point(data = result_data %>% filter(wday_char == "Mon"), mapping = aes(x = date, y = noRides, color = "Mon"), size = 3) +
   # geom_point(data = result_data %>% filter(wday_char == "Tue"), mapping = aes(x = date, y = noRides, color = "Tue"), size = 3) +
@@ -381,7 +381,7 @@ tavg_time <- ggplot(result_data) +
            y = mean(range(result_data$tavg)),
            label = "Change of operator,\nperiod removed",
            color = "black", 
-           size = 11,
+           size = 9,
            angle = 90) +
   #geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
   #geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
@@ -436,7 +436,7 @@ stringency_time <- ggplot(result_data) +
            y = mean(range(result_data$stringency)),
            label = "Change of operator,\nperiod removed",
            color = "black", 
-           size = 11,
+           size = 9,
            angle = 90) +
   #geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
   #geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
@@ -457,10 +457,10 @@ snow_time <- ggplot(result_data) +
            ymin = -Inf, ymax = Inf,  fill = "#D55E00", alpha=.3) +
   annotate("text", 
            x = as.Date("2021-05-31"),
-           y = mean(range(result_data$snow)),
+           y = 55,
            label = "Change of operator,\nperiod removed",
            color = "black", 
-           size = 11,
+           size = 9,
            angle = 90) +
   #geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
   #geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
@@ -485,7 +485,7 @@ wdir_time <- ggplot(result_data) +
            y = mean(range(result_data$wdir)),
            label = "Change of operator,\nperiod removed",
            color = "black", 
-           size = 11,
+           size = 9,
            angle = 90) +
   # geom_vline(xintercept = as.numeric(year_breaks), color = "red", linetype = "dashed", size = 1) +
   # geom_text(data = data.frame(x = year_breaks, y = rep(min(result_data$noRides), length(year_breaks)), year = substr(year_breaks, 3, 4)),
@@ -501,17 +501,16 @@ wdir_time <- ggplot(result_data) +
   # ggtitle("wdir over time")
 
 ggarrange(
-  noRides_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
-  tavg_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
+  noRides_time, tavg_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
   snow_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
   wdir_time, ggparagraph(text="   ", face = "italic", size = 6, color = "black"), 
   stringency_time,
-  labels = c("A", "B", "", "C", "", "D", "", "E", "", "F"), 
+  labels = c("A", "B", "C", "", "", "D", "E", ""), 
   align = "v", 
-  nrow = 11, ncol = 1, 
+  nrow = 8, ncol = 1, 
   font.label = list(size = 37), 
   legend = "bottom", 
-  heights = c(1.2, 0.1, 1, 0.1, 1, 0.1, 1, 0.1, 1, 0.1, 1)
+  heights = c(1, 1, 0.1, 1, 0.1, 1, 0.1, 1)
 )
 
 ggsave("ExploratoryAnalysis_BadWeather.pdf", dpi = 500, w = 24, h = 30)
@@ -1140,7 +1139,7 @@ plot_final_model <- ggplot(test_data %>% filter(year(date)>=2020)) +
            y = mean(range(result_data$noRides)),
            label = "Change of operator,\nperiod removed",
            color = "black", 
-           size = 11,
+           size = 9,
            angle = 90) +
   theme_minimal() +
   xlab("Date") +
