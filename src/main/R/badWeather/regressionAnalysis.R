@@ -991,6 +991,34 @@ adjustedNoRides_time_2
 
 ggsave("adjusted_nRides_time.pdf", adjustedNoRides_time_2, dpi = 500, w = 24, h = 9) 
 
+combined_mse_plot <- ggplot(result_data) +
+  geom_point(aes(x = date, y = adjustedNoRides, color = "adjusted nRides"), size = 4) +
+  geom_point(aes(x = date, y = noRides, color = "nRides"), size = 4) +
+  geom_line(aes(x = date, y = est_demand, color = "estimated demand"), size = 1.5) +
+  annotate("rect",
+           xmin = as.Date("2021-05-01"), xmax = as.Date("2021-06-30"), 
+           ymin = -Inf, ymax = Inf, fill = "#D55E00", alpha = 0.3) +
+  annotate("text", 
+           x = as.Date("2021-05-31"),
+           y = 50,
+           label = "Change of operator,\nperiod removed",
+           color = "black", 
+           size = 11,
+           angle = 90) +
+  theme_minimal() +
+  xlab("date") +
+  ylab("nRides") +
+  scale_x_date(breaks = seq(as.Date("2020-03-01"), as.Date("2022-12-31"), by = "3 months"), date_labels = "%m/%y") +
+  scale_color_manual(values = c("adjusted nRides" = "blue", "nRides" = "black", "estimated demand" = "red")) +
+  theme(text = element_text(size = 50), legend.position = "bottom", legend.title = element_blank()) +
+  theme(axis.ticks.x = element_line(size = 1), 
+        axis.ticks.y = element_line(size = 1),
+        axis.ticks.length = unit(15, "pt"),
+        axis.text = element_text(size = 45)) 
+combined_mse_plot
+ggsave("combined_mse_plot.pdf", combined_mse_plot, dpi = 500, w = 24, h = 9) 
+
+mean(mean(result_data$noRides), mean(result_data$adjustedNoRides))
 
 ############################################## first regression model ###############################################################################################################################
 # 
