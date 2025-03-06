@@ -254,7 +254,7 @@ plotWithRibbon <- function(parameterStr, scales = "free", show_legend = FALSE){
     geom_line(linewidth = 0.8) +
     geom_point(size = 2
                , aes(shape = serviceTimes,
-               color = ifelse(grepl("5", Wartepunkte), "black", Bediengebiet) ) 
+               color = ifelse(str_detect(Wartepunkte_Namen, "BH"), "black", Bediengebiet) ) 
     )+
     
     
@@ -290,13 +290,13 @@ plotWithRibbon <- function(parameterStr, scales = "free", show_legend = FALSE){
   
     
     #geom_text(aes(label = fleetSize), vjust = -1, hjust = 0.5, size = 3, color = "black") +
-    geom_text(aes(label = Wartepunkte), vjust = -1, hjust = 0.5, size = 2, color = "black") +
+    #geom_text(aes(label = Wartepunkte_Namen), vjust = -1, hjust = 0.5, size = 2, color = "black") +
     
-    geom_text(data = filter(plot_data, grepl("5", Wartepunkte)),
-              aes(x = fleetSize + 1, y = mean - 2, label = Wartepunkte), 
-              color = "black", size = 5, fontface = "bold") + 
+    #geom_text(data = filter(plot_data, str_detect(Wartepunkte_Namen, "BH")),
+    #          aes(x = fleetSize + 1, y = mean - 2, label = Wartepunkte), 
+    #          color = "black", size = 5, fontface = "bold") + 
     
-    geom_segment(data = filter(plot_data, grepl("5", Wartepunkte)),
+    geom_segment(data = filter(plot_data, str_detect(Wartepunkte_Namen, "BH")),
                  aes(x = fleetSize + 0.5, xend = fleetSize + 0.1, 
                      y = mean - 2, yend = mean),
                  arrow = arrow(length = unit(0.2, "cm")), color = "black") + 
@@ -599,16 +599,16 @@ plotWithRibbon2 <- function(parameterStr, scales = "free", show_legend = FALSE){
     
     
     #geom_text(aes(label = fleetSize), vjust = -1, hjust = 0.5, size = 3, color = "black") +
-    geom_text(aes(label = Wartepunkte), vjust = -1, hjust = 0.5, size = 2, color = "black") +
+    geom_text(aes(label = Wartepunkte_Namen), vjust = -1, hjust = 0.5, size = 2, color = "black") +
     
-    geom_text(data = filter(str_detect(Wartepunkte_Namen, "BH")),
-              aes(x = fleetSize + 1, y = mean - 2, label = Wartepunkte_Namen), 
-              color = "black", size = 5, fontface = "bold") + 
+    #geom_text(data = filter(str_detect(Wartepunkte_Namen, "BH")),
+    #          aes(x = fleetSize + 1, y = mean - 2, label = Wartepunkte_Namen), 
+    #          color = "black", size = 5, fontface = "bold") + 
     
-    geom_segment(data = filter(str_detect(Wartepunkte_Namen, "BH")),
-                 aes(x = fleetSize + 0.5, xend = fleetSize + 0.1, 
-                     y = mean - 2, yend = mean),
-                 arrow = arrow(length = unit(0.2, "cm")), color = "black") + 
+    #geom_segment(data = filter(str_detect(Wartepunkte_Namen, "BH")),
+    #             aes(x = fleetSize + 0.5, xend = fleetSize + 0.1, 
+    #                 y = mean - 2, yend = mean),
+    #             arrow = arrow(length = unit(0.2, "cm")), color = "black") + 
     
     
     #geom_text(data = filter(plot_data, Wartepunkte == "7,2"),
