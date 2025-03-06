@@ -8,7 +8,13 @@ library(grid)
 ### this script needs input that is produced with readValuesFromRunSummaries.R (or gatherResults.sh on the cluster)
 
 ## the following path points to the cluster: //net/ils/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/
+## so you need to adjust it to your own local mount
 mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/"
+
+## csv with information on waiting points. also sits on the cluster
+wartepunkte_path <- paste(mainDir, "KelRide-Wartepunkte.csv", sep = "")
+## local wartepunkty copy for backup
+#wartepunkte_path <- "D:/Projekte/KelRide/AV-Service-Extension/untersucheNachfrageWartepunkte/KelRide-Wartepunkte.csv"
 
 #set to true for AV and FALSE for conv. KEXI
 stats_for_AV = TRUE
@@ -24,10 +30,8 @@ if (stats_for_AV){
   
 ##read input
 transposed_result <- read.csv(input_file, check.names = FALSE, sep =",")
-## csv with information on waiting points
-wartepunkte <- read.csv2("D:/Projekte/KelRide/AV-Service-Extension/untersucheNachfrageWartepunkte/KelRide-Wartepunkte.csv")
-## local wartepunkty copy for backup
-#wartepunkte <- read.csv2("D:/Projekte/KelRide/AV-Service-Extension/untersucheNachfrageWartepunkte/KelRide-Wartepunkte.csv")
+wartepunkte <- read.csv2(wartepunkte_path)
+
 
 
 # serviceTimes umschreiben und faktorisieren
@@ -152,11 +156,13 @@ plotByConfiguration <- function(parameterStr, yAxisLabel = parameterStr, scales 
 }
 
 #####################################################################################
+### plot and save __all__ the different metrics (to the cluster).
+## for looking at single plots, you need to execute the lines individually
 if(FALSE){
   
   data <- results %>%
     filter(fleetSize < 150,
-           str_detect(area, "Saal")
+           str_detect(area, "Saal") # das Area-Encoding für die Konfigurations-Serie, die wir anschauen wollen ist KEXImSaal (grosses Gebiet) und SAR2023 (kleines Gebiet)
            | area == "SAR2023"
     )
   
