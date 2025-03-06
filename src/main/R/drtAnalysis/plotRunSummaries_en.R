@@ -536,8 +536,8 @@ plotWithRibbon2 <- function(parameterStr, scales = "free", show_legend = FALSE){
   }
   
   ribbon_data <- plot_data %>% 
-    mutate(hatWP5 = str_detect(Wartepunkte, "5")) %>% 
-    group_by(fleetSize, speed, serviceTimes, hatWP5) %>%
+    mutate(hatBhf = str_detect(Wartepunkte_Namen, "BH")) %>% 
+    group_by(fleetSize, speed, serviceTimes, hatBhf) %>%
     summarise(Min = min(mean, na.rm = TRUE), 
               Max = max(mean, na.rm = TRUE), 
               Median = median(mean, na.rm = TRUE)) %>%
@@ -563,14 +563,14 @@ plotWithRibbon2 <- function(parameterStr, scales = "free", show_legend = FALSE){
     geom_line(linewidth = 0.8) +
     geom_point(size = 2
                , aes(shape = serviceTimes,
-                     color = ifelse(grepl("5", Wartepunkte), "red", "blue") ) 
+                     color = ifelse(str_detect(Wartepunkte_Namen, "BH"), "red", "blue") ) 
     )+
     
     
     # Fläche zwischen min und max markieren
     geom_ribbon(data = ribbon_data, aes(x = fleetSize, ymin = Min, ymax = Max,
-                                        group = interaction(serviceTimes, hatWP5),
-                                        fill = hatWP5), 
+                                        group = interaction(serviceTimes, hatBhf),
+                                        fill = hatBhf), 
                 alpha = 0.1,  # Transparenz
                 inherit.aes = FALSE, # Verhindert Konflikte mit globalem Mapping
                 color = NA) + # Keine Randlinien
@@ -587,7 +587,7 @@ plotWithRibbon2 <- function(parameterStr, scales = "free", show_legend = FALSE){
     labs(title = plot_title,
          x = "Fleet Size",
          y = parameterStr,
-         color = "Service Area",
+         color = "Hat WP am Bhf",
          linetype = "Service Times",
          shape = "Service Times",
          fill = "Service Area"
@@ -601,11 +601,11 @@ plotWithRibbon2 <- function(parameterStr, scales = "free", show_legend = FALSE){
     #geom_text(aes(label = fleetSize), vjust = -1, hjust = 0.5, size = 3, color = "black") +
     geom_text(aes(label = Wartepunkte), vjust = -1, hjust = 0.5, size = 2, color = "black") +
     
-    geom_text(data = filter(plot_data, grepl("5", Wartepunkte)),
-              aes(x = fleetSize + 1, y = mean - 2, label = Wartepunkte), 
+    geom_text(data = filter(str_detect(Wartepunkte_Namen, "BH")),
+              aes(x = fleetSize + 1, y = mean - 2, label = Wartepunkte_Namen), 
               color = "black", size = 5, fontface = "bold") + 
     
-    geom_segment(data = filter(plot_data, grepl("5", Wartepunkte)),
+    geom_segment(data = filter(str_detect(Wartepunkte_Namen, "BH")),
                  aes(x = fleetSize + 0.5, xend = fleetSize + 0.1, 
                      y = mean - 2, yend = mean),
                  arrow = arrow(length = unit(0.2, "cm")), color = "black") + 
@@ -645,7 +645,7 @@ plotWithRibbon2 <- function(parameterStr, scales = "free", show_legend = FALSE){
 }
 
 
-plotWithRibbon2("Avg. wait time", "fixed") +
+plotWithRibbon2("Avg. wait time", "fixed", show_legend = TRUE) +
   labs(title = "Avg. wait time",
        y = "Avg. wait time [s]",
   )
