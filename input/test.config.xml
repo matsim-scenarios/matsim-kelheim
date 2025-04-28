@@ -28,7 +28,7 @@
 	</module>
 
 	<module name="plans">
-		<param name="inputPlansFile" value="provide plans file per code"/>
+		<param name="inputPlansFile" value="https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-1pct-plans.xml.gz"/> //change 1pc
 		<param name="removingUnnecessaryPlanAttributes" value="true"/>
 	</module>
 

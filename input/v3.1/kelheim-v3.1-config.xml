@@ -6,10 +6,10 @@
     </module>
 
     <module name="controller">
-        <param name="lastIteration" value="1000"/>
+        <param name="lastIteration" value="2"/>
         <param name="overwriteFiles" value="failIfDirectoryExists"/>
-        <param name="runId" value="kelheim-v3.1-25pct"/>
-        <param name="outputDirectory" value="./output/output-kelheim-v3.1-25pct"/>
+        <param name="runId" value="output_file_1"/>
+        <param name="outputDirectory" value="./output/output_file_1"/>
         <param name="writeEventsInterval" value="100"/>
         <param name="writePlansInterval" value="100"/>
         <param name="enableLinkToLinkRouting" value="false"/>
