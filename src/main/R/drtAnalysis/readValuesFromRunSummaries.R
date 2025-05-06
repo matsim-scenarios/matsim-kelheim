@@ -92,17 +92,14 @@ process_folders <- function(main_folder, speed, stats_for_AV) {
 
 #############
 
-mainDir <- "D:/Projekte/KelRide/runs/v3.1.1/output-KEXI-2.45-AV--0.0/"
-
 mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/"
-
 speeds <- list(3.3, 5, 8.3)
 
 stats_for_AV = TRUE #set to true for AV and FALSE for conv. KEXI
 
 results <- list()
 for (speed in speeds) {
-  main_folder <- paste(mainDir, "AV-speed-mps-", speed, "/", sep="")
+  main_folder <- paste(mainDir, "AV-speed-mps-", speed, sep="")
   runResults <- process_folders(main_folder, speed, stats_for_AV)  
   results[[speed]] <- runResults
 }
@@ -146,12 +143,16 @@ write_csv(transposed_result, paste(mainDir, output_file, sep=""))
 #####################################################################
 ######PLOTS####
 
+### !!! the plot for the final project report in German
+### are produced with plotRunSummaries.R !!!
+
 plotByConfiguration <- function(parameterStr){
   
   # Filtern der Daten für die gewünschten Parameter
   plot_data <- results %>%
     filter(parameter == parameterStr,
            intermodal == TRUE | area == "SAR2023")
+           #area == "WIEKEXImSaal")
   
   # Funktion zum Anpassen der Facet-Labels
   label_function <- function(value) {

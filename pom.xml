@@ -6,7 +6,7 @@
 		<artifactId>matsim-all</artifactId>
 
 		<!-- PR-labelled release -->
-		<version>2025.0-PR3402</version> <!-- PR3402 is from August 09, '24, when TS fixed bugs and included damages in NoiseAnalysis -->
+		<version>2025.0-PR3549</version> <!-- PR3549 is from November 07, 2024 -->
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
 		<!--		<version>16.0-SNAPSHOT</matsim.version>-->
@@ -15,7 +15,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.matsim-scenarios</groupId>
 	<artifactId>matsim-kelheim</artifactId>
-	<version>3.x-SNAPSHOT</version>
+	<version>2024.2-SNAPSHOT</version>
 
 	<name>MATSim Kelheim Model</name>
 	<description>A transport model of the district of Kelheim and it's surroundings</description>
@@ -212,7 +212,7 @@
 		<dependency>
 			<groupId>org.apache.avro</groupId>
 			<artifactId>avro</artifactId>
-			<version>1.11.3</version>
+			<version>1.12.0</version>
 		</dependency>
 
 
