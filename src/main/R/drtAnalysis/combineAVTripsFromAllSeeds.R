@@ -3,8 +3,8 @@ library(dplyr)
 library(stringr)
 library(fs) # Für die Verzeichnisoperationen
 
-cluster_mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/AV-speed-mps-8.3/"
-output_mainDir <- "D:/Projekte/KelRide/AV-Service-Extension/untersucheNachfrageWartepunkte/30kmh/"
+cluster_mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/AV-speed-mps-3.3/"
+output_mainDir <- "D:/Projekte/KelRide/AV-Service-Extension/untersucheNachfrageWartepunkte/12kmh/"
 
 run_name <- "ALLDEPOTklein-AV2"
 
