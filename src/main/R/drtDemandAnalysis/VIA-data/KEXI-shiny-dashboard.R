@@ -137,6 +137,7 @@ ui <- fluidPage(
               plotlyOutput("totalPassengersOverTime"),
               #plotlyOutput("rideRequestsOverTime"),
               plotlyOutput("passengerCountDistribution"),
+              textOutput("passengerCountAverage"),
               plotlyOutput("pooledRides"),
               leafletOutput("originMap", height = 600), # Karte für Standorte der Fahrten
               leafletOutput("destinationMap", height = 600), # Karte für Standorte der Fahrten
@@ -529,6 +530,12 @@ server <- function(input, output) {
       )
     
     ggplotly(gg)
+  })
+  
+  # Berechnung der durchschnittlichen Anzahl Fahrzeuge pro Tag
+  output$passengerCountAverage <- renderText({
+    avg_groupSize <- mean(avg_passengerCount()$avg)
+    paste("Mittlere Gruppengroesse: ", round(avg_groupSize, 2))
   })
   
 

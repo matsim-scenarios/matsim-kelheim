@@ -4,9 +4,9 @@ import org.apache.avro.file.CodecFactory;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.file.FileReader;
-import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.PrimitivesArrays;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.util.Utf8;
@@ -215,10 +215,8 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 			getCoordData(object1, xCoords);
 			getCoordData(object2, yCoords);
 
-
-//			TODO: for the example data even for the hourly data there was only one time stamp. This might be different with real data. this needs to be checked
-			if (object3 instanceof GenericData.Array<?>) {
-				List<Integer> ints = new ArrayList<>((GenericData.Array<Integer>) object3);
+			if (object3 instanceof PrimitivesArrays.IntArray intArray) {
+				List<Integer> ints = new ArrayList<>(intArray);
 
 				if (!timeStamps.equals(ints)) {
 					if (timeStamps.isEmpty()) {
@@ -235,8 +233,8 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 				List<Float> values = new ArrayList<>();
 
 				for (Map.Entry<?, ?> entry : ((HashMap<?, ?>) object4).entrySet()) {
-					if (entry.getKey() instanceof Utf8 && entry.getKey().toString().equals(dataFieldName) && entry.getValue() instanceof GenericData.Array<?>) {
-						values.addAll((GenericData.Array<Float>) entry.getValue());
+					if (entry.getKey() instanceof Utf8 && entry.getKey().toString().equals(dataFieldName) && entry.getValue() instanceof PrimitivesArrays.FloatArray floatArray) {
+						values.addAll(floatArray);
 
 						String entryString = ((Utf8) entry.getKey()).toString();
 
@@ -265,8 +263,8 @@ public class NoiseAverageAnalysis implements MATSimAppCommand {
 	}
 
 	private void getCoordData(Object object, List<Float> target) {
-		if (object instanceof GenericData.Array<?>) {
-			List<Float> floats = new ArrayList<>((GenericData.Array<Float>) object);
+		if (object instanceof PrimitivesArrays.FloatArray floatArray) {
+			List<Float> floats = new ArrayList<>(floatArray);
 
 			if (!target.equals(floats)) {
 				if (target.isEmpty()) {
