@@ -1,4 +1,4 @@
-package org.matsim.simwrapper;
+package org.matsim.analysis.postAnalysis.accessbility;
 
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
@@ -18,6 +18,7 @@ import org.locationtech.jts.geom.Point;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.application.ApplicationUtils;
 import org.matsim.contrib.accessibility.AccessibilityConfigGroup;
 import org.matsim.contrib.accessibility.AccessibilityFromEvents;
@@ -39,6 +40,8 @@ import org.matsim.core.controler.*;
 import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.facilities.*;
+import org.matsim.simwrapper.SimWrapper;
+import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.dashboard.AccessibilityDashboard;
 
 import java.io.BufferedReader;
@@ -50,7 +53,9 @@ import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 public class RunOfflineAccessibilityKelheim {
@@ -61,8 +66,8 @@ public class RunOfflineAccessibilityKelheim {
 	public static void main(String[] args) throws FactoryException, TransformException {
 
 		// CONFIGURATION
-		List<String> relevantPois = List.of("train_station", "supermarket");
-//		List<String> relevantPois = List.of("train_station");
+//		List<String> relevantPois = List.of("train_station", "supermarket");
+		List<String> relevantPois = List.of("train_station");
 
 
 		AccessibilityConfigGroup accConfig = new AccessibilityConfigGroup();
@@ -77,19 +82,18 @@ public class RunOfflineAccessibilityKelheim {
 		accConfig.setBoundingBoxBottom(leftBottom.y);
 		accConfig.setBoundingBoxRight(rightTop.x);
 		accConfig.setBoundingBoxTop(rightTop.y);
-		accConfig.setTileSize_m(250);
+		accConfig.setTileSize_m(250);//250
 
-//		List<Double> timesHour = List.of(8.0);
+		List<Double> timesHour = List.of(8.0);
 //		List<Double> timesHour = List.of(8.0, 12.0, 16.0);
-		List<Double> timesHour = List.of(6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0);
+//		List<Double> timesHour = List.of(6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0);
 		List<Double> timesSeconds = timesHour.stream().map(t -> t * 60 * 60).toList();
 
 		accConfig.setTimeOfDay(timesSeconds);
-//		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car,Modes4Accessibility.pt, Modes4Accessibility.estimatedDrt, Modes4Accessibility.walk);
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.estimatedDrt);
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car, Modes4Accessibility.pt, Modes4Accessibility.estimatedDrt, Modes4Accessibility.walk, Modes4Accessibility.bike, Modes4Accessibility.teleportedWalk);
 
-		for(Modes4Accessibility mode : accModes) {
-			accConfig.setComputingAccessibilityForMode(mode, true);
+		for(Modes4Accessibility mode : Modes4Accessibility.values()) {
+			accConfig.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
 
 
@@ -279,6 +283,16 @@ public class RunOfflineAccessibilityKelheim {
 		// SCENARIO
 
 		MutableScenario scenario = (MutableScenario) ScenarioUtils.loadScenario(config);
+
+		for( Link link : scenario.getNetwork().getLinks().values() ){
+			if(!link.getId().toString().startsWith("pt_")) {
+				Set<String> modes = new HashSet<>(link.getAllowedModes());
+				modes.add(TransportMode.walk);
+				modes.add(TransportMode.bike);
+				link.setAllowedModes(modes);
+			}
+
+		}
 
 		// add pois to scenario as facilities
 		readPoiCsv(scenario.getActivityFacilities(), poiFile);
