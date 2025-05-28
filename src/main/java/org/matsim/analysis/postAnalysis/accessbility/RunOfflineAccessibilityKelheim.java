@@ -69,8 +69,7 @@ public class RunOfflineAccessibilityKelheim {
 
 	private static final Logger log = LogManager.getLogger(RunOfflineAccessibilityKelheim.class);
 
-	private static final String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/kelheim-scratch/";
-
+	private static String outputDir;
 
 	protected RunOfflineAccessibilityKelheim() {
 		// should not be instantiated
@@ -78,6 +77,14 @@ public class RunOfflineAccessibilityKelheim {
 	}
 
 	public static void main(String[] args) throws FactoryException, TransformException {
+
+		if (args.length == 0) {
+			outputDir = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/kelheim-scratch/";
+		} else if (args.length == 1) {
+			outputDir = args[0];
+		} else {
+			throw new IllegalArgumentException("Please provide the output directory as an argument.");
+		}
 
 		// CONFIGURATION
 //		List<String> relevantPois = List.of("train_station", "supermarket");
@@ -100,7 +107,7 @@ public class RunOfflineAccessibilityKelheim {
 
 //		List<Double> timesHour = List.of(8.5, 9.5, 10.5);
 //		List<Double> timesHour = List.of(8.0, 12.0, 16.0);
-//		List<Double> timesHour = List.of(0.0,6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0);
+//		List<Double> timesHour = List.of(0.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0);
 		List<Double> timesHour = List.of(8.0);
 		List<Double> timesSeconds = timesHour.stream().map(t -> t * 60 * 60).toList();
 
@@ -115,8 +122,8 @@ public class RunOfflineAccessibilityKelheim {
 		// Part 1: Generate Parameters for Estimator
 		// Part 2: Calculate Accessibility
 
-//		EstimatorParameters estimatorParameters = step1_generateParams();
-//		step2_calculateAccessibility(estimatorParameters, relevantPois, accConfig);
+		EstimatorParameters estimatorParameters = step1GenerateParams();
+		step2CalculateAccessibility(estimatorParameters, relevantPois, accConfig);
 
 		// Part 3: Create Dashboard
 		step3CreateDashboard(relevantPois, accModes, mapCenterString);
@@ -137,7 +144,7 @@ public class RunOfflineAccessibilityKelheim {
 		double n = 0.;
 		double waitTimeSum = 0.;
 
-		Path filePath = Path.of(OUTPUT_DIR + "kexi-seed1-ASC-2.45.output_drt_legs_drt.csv");
+		Path filePath = Path.of(outputDir + "kexi-seed1-ASC-2.45.output_drt_legs_drt.csv");
 		try (CSVParser parser = new CSVParser(new BufferedReader(new InputStreamReader(Files.newInputStream(filePath))),
 			CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader())) {
 
@@ -181,9 +188,9 @@ public class RunOfflineAccessibilityKelheim {
 		String stopsFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-land.xml";
 		String poiFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/pois_complete.csv";
 
-		String eventsFile = ApplicationUtils.matchInput("output_events.xml.gz", Path.of(OUTPUT_DIR)).toString();
-		String networkFile = ApplicationUtils.matchInput("output_network.xml.gz", Path.of(OUTPUT_DIR)).toString();
-		String transportScheduleFile = ApplicationUtils.matchInput("output_transitSchedule.xml.gz", Path.of(OUTPUT_DIR)).toString();
+		String eventsFile = ApplicationUtils.matchInput("output_events.xml.gz", Path.of(outputDir)).toString();
+		String networkFile = ApplicationUtils.matchInput("output_network.xml.gz", Path.of(outputDir)).toString();
+		String transportScheduleFile = ApplicationUtils.matchInput("output_transitSchedule.xml.gz", Path.of(outputDir)).toString();
 
 
 		// CONFIG
@@ -195,7 +202,7 @@ public class RunOfflineAccessibilityKelheim {
 
 		config.controller().setLastIteration(0);
 //		config.controller().setOutputDirectory(utils.getOutputDirectory());
-		config.controller().setOutputDirectory(OUTPUT_DIR);
+		config.controller().setOutputDirectory(outputDir);
 		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 
 		config.routing().setRoutingRandomness(0.);
@@ -207,8 +214,27 @@ public class RunOfflineAccessibilityKelheim {
 
 		// transit
 		config.transit().setTransitScheduleFile(transportScheduleFile);
-		config.transitRouter().setSearchRadius(50_000);
-		config.transitRouter().setExtensionRadius(50_000);
+
+		// default config: (see kelheim-1000-200) --> looks better, but with holes
+		// search: 1000 (1km)
+		// extension: 200 (200m)
+		// maxBeelineWalkConnectionDistance 100.0
+
+		// kelheim config:
+		// search: 1000 (1km)
+		// extension: 500 (500m)
+		// maxBeelineWalkConnectionDistance 300.0
+
+		//closest stop: (see kelheim-1-0)
+		// search: 1 (1m)
+		// extension: 0 (0m)
+
+
+
+
+		config.transitRouter().setSearchRadius(1000);
+		config.transitRouter().setExtensionRadius(500);
+		config.transitRouter().setMaxBeelineWalkConnectionDistance(300);
 
 		// change walk speed to match kelheim scenario
 		config.routing().getTeleportedModeParams().get(TransportMode.walk).setTeleportedModeSpeed(3.8 / 3.6);
@@ -283,7 +309,7 @@ public class RunOfflineAccessibilityKelheim {
 	private static void step3CreateDashboard(List<String> relevantPois, List<Modes4Accessibility> accModes, String mapCenterString) {
 
 		final Config config = ConfigUtils.createConfig();
-		config.controller().setOutputDirectory(OUTPUT_DIR);
+		config.controller().setOutputDirectory(outputDir);
 		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 
 
@@ -307,11 +333,11 @@ public class RunOfflineAccessibilityKelheim {
 		SimWrapper sw = SimWrapper.create(config).addDashboard(new AccessibilityDashboard(config.global().getCoordinateSystem(), relevantPois, accModes));
 		boolean append = true;
 		try {
-			sw.generate(Path.of(OUTPUT_DIR), append);
+			sw.generate(Path.of(outputDir), append);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		sw.run(Path.of(OUTPUT_DIR));
+		sw.run(Path.of(outputDir));
 
 
 
