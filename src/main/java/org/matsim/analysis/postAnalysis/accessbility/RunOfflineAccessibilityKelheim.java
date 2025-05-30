@@ -96,14 +96,23 @@ public class RunOfflineAccessibilityKelheim {
 
 		Coordinate leftBottomWgs84 = new Coordinate(11.574, 48.584);
 		Coordinate topRightWgs84 = new Coordinate(12.095, 48.994);
-		String mapCenterString = (leftBottomWgs84.x + topRightWgs84.x) / 2 + "," + (leftBottomWgs84.y + topRightWgs84.y) / 2;
 		Coordinate leftBottom = transformCoordinate(CRS.decode("EPSG:4326", true), CRS.decode("EPSG:25832"), leftBottomWgs84);
 		Coordinate rightTop = transformCoordinate(CRS.decode("EPSG:4326", true), CRS.decode("EPSG:25832"), topRightWgs84);
+		String mapCenterString = (leftBottomWgs84.x + topRightWgs84.x) / 2 + "," + (leftBottomWgs84.y + topRightWgs84.y) / 2;
+
+		// abschnitt
+		//---
+//
+//		Coordinate leftBottom = new Coordinate(722948.8694512935, 5419286.339517641);
+//		Coordinate rightTop = new Coordinate(726198.8694512935, 5421786.339517641);
+//		String mapCenterString = null;
+
+		//--
 		accConfig.setBoundingBoxLeft(leftBottom.x);
 		accConfig.setBoundingBoxBottom(leftBottom.y);
 		accConfig.setBoundingBoxRight(rightTop.x);
 		accConfig.setBoundingBoxTop(rightTop.y);
-		accConfig.setTileSize_m(250);
+		accConfig.setTileSize_m(500);
 
 //		List<Double> timesHour = List.of(8.5, 9.5, 10.5);
 //		List<Double> timesHour = List.of(8.0, 12.0, 16.0);
@@ -112,8 +121,8 @@ public class RunOfflineAccessibilityKelheim {
 		List<Double> timesSeconds = timesHour.stream().map(t -> t * 60 * 60).toList();
 
 		accConfig.setTimeOfDay(timesSeconds);
-//		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car, Modes4Accessibility.freespeed, Modes4Accessibility.pt, Modes4Accessibility.estimatedDrt, Modes4Accessibility.walk, Modes4Accessibility.teleportedWalk);
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.pt);
+//		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car, Modes4Accessibility.pt, Modes4Accessibility.estimatedDrt, Modes4Accessibility.teleportedWalk);
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.estimatedDrt);
 
 		for (Modes4Accessibility mode : Modes4Accessibility.values()) {
 			accConfig.setComputingAccessibilityForMode(mode, accModes.contains(mode));
@@ -229,12 +238,24 @@ public class RunOfflineAccessibilityKelheim {
 		// search: 1 (1m)
 		// extension: 0 (0m)
 
+		// WAITING FOR PT:
+		// default: -6 --> -12 (including time lost)
+		// kelheim: -1.2 --> -7.2
+		// neutral: 0.0
+		config.scoring().setMarginalUtlOfWaitingPt_utils_hr(0.0);
 
 
+//		config.qsim().setVehiclesSource(QSimConfigGroup.VehiclesSource.defaultVehicle);
 
-		config.transitRouter().setSearchRadius(1000);
+
+		config.transitRouter().setSearchRadius(1_000);
 		config.transitRouter().setExtensionRadius(500);
 		config.transitRouter().setMaxBeelineWalkConnectionDistance(300);
+
+		//newC
+//		config.transitRouter().setSearchRadius(30_000);
+//		config.transitRouter().setExtensionRadius(500);
+//		config.transitRouter().setMaxBeelineWalkConnectionDistance(300);
 
 		// change walk speed to match kelheim scenario
 		config.routing().getTeleportedModeParams().get(TransportMode.walk).setTeleportedModeSpeed(3.8 / 3.6);
@@ -326,7 +347,9 @@ public class RunOfflineAccessibilityKelheim {
 		//simwrapper
 		SimWrapperConfigGroup group = ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class);
 		group.sampleSize = 0.001;
-		group.defaultParams().mapCenter = mapCenterString;
+		if (mapCenterString != null) {
+			group.defaultParams().mapCenter = mapCenterString;
+		}
 		group.defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
 
 
