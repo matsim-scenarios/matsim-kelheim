@@ -47,7 +47,10 @@ results <- transposed_result %>%
 
 results <- left_join(results, wartepunkte, join_by(area == Area.Key, fleetSize == Flottengroesse)) %>% 
   ## wir bennen um: 'konv. KEXI' --> 'conv. KEXI'
-  mutate(Bediengebiet = ifelse(Bediengebiet == "konv. KEXI", "conv. KEXI", Bediengebiet))
+  #mutate(Bediengebiet = ifelse(Bediengebiet == "konv. KEXI", "conv. KEXI", Bediengebiet))
+  ## wir bennen um: 'konv. KEXI' --> 'AV 2024' und 'konv. KEXI' --> 'Area All-2024'
+  mutate(Bediengebiet = ifelse(Bediengebiet == "konv. KEXI", "Area All-City", Bediengebiet)) %>% 
+  mutate(Bediengebiet = ifelse(Bediengebiet == "AV 2024", "Area 2024", Bediengebiet))
 
 
 unique(results$parameter)
@@ -118,7 +121,8 @@ plotByConfiguration <- function(parameterStr, yAxisLabel = parameterStr, scales 
     ) +
     
     scale_linetype_manual(values = c("9am - 4pm" = "solid", "all-day" = "dashed")) +
-    scale_color_manual(values = c("AV 2024" = "lightcoral", "conv. KEXI" = "darkturquoise"))  + 
+    #scale_color_manual(values = c("AV 2024" = "lightcoral", "conv. KEXI" = "darkturquoise"))  + 
+    scale_color_manual(values = c("Area 2024" = "lightcoral", "Area All-City" = "darkturquoise"))  + 
   
       #pastell_farben <- c(
       #  "lightblue",   # Hellblau
@@ -310,8 +314,8 @@ plotWithRibbon <- function(parameterStr, scales = "free", show_legend = FALSE){
     ) +
     
     scale_linetype_manual(values = c("9am - 4pm" = "solid", "all-day" = "dashed")) +
-    scale_color_manual(values = c("AV 2024" = "lightcoral", "conv. KEXI" = "darkturquoise"))  + 
-    scale_fill_manual(values = c("AV 2024" = "lightcoral", "conv. KEXI" = "darkturquoise")) +
+    scale_color_manual(values = c("Area 2024" = "lightcoral", "Area All-City" = "darkturquoise")) +
+    scale_fill_manual(values = c("Area 2024" = "lightcoral", "Area All-City" = "darkturquoise")) +
     #scale_color_manual(values = c("9am - 4pm" = "lightcoral", "all-day" = "darkturquoise"))  + 
     #scale_fill_manual(values = c("9am - 4pm" = "lightcoral", "all-day" = "darkturquoise")) +
   
@@ -366,7 +370,8 @@ plotWithRibbon <- function(parameterStr, scales = "free", show_legend = FALSE){
 
 data <- results %>%
   filter(#Bediengebiet != "conv. KEXI\n schlechte Wartepunkte",
-    str_starts(Bediengebiet, "conv."),
+    #str_starts(Bediengebiet, "conv."),
+    str_starts(Bediengebiet, "Area All"),
     serviceTimes == "9am - 4pm",
     #serviceTimes == "all-day",
     fleetSize < 10,
