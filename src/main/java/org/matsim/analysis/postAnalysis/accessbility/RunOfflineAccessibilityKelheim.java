@@ -19,6 +19,7 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.application.ApplicationUtils;
@@ -37,17 +38,21 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.FacilitiesConfigGroup;
-import org.matsim.core.config.groups.RoutingConfigGroup;
 import org.matsim.core.config.groups.ScoringConfigGroup;
 import org.matsim.core.controler.*;
 import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.facilities.*;
+import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
+import org.matsim.pt.transitSchedule.api.TransitScheduleWriter;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 import org.matsim.simwrapper.SimWrapper;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.dashboard.AccessibilityDashboard;
+import org.matsim.simwrapper.dashboard.AccessibilityDashboardKelheim;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -60,6 +65,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.matsim.core.scenario.ScenarioUtils.createScenario;
+
 
 /**
  * Run this class to calculate accessibility for the Kelheim scenario for different modes (including DRT). This class is meant to be run after
@@ -68,7 +75,11 @@ import java.util.Set;
 public class RunOfflineAccessibilityKelheim {
 
 	private static final Logger log = LogManager.getLogger(RunOfflineAccessibilityKelheim.class);
+	public static String stopsFileLand = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-land.xml";;
+	public static String stopsFileStadt = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-drt-stops.xml";;
+	public static String stopsFileStadtUndLand = "../public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-stadt-und-land.xml";;
 
+	public static String stopsFile;
 	private static String outputDir;
 
 	protected RunOfflineAccessibilityKelheim() {
@@ -87,14 +98,17 @@ public class RunOfflineAccessibilityKelheim {
 		}
 
 		// CONFIGURATION
-//		List<String> relevantPois = List.of("train_station", "supermarket");
-		List<String> relevantPois = List.of("train_station");
+		List<String> relevantPois = List.of("train_station", "supermarket");
+//		List<String> relevantPois = List.of("train_station");
 
+		stopsFile = stopsFileStadtUndLand;
 
 		AccessibilityConfigGroup accConfig = new AccessibilityConfigGroup();
 		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);
 
-		Coordinate leftBottomWgs84 = new Coordinate(11.574, 48.584);
+//		Coordinate leftBottomWgs84 = new Coordinate(11.574, 48.584);
+//		Coordinate topRightWgs84 = new Coordinate(12.095, 48.994);
+		Coordinate leftBottomWgs84 = new Coordinate(11.805, 48.81);
 		Coordinate topRightWgs84 = new Coordinate(12.095, 48.994);
 		Coordinate leftBottom = transformCoordinate(CRS.decode("EPSG:4326", true), CRS.decode("EPSG:25832"), leftBottomWgs84);
 		Coordinate rightTop = transformCoordinate(CRS.decode("EPSG:4326", true), CRS.decode("EPSG:25832"), topRightWgs84);
@@ -114,28 +128,66 @@ public class RunOfflineAccessibilityKelheim {
 		accConfig.setBoundingBoxTop(rightTop.y);
 		accConfig.setTileSize_m(500);
 
-//		List<Double> timesHour = List.of(8.5, 9.5, 10.5);
-//		List<Double> timesHour = List.of(8.0, 12.0, 16.0);
-//		List<Double> timesHour = List.of(0.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0);
-		List<Double> timesHour = List.of(8.0);
-		List<Double> timesSeconds = timesHour.stream().map(t -> t * 60 * 60).toList();
+//		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.estimatedDrt);
 
-		accConfig.setTimeOfDay(timesSeconds);
-//		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car, Modes4Accessibility.pt, Modes4Accessibility.estimatedDrt, Modes4Accessibility.teleportedWalk);
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.estimatedDrt);
-
-		for (Modes4Accessibility mode : Modes4Accessibility.values()) {
-			accConfig.setComputingAccessibilityForMode(mode, accModes.contains(mode));
-		}
 
 		// Part 1: Generate Parameters for Estimator
-		// Part 2: Calculate Accessibility
 
 		EstimatorParameters estimatorParameters = step1GenerateParams();
-		step2CalculateAccessibility(estimatorParameters, relevantPois, accConfig);
+		// Part 2: Calculate Accessibility
+
+		// A) MODES PT
+//		{
+//			List<Double> timesHour = List.of(1.0, 2.0, 3.0);
+//
+//			List<Double> timesSeconds = timesHour.stream().map(t -> t * 60 * 60).toList();
+//			accConfig.setTimeOfDay(timesSeconds);
+//
+//			List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.pt);
+//
+//			for (Modes4Accessibility mode : Modes4Accessibility.values()) {
+//				accConfig.setComputingAccessibilityForMode(mode, accModes.contains(mode));
+//			}
+//
+//			step2CalculateAccessibility(estimatorParameters, relevantPois, accConfig);
+//
+//			// Original file
+//			for (String act : relevantPois) {
+//				File oldFile = new File(outputDir + "/analysis/accessibility/" + act + "/accessibilities.csv");
+//
+//				// New file name
+//				File newFile = new File(outputDir + "/analysis/accessibility/" + act + "/pt_accessibilities.csv");
+//
+//				// Rename file
+//				if (oldFile.renameTo(newFile)) {
+//					System.out.println("File renamed successfully.");
+//				} else {
+//					System.out.println("Failed to rename file.");
+//				}
+//
+//			}
+//		}
+
+		// A) MODES CAR, WALK, DRT
+
+		{
+			List<Double> timesHour = List.of(8.0);
+			List<Double> timesSeconds = timesHour.stream().map(t -> t * 60 * 60).toList();
+
+			accConfig.setTimeOfDay(timesSeconds);
+			List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.teleportedWalk, Modes4Accessibility.car, Modes4Accessibility.estimatedDrt);
+			for (Modes4Accessibility mode : Modes4Accessibility.values()) {
+				accConfig.setComputingAccessibilityForMode(mode, accModes.contains(mode));
+			}
+
+			step2CalculateAccessibility(estimatorParameters, relevantPois, accConfig);
+		}
+
+
+
 
 		// Part 3: Create Dashboard
-		step3CreateDashboard(relevantPois, accModes, mapCenterString);
+		step3CreateDashboard(relevantPois, null, mapCenterString);
 
 	}
 
@@ -194,7 +246,12 @@ public class RunOfflineAccessibilityKelheim {
 	private static void step2CalculateAccessibility(EstimatorParameters estimatorParameters, List<String> relevantPois, ConfigGroup accConfig) {
 
 		// input files
-		String stopsFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-land.xml";
+		if (stopsFile.equals(stopsFileStadtUndLand) && !Files.exists(Path.of(stopsFileStadtUndLand))) {
+
+			mergeStadtUndLand();
+
+		}
+
 		String poiFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/pois_complete.csv";
 
 		String eventsFile = ApplicationUtils.matchInput("output_events.xml.gz", Path.of(outputDir)).toString();
@@ -206,7 +263,7 @@ public class RunOfflineAccessibilityKelheim {
 		//global
 		final Config config = ConfigUtils.createConfig();
 
-		config.routing().setAccessEgressType(RoutingConfigGroup.AccessEgressType.accessEgressModeToLink);
+//		config.routing().setAccessEgressType(RoutingConfigGroup.AccessEgressType.accessEgressModeToLink);
 
 
 		config.controller().setLastIteration(0);
@@ -327,6 +384,39 @@ public class RunOfflineAccessibilityKelheim {
 
 	}
 
+	private static void mergeStadtUndLand() {
+
+		// read umland transit schedule
+		Scenario scenarioUmland = createScenario(ConfigUtils.createConfig());
+		TransitScheduleReader transitScheduleReader = new TransitScheduleReader(scenarioUmland);
+		transitScheduleReader.readFile(stopsFileLand);
+
+
+		Scenario scenarioCity = createScenario(ConfigUtils.createConfig());
+		TransitScheduleReader transitScheduleReaderCity = new TransitScheduleReader(scenarioCity);
+		transitScheduleReaderCity.readFile(stopsFileStadt);
+		System.out.println(scenarioCity.getTransitSchedule().getFacilities().size());
+		Set<Id<TransitStopFacility>> idsCity = scenarioCity.getTransitSchedule().getFacilities().keySet();
+
+
+		for (Id<TransitStopFacility> id : idsCity) {
+			TransitStopFacility stopCity = scenarioCity.getTransitSchedule().getFacilities().get(id);
+			TransitStopFacility stopCityCopy = scenarioUmland.getTransitSchedule().getFactory().createTransitStopFacility(
+				Id.create(id.toString() + "-city", TransitStopFacility.class),
+				stopCity.getCoord(),
+				stopCity.getIsBlockingLane()
+			);
+			stopCityCopy.setLinkId(stopCity.getLinkId());
+
+			scenarioUmland.getTransitSchedule().addStopFacility(
+				stopCityCopy
+			);
+		}
+
+		TransitScheduleWriter transitScheduleWriter = new TransitScheduleWriter(scenarioUmland.getTransitSchedule());
+		transitScheduleWriter.writeFile("../public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-stadt-und-land.xml");
+	}
+
 	private static void step3CreateDashboard(List<String> relevantPois, List<Modes4Accessibility> accModes, String mapCenterString) {
 
 		final Config config = ConfigUtils.createConfig();
@@ -353,7 +443,7 @@ public class RunOfflineAccessibilityKelheim {
 		group.defaultDashboards = SimWrapperConfigGroup.Mode.disabled;
 
 
-		SimWrapper sw = SimWrapper.create(config).addDashboard(new AccessibilityDashboard(config.global().getCoordinateSystem(), relevantPois, accModes));
+		SimWrapper sw = SimWrapper.create(config).addDashboard(new AccessibilityDashboardKelheim(config.global().getCoordinateSystem(), relevantPois, accModes));
 		boolean append = true;
 		try {
 			sw.generate(Path.of(outputDir), append);
