@@ -92,7 +92,14 @@ process_folders <- function(main_folder, speed, stats_for_AV) {
 
 #############
 
-mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/"
+## the following path points to the runs-svn: https://data.vsp.tu-berlin.de/repos/runs-svn/KelRide/matsim-kelheim-v3.x/v3.1.1/output-KEXI-2.45-AV--0.0
+## so you need to adjust it to your own local copy
+## make sure to end it with a slash!!
+mainDir <- "D:/runs-svn/KelRide/matsim-kelheim-v3.x/v3.1.1/output-KEXI-2.45-AV--0.0/"
+
+## before you can run this here,
+## you need to have checked out all the analysis (simwrapper) subfolders of the AV configurations -> meaning the average dashboard data over 5 seeds!
+## one example: AV-speed-mps-8.3/WIEKEXI_WAASDPHPBH-AV5-intermodal/analysis/drt-drt and AV-speed-mps-8.3/WIEKEXI_WAASDPHPBH-AV5-intermodal/analysis/drt-drt-av
 speeds <- list(3.3, 5, 8.3)
 
 stats_for_AV = TRUE #set to true for AV and FALSE for conv. KEXI
@@ -139,111 +146,4 @@ if (stats_for_AV){
   output_file <- "results-konvKEXI.csv"
 }
 write_csv(transposed_result, paste(mainDir, output_file, sep=""))
-
-#####################################################################
-######PLOTS####
-
-### !!! the plot for the final project report in German
-### are produced with plotRunSummaries.R !!!
-
-plotByConfiguration <- function(parameterStr){
-  
-  # Filtern der Daten für die gewünschten Parameter
-  plot_data <- results %>%
-    filter(parameter == parameterStr,
-           intermodal == TRUE | area == "SAR2023")
-           #area == "WIEKEXImSaal")
-  
-  # Funktion zum Anpassen der Facet-Labels
-  label_function <- function(value) {
-    paste(value, "m/s")
-  }
-  
-  # Erstellen des Facet-Plots
-  ggplot(plot_data, aes(x = fleetSize, y = mean, color = area, linetype = as.factor(allDay), group = interaction(area, allDay))) +
-    geom_line(linewidth = 1.2) +
-    geom_point(size = 3,
-               #aes(shape = as.factor(intermodal))
-               ) +
-    facet_wrap(~ speed,
-               labeller = labeller(speed = label_function)
-               ,scales = "fixed"
-               ) +
-    geom_text(aes(label = fleetSize), vjust = -1, hjust = 0.5, size = 3, color = "black") +
-    labs(title = paste(parameterStr, "by Fleet Size, Speed, Area and Service Hours"),
-         x = "Fleet Size",
-         y = parameterStr,
-         color = "Area",
-         linetype = "All Day"
-         #,shape = "Intermodal"
-         ) +
-    #theme_dark() +
-    theme(
-      plot.title = element_text(size = 16, face = "bold"),  # Titelgröße anpassen
-      axis.title.x = element_text(size = 14),  # X-Achsentitelgröße anpassen
-      axis.title.y = element_text(size = 14),  # Y-Achsentitelgröße anpassen
-      axis.text = element_text(size = 12),  # Achsentextgröße anpassen
-      legend.title = element_text(size = 14),  # Legendentitelgröße anpassen
-      legend.text = element_text(size = 12),  # Legendtextgröße anpassen
-      strip.text = element_text(size = 12)  # Facet-Textgröße anpassen
-    )
-  
-}
-
-#unique(results$parameter)
-plotByConfiguration("Handled Requests")
-plotByConfiguration("Avg. wait time")
-plotByConfiguration("Avg. ride distance [km]")
-plotByConfiguration("Empty ratio")
-plotByConfiguration("Total vehicle mileage [km]")
-plotByConfiguration("Avg. fare [MoneyUnit]" )
-plotByConfiguration("Pax per veh-km")
-
-  
-#####################
-##Zusammenhang wait time und Nachfrage
-
-  handled_requests_data <- results %>%
-    filter(parameter == "Handled Requests") %>%
-    select(area, speed, fleetSize, allDay, mean, intermodal) %>%
-    rename(handled_requests = mean)
-  
-  avg_wait_time_data <- results %>%
-    filter(parameter == "Avg. wait time") %>%
-    select(area, speed, fleetSize, allDay, mean, intermodal) %>%
-    rename(avg_wait_time = mean)
-  
-  # Zusammenführen der Daten
-  plot_data <- left_join(handled_requests_data, avg_wait_time_data, by = c("area", "speed", "fleetSize", "allDay", "intermodal"))
-  
-  # Erstellen des Facet-Plots
-  facet_plot <- ggplot(plot_data, aes(x = avg_wait_time, y = handled_requests, color = area, linetype = as.factor(allDay), group = interaction(area, allDay))) +
-    geom_line(linewidth = 1.2) +
-    geom_point(size = 3
-               #,aes(shape = as.factor(intermodal))
-               ) +
-    facet_wrap(~ speed
-               #, scales = "free"
-               ) +
-    labs(title = "Handled Requests by Avg. Wait Time, Speed, Area, and All Day",
-         x = "Avg. Wait Time",
-         y = "Handled Requests",
-         color = "Area",
-         linetype = "All Day"
-         #,shape = "Intermodal"
-         ) +
-    theme_dark() +
-    theme(
-      plot.title = element_text(size = 16, face = "bold"),  # Titelgröße anpassen
-      axis.title.x = element_text(size = 14),  # X-Achsentitelgröße anpassen
-      axis.title.y = element_text(size = 14),  # Y-Achsentitelgröße anpassen
-      axis.text = element_text(size = 12),  # Achsentextgröße anpassen
-      legend.title = element_text(size = 14),  # Legendentitelgröße anpassen
-      legend.text = element_text(size = 12),  # Legendtextgröße anpassen
-      strip.text = element_text(size = 12)  # Facet-Textgröße anpassen
-    )
-  
-  # Plot anzeigen
-  print(facet_plot)
-    
   

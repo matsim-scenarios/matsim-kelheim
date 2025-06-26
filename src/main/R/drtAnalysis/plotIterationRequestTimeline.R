@@ -122,9 +122,10 @@ drtPlot<- function(base, runId, iteration, description = "", save = TRUE){
   print(p)
   
   if ( save ==TRUE){
-    output_file <- paste("E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/plots/AV/en/", runId, "/", "requestsOverTime_iter", iteration, "-AV.png", sep = "")
+    output_file <- paste("E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/plots/AV/en/", runId, "/", "requestsOverTime_iter", iteration, "-AV.pdf", sep = "")
     ggsave(filename = output_file,
-           dpi = 600, width = 32, height = 18, units = "cm")
+           #dpi = 600,
+           width = 32, height = 18, units = "cm")
   }
   
 }
@@ -270,13 +271,13 @@ if (!grepl("allDay", runId)) {
 # Plot anzeigen und speichern
 print(p)
 ggsave(
-  filename = paste(runId, "-facetPlot.png", sep = ""),
+  filename = paste(runId, "-facetPlot.pdf", sep = ""),
   plot     = p,
-  dpi      = 800,
+  #dpi      = 800,
   width    = 30,
   height   = 20,
   units    = "cm",
-  device   = "png",
+  device   = "pdf",
   path     = file.path("E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/plots/AV/en", runId)
 )
 
@@ -321,9 +322,9 @@ gg_bar <- ggplot(dat_bar, aes(x = factor(iteration), y = count, fill = type)) +
 
 # Speichern und anzeigen
 print(gg_bar)
-ggsave(filename = paste(runId, "_stacked_rides_rejections.png"),
+ggsave(filename = paste(runId, "_stacked_rides_rejections.pdf"),
        plot = gg_bar,
-       dpi = 600,
+       #dpi = 600,
        width = 30,
        height = 20,
        units = "cm",

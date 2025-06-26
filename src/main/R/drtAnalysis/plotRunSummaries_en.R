@@ -7,10 +7,9 @@ library(grid)
 
 ### this script needs input that is produced with readValuesFromRunSummaries.R (or gatherResults.sh on the cluster)
 
-## the following path points to the cluster: //net/ils/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/
-## so you need to adjust it to your own local mount
-mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0/"
-#mainDir <- "E:/matsim-kelheim/v3.1.1/output-KEXI-2.45-AV--0.0-rejection/"
+## the following path points to the runs-svn: https://data.vsp.tu-berlin.de/repos/runs-svn/KelRide/matsim-kelheim-v3.x/v3.1.1/output-KEXI-2.45-AV--0.0
+## so you need to adjust it to your own local copy
+mainDir <- "D:/runs-svn/KelRide/matsim-kelheim-v3.x/v3.1.1/output-KEXI-2.45-AV--0.0"
 
 ## csv with information on waiting points. also sits on the cluster
 wartepunkte_path <- paste(mainDir, "KelRide-Wartepunkte.csv", sep = "")
@@ -24,6 +23,8 @@ stats_for_AV = TRUE
 ################################################################################################
 
 if (stats_for_AV){
+  # in order to (re-) create this file you need to run readValuesFromRunSummaries.R
+  # and for that, you need to have checked out all the analysis (simwrapper) subfolders of the AV configurations -> meaning the average dashboard data over 5 seeds!
   input_file <- paste(mainDir, "results-av.csv", sep="")
 } else {
   input_file <- paste(mainDir, "results-konvKEXI.csv", sep="")
@@ -58,12 +59,13 @@ unique(results$parameter)
 ##############################################################################################
 save <- function(fileName){
   if (stats_for_AV){
-    output_file <- paste(mainDir, "plots/AV/en/", fileName, "-AV.png", sep = "")
+    output_file <- paste(mainDir, "plots/AV/en/", fileName, "-AV.pdf", sep = "")
   } else {
-    output_file <- paste(mainDir, "plots/konvKEXI/en", fileName, "-konvKEXI.png", sep = "")
+    output_file <- paste(mainDir, "plots/konvKEXI/en", fileName, "-konvKEXI.pdf", sep = "")
   }
   ggsave(filename = output_file,
-         dpi = 600, width = 32, height = 18, units = "cm")
+         #dpi = 600,
+         width = 32, height = 18, units = "cm")
 }
 
 
