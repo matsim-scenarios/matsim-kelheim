@@ -9,7 +9,7 @@ library(grid)
 
 ## the following path points to the runs-svn: https://data.vsp.tu-berlin.de/repos/runs-svn/KelRide/matsim-kelheim-v3.x/v3.1.1/output-KEXI-2.45-AV--0.0
 ## so you need to adjust it to your own local copy
-mainDir <- "D:/runs-svn/KelRide/matsim-kelheim-v3.x/v3.1.1/output-KEXI-2.45-AV--0.0"
+mainDir <- "D:/runs-svn/KelRide/matsim-kelheim-v3.x/v3.1.1/output-KEXI-2.45-AV--0.0/"
 
 ## csv with information on waiting points. also sits on the cluster
 wartepunkte_path <- paste(mainDir, "KelRide-Wartepunkte.csv", sep = "")
@@ -19,8 +19,9 @@ wartepunkte_path <- paste(mainDir, "KelRide-Wartepunkte.csv", sep = "")
 #set to true for AV and FALSE for conv. KEXI
 stats_for_AV = TRUE
 
-################################################################################################
-################################################################################################
+#########################################
+#########################################
+######## READ AND PREPARE DATA ##########      
 
 if (stats_for_AV){
   # in order to (re-) create this file you need to run readValuesFromRunSummaries.R
@@ -29,7 +30,7 @@ if (stats_for_AV){
 } else {
   input_file <- paste(mainDir, "results-konvKEXI.csv", sep="")
 }
-  
+
 ##read input
 transposed_result <- read.csv(input_file, check.names = FALSE, sep =",")
 wartepunkte <- read.csv2(wartepunkte_path)
@@ -38,13 +39,13 @@ wartepunkte <- read.csv2(wartepunkte_path)
 
 # serviceTimes umschreiben und faktorisieren
 transposed_result$serviceTimes <- factor(ifelse(transposed_result$allDay == TRUE, "all-day", "9am - 4pm"),
-                                           levels = c("all-day", "9am - 4pm"))
+                                         levels = c("all-day", "9am - 4pm"))
 
 results <- transposed_result %>%
   gather(key = "parameter", value = "mean",
          -speed, -area, -fleetSize, -intermodal, -serviceTimes
          #, -Wartepunkte, -Wartepunkte_Namen
-         )
+  )
 
 results <- left_join(results, wartepunkte, join_by(area == Area.Key, fleetSize == Flottengroesse)) %>% 
   ## wir bennen um: 'konv. KEXI' --> 'conv. KEXI'
@@ -56,182 +57,234 @@ results <- left_join(results, wartepunkte, join_by(area == Area.Key, fleetSize =
 
 unique(results$parameter)
 
-##############################################################################################
+
+#########################################
+#########################################
+######## SAVING FUNCTION #############
+
 save <- function(fileName){
   if (stats_for_AV){
-    output_file <- paste(mainDir, "plots/AV/en/", fileName, "-AV.pdf", sep = "")
+    output_file_png <- paste(mainDir, "plots/AV/en-new/", fileName, "-AV.png", sep = "")
+    output_file_pdf <- paste(mainDir, "plots/AV/en-new/", fileName, "-AV.pdf", sep = "")
   } else {
-    output_file <- paste(mainDir, "plots/konvKEXI/en", fileName, "-konvKEXI.pdf", sep = "")
+    output_file_png <- paste(mainDir, "plots/konvKEXI/en-new/", fileName, "-konvKEXI.png", sep = "")
+    output_file_pdf <- paste(mainDir, "plots/konvKEXI/en-new/", fileName, "-konvKEXI.pdf", sep = "")
   }
-  ggsave(filename = output_file,
+  ggsave(filename = output_file_png,
+         dpi = 600,
+         width = 32, height = 24, units = "cm")
+  ggsave(filename = output_file_pdf,
          #dpi = 600,
-         width = 32, height = 18, units = "cm")
+         width = 32, height = 24, units = "cm")
 }
 
 
-#####################################################################################
-##############################
-########## PLOT ausgangsvergleich
-########
-plotByConfiguration <- function(parameterStr, yAxisLabel = parameterStr, scales = "free", show_legend = FALSE){
+#########################################
+#########################################
+######## PLOTTING FUNCTIONS #############  
+plotByOperatingTimes <- function(parameterStr, yAxisLabel = parameterStr, scales = "free", show_legend = FALSE){
   
   # Filtern der Daten für die gewünschten Parameter
   plot_data <- data %>%
     filter(parameter == parameterStr)  
   
-  # Funktion zum Anpassen der Facet-Labels
-  label_function <- function(value) {
-    paste(round(as.numeric(value) * 3.6, 0), "km/h")
+  # Funktion zum Anpassen der Farbenlabels (für Geschwindigkeit)
+  speed_label_function <- function(value) {
+    paste0(round(as.numeric(value) * 3.6, 0), " km/h")
   }
   
   if (stats_for_AV){
-    plot_title <- paste(#"AV KEXI:",
-                        parameterStr
-                        #,"by AV configuration\n (speed, fleet size, service area and times)"
-                        )
+    plot_title <- paste(parameterStr)
   } else {
-    plot_title <- paste("CONV. KEXI:",
-                        parameterStr
-                        #, "by AV configuration\n (speed, fleet size, service area and times)"
-                        )
+    plot_title <- paste("CONV. KEXI:", parameterStr)
   }
   
-  # Erstellen des Facet-Plots
-  plot <- ggplot(plot_data, aes(x = fleetSize, y = mean,
-                        color = Bediengebiet,
-                        linetype = serviceTimes,
-                        group = interaction(area, serviceTimes))) +
+  plot <- ggplot(plot_data, aes(
+    x = fleetSize,
+    y = mean,
+    color = factor(speed),
+    linetype = Bediengebiet,
+    group = interaction(speed, Bediengebiet)
+  )) +
     geom_line(linewidth = 1.2) +
-    geom_point(size = 4
-               , aes(shape = serviceTimes)
-    )+
+    geom_point(size = 4, aes(shape = Bediengebiet)) +
     
-    facet_wrap(~speed,
-               labeller = labeller(speed = label_function)
-               ,scales = scales
+    facet_wrap(~serviceTimes, scales = scales) +
+    
+    labs(
+      title = plot_title,
+      x = "Fleet Size [n]",
+      y = yAxisLabel,
+      color = "Speed",
+      linetype = "Service Area",
+      shape = "Service Area"
     ) +
     
-    #scale_x_log10() +
-    #scale_y_log10() +
-    
-    labs(title = plot_title,
-         x = "Fleet Size",
-         y = yAxisLabel,
-         color = "Service Area",
-         linetype = "Operating Times",
-         shape = "Operating Times"
-    ) +
-    
-    scale_linetype_manual(values = c("9am - 4pm" = "solid", "all-day" = "dashed")) +
-    #scale_color_manual(values = c("AV 2024" = "lightcoral", "conv. KEXI" = "darkturquoise"))  + 
-    scale_color_manual(values = c("Area 2024" = "lightcoral", "Area All-City" = "darkturquoise"))  + 
-  
-      #pastell_farben <- c(
-      #  "lightblue",   # Hellblau
-      #  "lightcoral",  # Pastellrot
-      #  "lightpink",   # Pastellrosa
-      #  "lightgreen",  # Hellgrün
-      #  "lightskyblue",# Himmelblau
-      #  "thistle",     # Zartes Lila
-      #  "peachpuff",   # Pfirsichfarben
-      #  "wheat"        # Weizenfarben
-      #)
-    
-    #geom_text(aes(label = fleetSize), vjust = -1, hjust = 0.5, size = 3, color = "black") +
-    #geom_text(aes(label = serviceTimes), vjust = -1, hjust = 0.5, size = 3, color = "black") +
-    #theme_dark() +
+    scale_color_discrete(labels = speed_label_function) +
     
     theme(
-      plot.title = element_text(size = 32, face = "bold"),  # Titelgröße anpassen
-      axis.title.x = element_text(size = 22, face = "bold"),  # X-Achsentitelgröße anpassen
-      axis.title.y = element_text(size = 22, face = "bold"),  # Y-Achsentitelgröße anpassen
-      axis.text = element_text(size = 20, face = "bold"),  # Achsentextgröße anpassen
-      legend.title = element_text(size = 24, face = "bold"),  # Legendentitelgröße anpassen
-      legend.text = element_text(size = 20),  # Legendtextgröße anpassen
-      strip.text = element_text(size = 24, face = "bold")  # Facet-Textgröße anpassen
+      plot.title = element_text(size = 32, face = "bold"),
+      axis.title.x = element_text(size = 22, face = "bold"),
+      axis.title.y = element_text(size = 22, face = "bold"),
+      axis.text = element_text(size = 20, face = "bold"),
+      legend.title = element_text(size = 24, face = "bold"),
+      legend.text = element_text(size = 20),
+      strip.text = element_text(size = 24, face = "bold")
     )
   
-    # Falls die Legende aktiviert ist, positioniere sie unten
-    if (show_legend) {
-      plot <- plot + theme(legend.position = "bottom")
-    } else {
-      plot <- plot + theme(legend.position = "none")
-    }
+  if (show_legend) {
+    plot <- plot + theme(legend.position = "bottom")
+  } else {
+    plot <- plot + theme(legend.position = "none")
+  }
   
-    return(plot)
-  
+  return(plot)
 }
 
-#####################################################################################
-### plot and save __all__ the different metrics (to the cluster).
-## for looking at single plots, you need to execute the lines individually
-if(FALSE){
+plotByConfiguration <- function(parameterStr, yAxisLabel = parameterStr, scales = "free", show_legend = FALSE){
   
-  data <- results %>%
-    filter(fleetSize < 150,
-           str_detect(area, "Saal") # das Area-Encoding für die Konfigurations-Serie, die wir anschauen wollen ist KEXImSaal (grosses Gebiet) und SAR2023 (kleines Gebiet)
-           #area == "ALLCITY" 
-           | area == "SAR2023"
-    ) %>% 
-    # wir haben festgestellt, dass 2 Fzge im großen Bediengebiet zu unplausiblen Ergebnissen führen, weil zu viel rejected wird während innovation
-    # deswegen sortieren wir diese Runs wieder aus
-    filter( ! (fleetSize == 2 & str_detect(area, "Saal")) )
+  # Filtern der Daten für die gewünschten Parameter
+  plot_data <- data %>%
+    filter(parameter == parameterStr) %>%
+    mutate(
+      speed_fct = factor(speed),
+      speed_kmh = paste0(round(as.numeric(speed) * 3.6), " km/h"),
+      facet_group = interaction(Bediengebiet, serviceTimes, sep = " | ")
+    )
   
-  ###nachfrage
-  plotByConfiguration("Handled Requests", show_legend = TRUE)
-  save("singleConfig-handledRequests")
-  plotByConfiguration("Passengers (Pax)", yAxisLabel = "Passengers [n]", scales = "fixed")
-  save("singleConfig-pax")
-  plotByConfiguration("Passengers (Pax)", yAxisLabel = "Passengers [n]")
-  save("singleConfig-pax_yAxesDiff")
-  plotByConfiguration("Avg. wait time", yAxisLabel = "Avg. wait time [s]", scales = "fixed")
-  save("singleConfig-waitTime")
-  plotByConfiguration("95th percentile wait time", yAxisLabel = "95th percentile wait time [s]", scales = "fixed")
-  save("singleConfig-waitTime-p95")
-  plotByConfiguration("Avg. total travel time", yAxisLabel = "Avg. total travel time [s]", scales =  "fixed")
-  save("singleConfig-totalTravelTime")
+  if (stats_for_AV){
+    plot_title <- paste(parameterStr)
+  } else {
+    plot_title <- paste("CONV. KEXI:", parameterStr)
+  }
   
-  plotByConfiguration("Avg. in-vehicle time", yAxisLabel = "Avg. in-vehicle travel time [s]", scales =  "fixed")
+  plot <- ggplot(plot_data, aes(
+    x = fleetSize,
+    y = mean,
+    color = speed_fct,
+    linetype = Bediengebiet,
+    group = interaction(speed, Bediengebiet)
+  )) +
+    geom_line(linewidth = 1.2) +
+    geom_point(size = 4, aes(shape = Bediengebiet)) +
+    
+    facet_wrap(~facet_group, scales = scales) +
+    
+    labs(
+      title = plot_title,
+      x = "Fleet Size [n]",
+      y = yAxisLabel,
+      color = "Speed",
+      linetype = "Service Area",
+      shape = "Service Area"
+    ) +
+    
+    scale_color_discrete(labels = function(x) paste0(round(as.numeric(x) * 3.6), " km/h")) +
+    
+    theme(
+      plot.title = element_text(size = 32, face = "bold"),
+      axis.title.x = element_text(size = 22, face = "bold"),
+      axis.title.y = element_text(size = 22, face = "bold"),
+      axis.text = element_text(size = 20, face = "bold"),
+      legend.title = element_text(size = 24, face = "bold"),
+      legend.text = element_text(size = 20),
+      strip.text = element_text(size = 24, face = "bold")
+    )
   
-  plotByConfiguration("Avg. ride distance [km]", scales = "fixed") +
-    labs(title = "Avg. customer ride distance [km]"
-  )
-  save("singleConfig-rideDistance")
-  plotByConfiguration("Avg. direct distance [km]", scales = "fixed") +
-    labs(title = "Avg. customer direct distance [km]"
-  )
-  save("singleConfig-directDistance")
+  if (show_legend) {
+    plot <- plot + theme(legend.position = "bottom")
+  } else {
+    plot <- plot + theme(legend.position = "none")
+  }
   
-  plotByConfiguration("Empty ratio", "fixed") +
-    labs(title = "Ratio of empty vehicle mileage"
-  )
-  save("singleConfig-emptyRatio")
-  plotByConfiguration("Detour ratio", scales = "fixed") +
-    labs(title = "Total vehicle mileage / Avg. direct customer distance"
-  )
-  save("singleConfig-detourRatio")
-  
-  ###betrieb
-  plotByConfiguration("Total vehicle mileage [km]", scales = "fixed")
-  save("singleConfig-vehicleMileage")
-  plotByConfiguration("Occupancy rate [pax-km/v-km]", scales = "fixed")
-  save("singleConfig-occupancyRate")
-  plotByConfiguration("Pax per veh-km", scales = "fixed") +
-    scale_y_continuous(labels = function(x) sprintf("%.2f", x))
-  
-  save("singleConfig-paxPerKM-en")
-  plotByConfiguration("Pax per veh-h")
-  plotByConfiguration("Pax per veh-h", scales = "fixed")
-  save("singleConfig-paxPerVehHou-enr")
-  
-  plotByConfiguration("Total pax distance [km]", scales = "fixed")
-  save("singleConfig-paxKM-en")
-  
+  return(plot)
 }
+
+#############################
+#############################
+######## Filter DATA ########
+      
+      
+      data <- results %>%
+        filter(fleetSize < 150,
+               str_detect(area, "Saal") # das Area-Encoding für die Konfigurations-Serie, die wir anschauen wollen ist KEXImSaal (grosses Gebiet) und SAR2023 (kleines Gebiet)
+               #area == "ALLCITY" 
+               | area == "SAR2023"
+        ) %>% 
+        # wir haben festgestellt, dass 2 Fzge im großen Bediengebiet zu unplausiblen Ergebnissen führen, weil zu viel rejected wird während innovation
+        # deswegen sortieren wir diese Runs wieder aus
+        filter( ! (fleetSize == 2 & str_detect(area, "Saal")) 
+        )
+
+#############################
+#############################
+######## PLOTTING############      
+
+
+      ###passengers
+      plotByConfiguration("Handled Requests", show_legend = TRUE)
+      #save("singleConfig-handledRequests")
+      plotByConfiguration("Passengers (Pax)", yAxisLabel = "Passengers [n]", scales = "fixed", show_legend = TRUE) +
+        labs(title = "Nr. of AMoD passengers"
+        )
+      save("singleConfig-pax")
+      plotByConfiguration("Passengers (Pax)", yAxisLabel = "Passengers [n]")
+      #save("singleConfig-pax_yAxesDiff")
+      
+      ###waiting/travel time
+      plotByConfiguration("Avg. wait time", yAxisLabel = "Avg. wait time [s]", scales = "fixed", show_legend =  TRUE)
+      save("singleConfig-waitTime")
+      plotByConfiguration("95th percentile wait time", yAxisLabel = "95th percentile wait time [s]", scales = "fixed")
+      #save("singleConfig-waitTime-p95")
+      plotByConfiguration("Avg. total travel time", yAxisLabel = "Avg. total travel time [s]", scales =  "fixed", show_legend = TRUE)
+      save("singleConfig-totalTravelTime")
+      plotByConfiguration("Avg. in-vehicle time", yAxisLabel = "Avg. in-vehicle travel time [s]", scales =  "fixed", show_legend = TRUE)
+      save("singleConfig-inVehTime")
+      
+      ###distance
+      plotByConfiguration("Avg. ride distance [km]", scales = "fixed", show_legend = TRUE) +
+        labs(title = "Avg. customer ride distance"
+        )
+      save("singleConfig-rideDistance")
+      plotByConfiguration("Avg. direct distance [km]", scales = "fixed", show_legend = TRUE) +
+        labs(title = "Avg. customer direct distance [km]"
+        )
+      #save("singleConfig-directDistance")
+      
+      plotByConfiguration("Empty ratio", "fixed") +
+        labs(title = "Ratio of empty vehicle mileage"
+        )
+      #save("singleConfig-emptyRatio")
+      plotByConfiguration("Detour ratio", scales = "fixed") +
+        labs(title = "Total vehicle mileage / Avg. direct customer distance"
+        )
+      #save("singleConfig-detourRatio")
+      
+      ###betrieb
+      plotByConfiguration("Total vehicle mileage [km]", scales = "fixed")
+      #save("singleConfig-vehicleMileage")
+      plotByConfiguration("Occupancy rate [pax-km/v-km]", scales = "fixed")
+      #save("singleConfig-occupancyRate")
+      plotByConfiguration("Pax per veh-km", scales = "fixed", show_legend = TRUE) +
+        labs(title = "Nr. of passengers per vehicle-km"
+        ) +
+        scale_y_continuous(labels = function(x) sprintf("%.2f", x))
+      save("singleConfig-paxPerKM-en")
+      
+      plotByConfiguration("Pax per veh-h")
+      plotByConfiguration("Pax per veh-h", scales = "fixed", show_legend = TRUE) +
+        labs(title = "Nr. of passengers per vehicle-hour"
+        )
+      save("singleConfig-paxPerVehHour")
+      
+      plotByConfiguration("Total pax distance [km]", scales = "fixed")
+      save("singleConfig-paxKM-en")
+      
+
 
 
 #############################################
-###########################################################################
+#############################################
 ############################################
 #### plotte mit mehr Konfigurationen für kleine Stützstellen
 
@@ -307,7 +360,7 @@ plotWithRibbon <- function(parameterStr, scales = "free", show_legend = FALSE){
     #scale_y_log10() +
     
     labs(title = plot_title,
-         x = "Fleet Size",
+         x = "Fleet Size [n]",
          y = parameterStr,
          color = "Service Area",
          linetype = "Service Times",
@@ -404,7 +457,7 @@ data <- data %>%
 
 
 plotWithRibbon("Passengers (Pax)") + 
-  labs(title = "Passengers (Pax)",
+  labs(title = "Nr. of AMoD passengers",
        y = "Passengers [n]",
   )
 
