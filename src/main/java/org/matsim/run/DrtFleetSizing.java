@@ -4,6 +4,9 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
@@ -19,6 +22,7 @@ import org.matsim.contrib.drt.run.DrtControlerCreator;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.contrib.dvrp.run.AbstractDvrpModeModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
+import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
@@ -29,8 +33,10 @@ import org.matsim.core.router.MainModeIdentifier;
 import org.matsim.core.router.TripStructureUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.rebalancing.WaitingPointsBasedRebalancingModule;
+import org.matsim.vehicles.VehicleType;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -70,6 +76,7 @@ public class DrtFleetSizing implements MATSimAppCommand {
 	@CommandLine.Option(names = "--fleet-sizing", description = "a triplet: [from max interval]. ", arity = "1..*", defaultValue = "10 50 5")
 	private List<Integer> fleetSizing;
 
+	private Logger logger = LogManager.getLogger(DrtFleetSizing.class);
 
 	public static void main(String[] args) {
 		new DrtFleetSizing().execute(args);
@@ -79,13 +86,29 @@ public class DrtFleetSizing implements MATSimAppCommand {
 	public Integer call() throws Exception {
 		// write output root folder
 		if (!Files.exists(Path.of(outputFolderPath))) {
+			logger.info("creating outputFolderPath");
 			Files.createDirectories(Path.of(outputFolderPath));
 		}
 
-		// read DRT trips and generate plans
+		//input paths for the simulations
 		String drtNetworkPath = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.1/input/av-fleet-sizing/kelheim-v3.0-drt-network.xml.gz";
+		String extractedAVPlansPath = outputFolderPath + "/av-plans.xml.gz";
+
+		// read DRT trips and generate plans
+		extractAVDemandFromExistingOutput(drtNetworkPath, extractedAVPlansPath);
+
+		// run DRT simulations
+		runDRTSimulations(drtNetworkPath, extractedAVPlansPath);
+
+		return 0;
+	}
+
+	private @NotNull String extractAVDemandFromExistingOutput(String drtNetworkPath, String extractedAVPlansPath) {
+
+
 		Network drtNetwork = NetworkUtils.readNetwork(drtNetworkPath);
 		Path outputPopulationPath = globFile(Path.of(matsimRunFolderPath), "*output_plans.xml.gz*");
+		logger.info("retrieving single-leg av plans from " + outputPopulationPath);
 		MainModeIdentifier modeIdentifier = new DefaultAnalysisMainModeIdentifier();
 		Population outputPlans = PopulationUtils.readPopulation(outputPopulationPath.toString());
 		Population avPlans = PopulationUtils.createPopulation(ConfigUtils.createConfig());
@@ -127,25 +150,39 @@ public class DrtFleetSizing implements MATSimAppCommand {
 				}
 			}
 		}
-		new PopulationWriter(avPlans).write(outputFolderPath + "/av-plans.xml.gz");
+		new PopulationWriter(avPlans).write(extractedAVPlansPath);
+		return drtNetworkPath;
+	}
 
-		// run DRT simulations
+	private void runDRTSimulations(String drtNetworkPath, String extractedAVPlansPath) throws IOException {
 		Preconditions.checkArgument(fleetSizing.size() == 3);
 		int fleetFrom = fleetSizing.get(0);
 		int fleetMax = fleetSizing.get(1);
 		int fleetInterval = fleetSizing.get(2);
 
 		for (int fleetSize = fleetFrom; fleetSize <= fleetMax; fleetSize += fleetInterval) {
+			logger.info("set up run with fleet size = " + fleetSize);
 			// setup DRT run
 			Config config = ConfigUtils.loadConfig(drtConfigPath, new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new), new DvrpConfigGroup());
 			config.network().setInputFile(drtNetworkPath);
-			config.plans().setInputFile(outputFolderPath + "/av-plans.xml.gz");
+			config.plans().setInputFile(extractedAVPlansPath);
 			config.controller().setLastIteration(1);
 			config.controller().setOutputDirectory(outputFolderPath + "/" + fleetSize + "-veh");
+			logger.info("output will be written to " + outputFolderPath + "/" + fleetSize + "-veh");
 			config.vehicles().setVehiclesFile(vehiclesFolderPath + "/" + fleetSize + "-veh.xml");
 			String singleDrtRunOutputDirectory = config.controller().getOutputDirectory();
 			MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
 			Controler controler = DrtControlerCreator.createControler(config, false);
+
+			// Add speed limit to av vehicle
+			double maxSpeed = controler.getScenario()
+				.getVehicles()
+				.getVehicleTypes()
+				.get(Id.create("autonomous_vehicle", VehicleType.class))
+				.getMaximumVelocity();
+			controler.addOverridingModule(
+				new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
+					maxSpeed));
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				if (drtCfg.getMode().equals("av")) {
@@ -177,11 +214,12 @@ public class DrtFleetSizing implements MATSimAppCommand {
 				}
 			}
 
+			logger.info("the obtained waiting time is " + waitingTime);
+
 			if (waitingTime < meanWaitTime) {
+				logger.info("will stop to conduct simulations, as the target waiting time of " + waitingTime + " is higher than the yielded waiting time.");
 				break;
 			}
 		}
-
-		return 0;
 	}
 }
