@@ -67,6 +67,387 @@ transposed_result_clean <- transposed_result_clean %>%
 ################################################################################################
 
 
+##########
+#### guppiert pro area und pro service times
+
+
+compute_elasticities_per_area_times <- function(
+    data,
+    #time_vars = c("Avg. wait time", "Avg. in-vehicle time", "Avg. total travel time"),
+    time_vars = c("Avg. wait time", "95th percentile wait time", "Avg. total travel time"),
+    control_fleet = TRUE
+) {
+  data %>%
+    group_by(area, serviceTimes) %>%
+    group_split() %>%
+    map_df(function(df_group) {
+      map_df(time_vars, function(var) {
+        # Modellformel dynamisch erstellen
+        fmla_string <- if (control_fleet) {
+          paste0("log(`Passengers (Pax)`) ~ log(`", var, "`) + log(fleetSize)")
+        } else {
+          paste0("log(`Passengers (Pax)`) ~ log(`", var, "`)")
+        }
+        fmla <- as.formula(fmla_string)
+        
+        cat("Modell für Gruppe:", unique(df_group$area), unique(df_group$serviceTimes), "\n")
+        cat("  Variable:", var, "\n")
+        cat("  Formel: ", fmla_string, "\n")
+        
+        # Werte prüfen
+        pax <- df_group$`Passengers (Pax)`
+        if (!var %in% colnames(df_group)) {
+          cat("  ⚠️  Variable", var, "nicht im Datensatz – überspringe...\n\n")
+          return(NULL)
+        }
+        var_values <- df_group[[var]]
+        if (any(is.na(var_values)) | any(is.na(pax))) {
+          cat("  🟡 NA-Werte gefunden – überspringe...\n\n")
+          return(NULL)
+        }
+        if (min(var_values, pax, df_group$fleetSize, na.rm = TRUE) <= 0) {
+          cat("  🔴 Nicht-positive Werte – überspringe...\n\n")
+          return(NULL)
+        }
+        
+        # Modell schätzen
+        mod <- lm(fmla, data = df_group)
+        summary_mod <- summary(mod)
+        coefs <- tidy(mod)
+        
+        # Delta-Elastizität berechnen
+        delta_log_pax <- log(pax[which.max(var_values)]) - log(pax[which.min(var_values)])
+        delta_log_var <- log(max(var_values)) - log(min(var_values))
+        approx_elast <- delta_log_pax / delta_log_var
+        
+        # Zeile für Zeitvariable
+        time_row <- coefs %>%
+          filter(str_detect(term, fixed(var))) %>%
+          mutate(
+            metric = var,
+            area = unique(df_group$area),
+            serviceTimes = unique(df_group$serviceTimes),
+            r_squared = summary_mod$r.squared,
+            adj_r_squared = summary_mod$adj.r.squared,
+            N = nrow(df_group),
+            signif = case_when(
+              p.value < 0.001 ~ "***",
+              p.value < 0.01 ~ "**",
+              p.value < 0.05 ~ "*",
+              p.value < 0.1 ~ ".",
+              TRUE ~ ""
+            ),
+            label = paste0(round(estimate, 2), signif),
+            y_label = paste0(var, " (", area, ", ", serviceTimes, ")"),
+            delta_elasticity = approx_elast
+          )
+        
+        # Zeile für fleetSize (optional)
+        if (control_fleet) {
+          fleet_row <- coefs %>%
+            filter(term == "log(fleetSize)") %>%
+            transmute(
+              fleet_effect = estimate,
+              fleet_se = std.error,
+              fleet_signif = case_when(
+                p.value < 0.001 ~ "***",
+                p.value < 0.01 ~ "**",
+                p.value < 0.05 ~ "*",
+                p.value < 0.1 ~ ".",
+                TRUE ~ ""
+              )
+            )
+          # Kombinieren
+          bind_cols(time_row, fleet_row)
+        } else {
+          time_row
+        }
+      })
+    })
+}
+
+
+wait_fleet_elasticity <- function(
+    data,
+    #time_vars = c("Avg. wait time", "Avg. in-vehicle time", "Avg. total travel time"),
+    time_vars = c("Avg. wait time", "95th percentile wait time", "Avg. total travel time")
+) {
+  data %>%
+    group_by(area, serviceTimes) %>%
+    group_split() %>%
+    map_df(function(df_group) {
+      map_df(time_vars, function(var) {
+        # Modellformel dynamisch erstellen
+        fmla_string <- paste0("log(`", var, "`) ~  log(fleetSize)")
+        fmla <- as.formula(fmla_string)
+        
+        cat("Modell für Gruppe:", unique(df_group$area), unique(df_group$serviceTimes), "\n")
+        cat("  Variable:", var, "\n")
+        cat("  Formel: ", fmla_string, "\n")
+        
+        # Werte prüfen
+        pax <- df_group$`Passengers (Pax)`
+        if (!var %in% colnames(df_group)) {
+          cat("  ⚠️  Variable", var, "nicht im Datensatz – überspringe...\n\n")
+          return(NULL)
+        }
+        var_values <- df_group[[var]]
+        if (any(is.na(var_values)) | any(is.na(pax))) {
+          cat("  🟡 NA-Werte gefunden – überspringe...\n\n")
+          return(NULL)
+        }
+        if (min(var_values, pax, df_group$fleetSize, na.rm = TRUE) <= 0) {
+          cat("  🔴 Nicht-positive Werte – überspringe...\n\n")
+          return(NULL)
+        }
+        
+        # Modell schätzen
+        mod <- lm(fmla, data = df_group)
+        summary_mod <- summary(mod)
+        coefs <- tidy(mod)
+        
+        # Delta-Elastizität berechnen
+        delta_log_pax <- log(pax[which.max(var_values)]) - log(pax[which.min(var_values)])
+        delta_log_var <- log(max(var_values)) - log(min(var_values))
+        approx_elast <- delta_log_pax / delta_log_var
+        
+        # Zeile für Zeitvariable
+        time_row <- coefs %>%
+          filter(str_detect(term, fixed(var))) %>%
+          mutate(
+            metric = var,
+            area = unique(df_group$area),
+            serviceTimes = unique(df_group$serviceTimes),
+            r_squared = summary_mod$r.squared,
+            adj_r_squared = summary_mod$adj.r.squared,
+            N = nrow(df_group),
+            signif = case_when(
+              p.value < 0.001 ~ "***",
+              p.value < 0.01 ~ "**",
+              p.value < 0.05 ~ "*",
+              p.value < 0.1 ~ ".",
+              TRUE ~ ""
+            ),
+            label = paste0(round(estimate, 2), signif),
+            y_label = paste0(var, " (", area, ", ", serviceTimes, ")"),
+            delta_elasticity = approx_elast
+          )
+      
+          time_row
+        
+      })
+    })
+}
+
+
+# Mit Kontrolle von fleetSize
+results_with_control <- compute_elasticities_per_area_times(transposed_result_clean, control_fleet = TRUE)
+
+# Ohne Kontrolle von fleetSize
+results_without_control <- compute_elasticities_per_area_times(transposed_result_clean, control_fleet = FALSE)
+wait_fleet <- wait_fleet_elasticity(transposed_result_clean)
+
+test <- transposed_result_clean %>% 
+  filter(area == "Area All-City", allDay == TRUE)
+fmla_string <- paste0("log(`Avg. wait time`) ~  log(fleetSize)")
+fmla <- as.formula(fmla_string)
+# Modell schätzen
+mod <- lm(fmla, data = test)
+summary(mod)
+
+fmla_b_string <- paste0("log(`Passengers (Pax)`) ~  log(`Avg. wait time`)")
+fmla_b <- as.formula(fmla_b_string)
+
+mod_b <- lm(fmla_b, data = test)
+summary(mod_b)
+
+a <- coef(mod)[["log(fleetSize)"]]
+b <- coef(mod_b)[["log(`Avg. wait time`)"]]
+
+total_effect <- a * b
+total_effect
+
+####################################
+####################################
+## nun nehmen wir die wahrgenommene geschwindigkeit der kunden.
+
+transposed_result_clean <- transposed_result_clean %>%
+  mutate(
+    'Avg. total speed' = `Avg. ride distance [km]` / (`Avg. total travel time` / 3600),       # Zeit in Stunden
+    avg_speed_inveh = `Avg. ride distance [km]` / (`Avg. in-vehicle time` / 3600)
+  )
+
+time_vars = c("Avg. wait time", "Avg. total speed", "avg_speed_inveh")
+
+results_with_control <- compute_elasticities_per_area_times(transposed_result_clean,
+                                                            time_vars = time_vars,
+                                                            control_fleet =  TRUE)
+results_without_control <- compute_elasticities_per_area_times(transposed_result_clean,
+                                                               time_vars = time_vars,
+                                                               control_fleet = FALSE)
+results_comparison <- bind_rows(
+  results_without_control %>% mutate(control = "without control"),
+  results_with_control %>% mutate(control = "control log(fleetSize)")
+) %>%
+  #filter(metric == "Avg. wait time" | metric == "avg_speed_total") %>%  # Nur Wartezeit
+  mutate(
+    label = paste0(round(estimate, 2), signif),
+    ymin = estimate - std.error,
+    ymax = estimate + std.error,
+    y_group = fct_rev(y_label)  # für sortierte Achse
+  )
+
+
+#fleet_effect_labels <- results_comparison %>%
+#  filter(control == "control log(fleetSize)") %>%
+#  group_by(area, serviceTimes) %>%
+#  summarise(
+#    fleet_label = paste0("fleetSize effect: ", round(first(fleet_effect), 2), first(fleet_signif)),
+#    .groups = "drop"
+#  ) %>%
+#  mutate(
+#    x = 0,       # Mittelwert auf X-Achse
+#    y = 2.5      # Oberhalb der höchsten Metrikanzahl – ggf. anpassen
+#  )
+
+fleet_effects <- results_comparison %>%
+  filter(control == "control log(fleetSize)") %>%
+  transmute(
+    term = "fleetSize",
+    estimate = fleet_effect,
+    std.error = fleet_se,
+    p.value = NA,  # Optional
+    metric = "Fleet size",
+    area,
+    serviceTimes,
+    r_squared,
+    adj_r_squared,
+    N,
+    signif = fleet_signif,
+    label = paste0(round(fleet_effect, 2), fleet_signif),
+    y_label = paste0("Fleet size (", area, ", ", serviceTimes, ")"),
+    delta_elasticity = NA_real_,
+    control = control,
+    ymin = fleet_effect * fleet_se,
+    ymax = fleet_effect * fleet_se,
+    y_group = paste0("Fleet size (", area, ", ", serviceTimes, ")")
+  )
+
+
+results_plotdata <- bind_rows(results_comparison, fleet_effects)
+
+ggplot(results_plotdata, aes(x = estimate, y = metric, fill = control)) +
+  geom_col(width = 0.6, position = position_dodge(width = 0.7)) +
+  geom_errorbarh(aes(xmin = ymin, xmax = ymax),
+                 height = 0.2,
+                 position = position_dodge(width = 0.7)) +
+  geom_text(aes(label = label),
+            position = position_dodge(width = 0.7),
+            hjust = ifelse(results_plotdata$estimate > 0, -0.1, 1.1),
+            vjust = -0.3,
+            size = 4.5,
+            angle = 0) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  facet_grid(serviceTimes ~ area) +
+  labs(
+    title = "Comparison of Elasticity Estimates",
+    subtitle = "With and without controlling for fleet size\nError bars = standard errors, stars indicate significance levels",
+    x = "log-log elasticity estimate",
+    y = NULL,
+    fill = "Model specification"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    legend.position = "bottom",
+    #text = element_text(face = "bold"),
+    axis.text = element_text(size = 14),
+    legend.text = element_text(size = 13),
+    plot.title = element_text(size = 18, face = "bold"),
+    plot.subtitle = element_text(size = 14, face = "bold"),
+    strip.text = element_text(size = 18, face = "bold")
+  ) 
+
+#+
+#  geom_text(
+#    data = fleet_effect_labels,
+#    aes(x = x, y = y, label = fleet_label),
+#    inherit.aes = FALSE,
+#    hjust = 0,
+#    vjust = 1,
+#    size = 4,
+#    fontface = "italic"
+#  )
+
+
+
+
+
+
+# Nur Modelle mit Kontrolle
+fleet_effects <- results_comparison %>%
+  filter(!is.na(fleet_effect)) %>%
+  transmute(
+    estimate = fleet_effect,
+    std.error = fleet_se,
+    metric = "fleetSize",
+    control = control,
+    area = area,
+    serviceTimes = serviceTimes,
+    r_squared = r_squared,
+    adj_r_squared = adj_r_squared,
+    N = N,
+    signif = fleet_signif,
+    label = paste0(round(fleet_effect, 2), fleet_signif),
+    y_label = paste0("fleetSize (", area, ", ", serviceTimes, ")"),
+    ymin = fleet_effect - fleet_se,
+    ymax = fleet_effect + fleet_se,
+    y_group = y_label
+  )
+
+
+# Filter z. B. nach avg_speed_total
+speed_results <- results_with_control %>%
+  filter(metric == "Avg. total speed")
+
+# Kombiniere beide
+plot_data <- bind_rows(speed_results, fleet_effects)
+
+library(ggplot2)
+library(forcats)
+
+ggplot(plot_data, aes(x = estimate, y = fct_rev(y_group), fill = metric)) +
+  geom_col(width = 0.6, alpha = 0.75, position = position_dodge2()) +
+  geom_errorbarh(aes(xmin = ymin, xmax = ymax), height = 0.2) +
+  geom_text(aes(label = label),
+            hjust = ifelse(plot_data$estimate > 0, -0.1, 1.1),
+            size = 4) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Elastizitäten und Effekt der Flottengröße",
+    subtitle = "Fehlerbalken = Standardfehler, Sterne = Signifikanzniveau",
+    x = "log-log Effekt / Elastizität",
+    y = NULL,
+    fill = "Variable"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    axis.text.y = element_text(face = "bold"),
+    axis.text.x = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(face = "italic")
+  )
+
+
+
+
+######################
+############################
+#################################
+# alter code
+#####################
+
+
 ########################################################
 # Gruppierung definieren
 transposed_result_clean <- transposed_result_clean %>%
@@ -362,7 +743,7 @@ print(model_total_by_area)
 
 
 # Zeitmetriken, die wir vergleichen wollen
-time_vars <- c("Avg. wait time", "Avg. in-vehicle time", "Avg. total travel time")
+time_vars <- c("Avg. wait time", "Avg. in-vehicle time", "Avg. total travel time", "95th percentile wait time")
 
 # Dynamische Modellerstellung
 elasticity_results <- map_df(time_vars, function(var) {
@@ -651,284 +1032,6 @@ areas <- compute_elasticities_per_area(transposed_result_clean)
 
 
 ##############################################################################
-##########
-#### guppiert pro area und pro service times
-
-
-compute_elasticities_per_area_times <- function(
-    data,
-    time_vars = c("Avg. wait time", "Avg. in-vehicle time", "Avg. total travel time"),
-    control_fleet = TRUE
-) {
-  data %>%
-    group_by(area, serviceTimes) %>%
-    group_split() %>%
-    map_df(function(df_group) {
-      map_df(time_vars, function(var) {
-        # Modellformel dynamisch erstellen
-        fmla_string <- if (control_fleet) {
-          paste0("log(`Passengers (Pax)`) ~ log(`", var, "`) + log(fleetSize)")
-        } else {
-          paste0("log(`Passengers (Pax)`) ~ log(`", var, "`)")
-        }
-        fmla <- as.formula(fmla_string)
-        
-        cat("Modell für Gruppe:", unique(df_group$area), unique(df_group$serviceTimes), "\n")
-        cat("  Variable:", var, "\n")
-        cat("  Formel: ", fmla_string, "\n")
-        
-        # Werte prüfen
-        pax <- df_group$`Passengers (Pax)`
-        if (!var %in% colnames(df_group)) {
-          cat("  ⚠️  Variable", var, "nicht im Datensatz – überspringe...\n\n")
-          return(NULL)
-        }
-        var_values <- df_group[[var]]
-        if (any(is.na(var_values)) | any(is.na(pax))) {
-          cat("  🟡 NA-Werte gefunden – überspringe...\n\n")
-          return(NULL)
-        }
-        if (min(var_values, pax, df_group$fleetSize, na.rm = TRUE) <= 0) {
-          cat("  🔴 Nicht-positive Werte – überspringe...\n\n")
-          return(NULL)
-        }
-        
-        # Modell schätzen
-        mod <- lm(fmla, data = df_group)
-        summary_mod <- summary(mod)
-        coefs <- tidy(mod)
-        
-        # Delta-Elastizität berechnen
-        delta_log_pax <- log(pax[which.max(var_values)]) - log(pax[which.min(var_values)])
-        delta_log_var <- log(max(var_values)) - log(min(var_values))
-        approx_elast <- delta_log_pax / delta_log_var
-        
-        # Zeile für Zeitvariable
-        time_row <- coefs %>%
-          filter(str_detect(term, fixed(var))) %>%
-          mutate(
-            metric = var,
-            area = unique(df_group$area),
-            serviceTimes = unique(df_group$serviceTimes),
-            r_squared = summary_mod$r.squared,
-            adj_r_squared = summary_mod$adj.r.squared,
-            N = nrow(df_group),
-            signif = case_when(
-              p.value < 0.001 ~ "***",
-              p.value < 0.01 ~ "**",
-              p.value < 0.05 ~ "*",
-              p.value < 0.1 ~ ".",
-              TRUE ~ ""
-            ),
-            label = paste0(round(estimate, 2), signif),
-            y_label = paste0(var, " (", area, ", ", serviceTimes, ")"),
-            delta_elasticity = approx_elast
-          )
-        
-        # Zeile für fleetSize (optional)
-        if (control_fleet) {
-          fleet_row <- coefs %>%
-            filter(term == "log(fleetSize)") %>%
-            transmute(
-              fleet_effect = estimate,
-              fleet_se = std.error,
-              fleet_signif = case_when(
-                p.value < 0.001 ~ "***",
-                p.value < 0.01 ~ "**",
-                p.value < 0.05 ~ "*",
-                p.value < 0.1 ~ ".",
-                TRUE ~ ""
-              )
-            )
-          # Kombinieren
-          bind_cols(time_row, fleet_row)
-        } else {
-          time_row
-        }
-      })
-    })
-}
-
-# Mit Kontrolle von fleetSize
-results_with_control <- compute_elasticities_per_area_times(transposed_result_clean, control_fleet = TRUE)
-
-# Ohne Kontrolle von fleetSize
-results_without_control <- compute_elasticities_per_area_times(transposed_result_clean, control_fleet = FALSE)
-
-####################################
-####################################
-## nun nehmen wir die wahrgenommene geschwindigkeit der kunden.
-
-transposed_result_clean <- transposed_result_clean %>%
-  mutate(
-    'Avg. total speed' = `Avg. ride distance [km]` / (`Avg. total travel time` / 3600),       # Zeit in Stunden
-    avg_speed_inveh = `Avg. ride distance [km]` / (`Avg. in-vehicle time` / 3600)
-  )
-
-time_vars = c("Avg. wait time", "Avg. total speed", "avg_speed_inveh")
-
-results_with_control <- compute_elasticities_per_area_times(transposed_result_clean,
-                                                            time_vars = time_vars,
-                                                            control_fleet =  TRUE)
-results_without_control <- compute_elasticities_per_area_times(transposed_result_clean,
-                                                            time_vars = time_vars,
-                                                            control_fleet = FALSE)
-results_comparison <- bind_rows(
-  results_without_control %>% mutate(control = "without control"),
-  results_with_control %>% mutate(control = "control log(fleetSize)")
-) %>%
-  #filter(metric == "Avg. wait time" | metric == "avg_speed_total") %>%  # Nur Wartezeit
-  mutate(
-    label = paste0(round(estimate, 2), signif),
-    ymin = estimate - std.error,
-    ymax = estimate + std.error,
-    y_group = fct_rev(y_label)  # für sortierte Achse
-  )
-
-
-#fleet_effect_labels <- results_comparison %>%
-#  filter(control == "control log(fleetSize)") %>%
-#  group_by(area, serviceTimes) %>%
-#  summarise(
-#    fleet_label = paste0("fleetSize effect: ", round(first(fleet_effect), 2), first(fleet_signif)),
-#    .groups = "drop"
-#  ) %>%
-#  mutate(
-#    x = 0,       # Mittelwert auf X-Achse
-#    y = 2.5      # Oberhalb der höchsten Metrikanzahl – ggf. anpassen
-#  )
-
-fleet_effects <- results_comparison %>%
-  filter(control == "control log(fleetSize)") %>%
-  transmute(
-    term = "fleetSize",
-    estimate = fleet_effect,
-    std.error = fleet_se,
-    p.value = NA,  # Optional
-    metric = "Fleet size",
-    area,
-    serviceTimes,
-    r_squared,
-    adj_r_squared,
-    N,
-    signif = fleet_signif,
-    label = paste0(round(fleet_effect, 2), fleet_signif),
-    y_label = paste0("Fleet size (", area, ", ", serviceTimes, ")"),
-    delta_elasticity = NA_real_,
-    control = control,
-    ymin = fleet_effect * fleet_se,
-    ymax = fleet_effect * fleet_se,
-    y_group = paste0("Fleet size (", area, ", ", serviceTimes, ")")
-  )
-
-
-results_plotdata <- bind_rows(results_comparison, fleet_effects)
-
-ggplot(results_plotdata, aes(x = estimate, y = metric, fill = control)) +
-  geom_col(width = 0.6, position = position_dodge(width = 0.7)) +
-  geom_errorbarh(aes(xmin = ymin, xmax = ymax),
-                 height = 0.2,
-                 position = position_dodge(width = 0.7)) +
-  geom_text(aes(label = label),
-            position = position_dodge(width = 0.7),
-            hjust = ifelse(results_plotdata$estimate > 0, -0.1, 1.1),
-            vjust = -0.3,
-            size = 4.5,
-            angle = 0) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  facet_grid(serviceTimes ~ area) +
-  labs(
-    title = "Comparison of Elasticity Estimates",
-    subtitle = "With and without controlling for fleet size\nError bars = standard errors, stars indicate significance levels",
-    x = "log-log elasticity estimate",
-    y = NULL,
-    fill = "Model specification"
-  ) +
-  theme_minimal(base_size = 15) +
-  theme(
-    legend.position = "bottom",
-    #text = element_text(face = "bold"),
-    axis.text = element_text(size = 14),
-    legend.text = element_text(size = 13),
-    plot.title = element_text(size = 18, face = "bold"),
-    plot.subtitle = element_text(size = 14, face = "bold"),
-    strip.text = element_text(size = 18, face = "bold")
-  ) 
-
-#+
-#  geom_text(
-#    data = fleet_effect_labels,
-#    aes(x = x, y = y, label = fleet_label),
-#    inherit.aes = FALSE,
-#    hjust = 0,
-#    vjust = 1,
-#    size = 4,
-#    fontface = "italic"
-#  )
-
- 
-  
-
-
-
-# Nur Modelle mit Kontrolle
-fleet_effects <- results_comparison %>%
-  filter(!is.na(fleet_effect)) %>%
-  transmute(
-    estimate = fleet_effect,
-    std.error = fleet_se,
-    metric = "fleetSize",
-    control = control,
-    area = area,
-    serviceTimes = serviceTimes,
-    r_squared = r_squared,
-    adj_r_squared = adj_r_squared,
-    N = N,
-    signif = fleet_signif,
-    label = paste0(round(fleet_effect, 2), fleet_signif),
-    y_label = paste0("fleetSize (", area, ", ", serviceTimes, ")"),
-    ymin = fleet_effect - fleet_se,
-    ymax = fleet_effect + fleet_se,
-    y_group = y_label
-  )
-
-
-# Filter z. B. nach avg_speed_total
-speed_results <- results_with_control %>%
-  filter(metric == "Avg. total speed")
-
-# Kombiniere beide
-plot_data <- bind_rows(speed_results, fleet_effects)
-
-library(ggplot2)
-library(forcats)
-
-ggplot(plot_data, aes(x = estimate, y = fct_rev(y_group), fill = metric)) +
-  geom_col(width = 0.6, alpha = 0.75, position = position_dodge2()) +
-  geom_errorbarh(aes(xmin = ymin, xmax = ymax), height = 0.2) +
-  geom_text(aes(label = label),
-            hjust = ifelse(plot_data$estimate > 0, -0.1, 1.1),
-            size = 4) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  labs(
-    title = "Elastizitäten und Effekt der Flottengröße",
-    subtitle = "Fehlerbalken = Standardfehler, Sterne = Signifikanzniveau",
-    x = "log-log Effekt / Elastizität",
-    y = NULL,
-    fill = "Variable"
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    legend.position = "bottom",
-    axis.text.y = element_text(face = "bold"),
-    axis.text.x = element_text(face = "bold"),
-    plot.title = element_text(face = "bold"),
-    plot.subtitle = element_text(face = "italic")
-  )
-
-
-
-
 
 
 

@@ -113,7 +113,7 @@ plotByOperatingTimes <- function(parameterStr, yAxisLabel = parameterStr, scales
     
     labs(
       title = plot_title,
-      x = "Fleet Size [n]",
+      x = "log(Fleet Size) [n]",
       y = yAxisLabel,
       color = "Speed",
       linetype = "Service Area",
@@ -200,6 +200,67 @@ plotByConfiguration <- function(parameterStr, yAxisLabel = parameterStr, scales 
   return(plot)
 }
 
+plotByConfigurationLog <- function(parameterStr, yAxisLabel = parameterStr, scales = "free", show_legend = FALSE){
+  
+  # Filtern der Daten für die gewünschten Parameter
+  plot_data <- data %>%
+    filter(parameter == parameterStr) %>%
+    mutate(
+      speed_fct = factor(speed),
+      speed_kmh = paste0(round(as.numeric(speed) * 3.6), " km/h"),
+      facet_group = interaction(Bediengebiet, serviceTimes, sep = " | ")
+    )
+  
+  if (stats_for_AV){
+    plot_title <- paste(parameterStr)
+  } else {
+    plot_title <- paste("CONV. KEXI:", parameterStr)
+  }
+  
+  plot <- ggplot(plot_data, aes(
+    x = fleetSize,
+    y = mean,
+    color = speed_fct,
+    linetype = Bediengebiet,
+    group = interaction(speed, Bediengebiet)
+  )) +
+    geom_line(linewidth = 1.2) +
+    geom_point(size = 4, aes(shape = Bediengebiet)) +
+    
+    facet_wrap(~facet_group, scales = scales) +
+    
+    labs(
+      title = plot_title,
+      x = "Fleet Size [n]",
+      y = yAxisLabel,
+      color = "Speed",
+      linetype = "Service Area",
+      shape = "Service Area"
+    ) +
+    
+    scale_color_discrete(labels = function(x) paste0(round(as.numeric(x) * 3.6), " km/h")) +
+    scale_x_log10() +
+    scale_y_log10() +
+    
+    theme(
+      plot.title = element_text(size = 32, face = "bold"),
+      axis.title.x = element_text(size = 22, face = "bold"),
+      axis.title.y = element_text(size = 22, face = "bold"),
+      axis.text = element_text(size = 20, face = "bold"),
+      legend.title = element_text(size = 24, face = "bold"),
+      legend.text = element_text(size = 20),
+      strip.text = element_text(size = 24, face = "bold")
+    )
+  
+  if (show_legend) {
+    plot <- plot + theme(legend.position = "bottom")
+  } else {
+    plot <- plot + theme(legend.position = "none")
+  }
+  
+  return(plot)
+}
+
 #############################
 #############################
 ######## Filter DATA ########
@@ -228,10 +289,16 @@ plotByConfiguration <- function(parameterStr, yAxisLabel = parameterStr, scales 
         labs(title = "Nr. of AMoD passengers"
         )
       save("singleConfig-pax")
+      plotByConfigurationLog("Passengers (Pax)", yAxisLabel = "Passengers [n]", scales = "fixed", show_legend = TRUE) +
+        labs(title = "Nr. of AMoD passengers"
+        )
+      save("singleConfig-pax-log")
       plotByConfiguration("Passengers (Pax)", yAxisLabel = "Passengers [n]")
       #save("singleConfig-pax_yAxesDiff")
       
       ###waiting/travel time
+      plotByConfigurationLog("Avg. wait time", yAxisLabel = "Avg. wait time [s]", scales = "fixed", show_legend =  TRUE)
+      save("singleConfig-waitTime-log")
       plotByConfiguration("Avg. wait time", yAxisLabel = "Avg. wait time [s]", scales = "fixed", show_legend =  TRUE)
       save("singleConfig-waitTime")
       plotByConfiguration("95th percentile wait time", yAxisLabel = "95th percentile wait time [s]", scales = "fixed")
@@ -240,21 +307,33 @@ plotByConfiguration <- function(parameterStr, yAxisLabel = parameterStr, scales 
       save("singleConfig-totalTravelTime")
       plotByConfiguration("Avg. in-vehicle time", yAxisLabel = "Avg. in-vehicle travel time [s]", scales =  "fixed", show_legend = TRUE)
       save("singleConfig-inVehTime")
+      plotByConfigurationLog("Avg. in-vehicle time", yAxisLabel = "Avg. in-vehicle travel time [s]", scales =  "fixed", show_legend = TRUE)
+      save("singleConfig-inVehTime-log")
       
       ###distance
       plotByConfiguration("Avg. ride distance [km]", scales = "fixed", show_legend = TRUE) +
         labs(title = "Avg. customer ride distance"
         )
       save("singleConfig-rideDistance")
-      plotByConfiguration("Avg. direct distance [km]", scales = "fixed", show_legend = TRUE) +
+      plotByConfigurationLog("Avg. ride distance [km]", scales = "fixed", show_legend = TRUE) +
+        labs(title = "Avg. customer ride distance"
+        )
+      save("singleConfig-rideDistance-log")
+      
+      plotByConfiguration("Avg. direct distance [km]", scales = "fixed", show_legend = FALSE) +
         labs(title = "Avg. customer direct distance [km]"
         )
-      #save("singleConfig-directDistance")
+      save("singleConfig-directDistance")
       
-      plotByConfiguration("Empty ratio", "fixed") +
+      plotByConfigurationLog("Avg. direct distance [km]", scales = "fixed", show_legend = FALSE) +
+        labs(title = "Avg. customer direct distance [km]"
+        )
+      save("singleConfig-directDistance-log")
+      
+      plotByConfiguration("Empty ratio", scales = "fixed") +
         labs(title = "Ratio of empty vehicle mileage"
         )
-      #save("singleConfig-emptyRatio")
+      save("singleConfig-emptyRatio")
       plotByConfiguration("Detour ratio", scales = "fixed") +
         labs(title = "Total vehicle mileage / Avg. direct customer distance"
         )
@@ -262,10 +341,10 @@ plotByConfiguration <- function(parameterStr, yAxisLabel = parameterStr, scales 
       
       ###betrieb
       plotByConfiguration("Total vehicle mileage [km]", scales = "fixed")
-      #save("singleConfig-vehicleMileage")
+      save("singleConfig-vehicleMileage")
       plotByConfiguration("Occupancy rate [pax-km/v-km]", scales = "fixed")
-      #save("singleConfig-occupancyRate")
-      plotByConfiguration("Pax per veh-km", scales = "fixed", show_legend = TRUE) +
+      save("singleConfig-occupancyRate")
+      plotByConfiguration("Pax per veh-km", scales = "fixed", show_legend = FALSE) +
         labs(title = "Nr. of passengers per vehicle-km"
         ) +
         scale_y_continuous(labels = function(x) sprintf("%.2f", x))
