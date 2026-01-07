@@ -3,8 +3,8 @@ package org.matsim.run;
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import jakarta.annotation.Nullable;
 import org.matsim.analysis.KelheimMainModeIdentifier;
-import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
 import org.matsim.analysis.postAnalysis.drt.DrtServiceQualityAnalysis;
 import org.matsim.analysis.postAnalysis.drt.DrtVehiclesRoadUsageAnalysis;
@@ -23,7 +23,7 @@ import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.traffic.LinkStats;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
-import org.matsim.application.prepare.freight.tripExtraction.ExtractRelevantFreightTrips;
+import org.matsim.application.prepare.longDistanceFreightGER.tripExtraction.ExtractRelevantFreightTrips;
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
@@ -67,7 +67,6 @@ import org.matsim.contrib.vsp.pt.fare.DistanceBasedPtFareParams;
 import org.matsim.contrib.vsp.pt.fare.PtFareConfigGroup;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.SplittableRandom;
@@ -180,10 +179,10 @@ public class RunKelheimScenario extends MATSimApplication {
 		SimWrapperConfigGroup sw = ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class);
 
 		// Relative to config
-		sw.defaultParams().shp = "../shp/dilutionArea.shp";
-		sw.defaultParams().mapCenter = "11.89,48.91";
-		sw.defaultParams().mapZoomLevel = 11d;
-		sw.sampleSize = sample.getSample();
+		sw.defaultParams().setShp("../shp/dilutionArea.shp");
+		sw.defaultParams().setMapCenter("11.89,48.91");
+		sw.defaultParams().setMapZoomLevel(11d);
+		sw.setSampleSize(sample.getSample());
 
 		if (intermodal) {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
@@ -300,7 +299,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				install(new SimWrapperModule());
 
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
-				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
+//				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
 				/*
 				if (strategy.getModeChoice() == StrategyOptions.ModeChoice.randomSubtourMode) {
@@ -362,11 +361,11 @@ public class RunKelheimScenario extends MATSimApplication {
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, baseFare, surcharge));
-				if (rebalancing && drtCfg.mode.equals("av")) {
+				if (rebalancing && drtCfg.getMode().equals("av")) {
 					controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
 				} else {
 					// No rebalancing strategy
-					controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.mode) {
+					controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.getMode()) {
 						@Override
 						public void install() {
 							bindModal(RebalancingStrategy.class).to(NoRebalancingStrategy.class).asEagerSingleton();

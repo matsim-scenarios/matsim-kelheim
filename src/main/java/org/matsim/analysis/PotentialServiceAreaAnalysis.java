@@ -305,8 +305,8 @@ public final class PotentialServiceAreaAnalysis {
 
 		stops.forEach(stop -> {
 			CarrierService service = CarrierService.Builder.newInstance(Id.create(stop.id, CarrierService.class), NetworkUtils.getNearestLinkExactly(network, stop.coord).getId())
-					.setName(stop.lage)
-					.build();
+//				.setName(stop.lage)
+				.build();
 			carrier.getServices().put(service.getId(), service);
 		});
 

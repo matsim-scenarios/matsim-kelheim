@@ -108,7 +108,7 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 				viz.description = finalLinkDescription;
 				viz.height = 12.0;
 				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
+				viz.zoom = data.context().getMapZoomLevel();
 				viz.setShape(new CreateAverageDashboards().copyVizNetwork(dirs, ".avro"), "id");
 				viz.addDataset("emissions_per_m", postProcess(data, "mean_emissions_per_link_per_m.csv"));
 				viz.display.lineColor.dataset = "emissions_per_m";

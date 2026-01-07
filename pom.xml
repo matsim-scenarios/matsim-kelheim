@@ -7,7 +7,7 @@
 
 		<!-- PR-labelled release -->
 <!--		<version>2025.0-PR3549</version> &lt;!&ndash; PR3549 is from November 07, 2024 &ndash;&gt;-->
-		<version>2025.0-SNAPSHOT</version>
+		<version>2026.0-SNAPSHOT</version>
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
 		<!--		<version>16.0-SNAPSHOT</matsim.version>-->
@@ -198,17 +198,17 @@
 			<version>${matsim.version}</version>
 		</dependency>
 
-		<dependency>
-			<groupId>one.util</groupId>
-			<artifactId>streamex</artifactId>
-			<version>0.8.2</version>
-		</dependency>
+<!--		<dependency>-->
+<!--			<groupId>one.util</groupId>-->
+<!--			<artifactId>streamex</artifactId>-->
+<!--			<version>0.8.2</version>-->
+<!--		</dependency>-->
 
-		<dependency>
-			<groupId>commons-io</groupId>
-			<artifactId>commons-io</artifactId>
-			<version>2.16.1</version>
-		</dependency>
+<!--		<dependency>-->
+<!--			<groupId>commons-io</groupId>-->
+<!--			<artifactId>commons-io</artifactId>-->
+<!--			<version>2.16.1</version>-->
+<!--		</dependency>-->
 
 		<dependency>
 			<groupId>org.apache.avro</groupId>

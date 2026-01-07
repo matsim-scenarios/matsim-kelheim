@@ -1,17 +1,10 @@
-package org.matsim.analysis.postAnalysis.accessbility;
+package org.matsim.analysis.postAnalysis.accessibility;
 
-import org.matsim.application.analysis.LogFileAnalysis;
-import org.matsim.application.analysis.accessibility.PrepareHouseholds;
-import org.matsim.application.analysis.accessibility.PreparePois;
-import org.matsim.application.analysis.traffic.TrafficAnalysis;
-import org.matsim.application.prepare.network.CreateAvroNetwork;
 import org.matsim.simwrapper.Dashboard;
 import org.matsim.simwrapper.Data;
 import org.matsim.simwrapper.Header;
 import org.matsim.simwrapper.Layout;
 import org.matsim.simwrapper.viz.*;
-import tech.tablesaw.plotly.components.Axis;
-import tech.tablesaw.plotly.traces.BarTrace;
 
 import java.util.List;
 
@@ -69,15 +62,15 @@ public class OverviewDashboardHeart implements Dashboard {
 				.el(Hexagons.class, ((viz, data) -> {
 					this.globalCenter = data.context().getCenter();
 					generateHouseholds(viz, data);
-				}))
-				.el(MapPlot.class, ((viz, data) -> generatePois(viz, data, pois.get(0))));
-
-
-			for (int i = 1; i < pois.size(); i++) {
-				String poi = pois.get(i);
-				layout.row("pois")
-					.el(MapPlot.class, ((viz, data) -> generatePois(viz, data, poi)));
-			}
+				}));
+//				.el(MapPlot.class, ((viz, data) -> generatePois(viz, data, pois.get(0))));
+//
+//
+//			for (int i = 1; i < pois.size(); i++) {
+//				String poi = pois.get(i);
+//				layout.row("pois")
+//					.el(MapPlot.class, ((viz, data) -> generatePois(viz, data, poi)));
+//			}
 
 		}
 //
@@ -170,15 +163,15 @@ public class OverviewDashboardHeart implements Dashboard {
 //		});
 	}
 
-		private void generatePois(MapPlot viz, Data data, String poi) {
-		viz.title = "POIs: " + poi;
-		viz.description = "Shows points of interest of type " + poi;
-		viz.setShape(data.computeWithPlaceholder(PreparePois.class, "%s/pois.shp", poi));
-		viz.display.fill.fixedColors = new String[]{"#f28e2c"};
-//		viz.height = height;
-		viz.center = globalCenter;
-//		viz.zoom = globalZoom;
-	}
+//		private void generatePois(MapPlot viz, Data data, String poi) {
+//		viz.title = "POIs: " + poi;
+//		viz.description = "Shows points of interest of type " + poi;
+//		viz.setShape(data.computeWithPlaceholder(PreparePois.class, "%s/pois.shp", poi));
+//		viz.display.fill.fixedColors = new String[]{"#f28e2c"};
+////		viz.height = height;
+//		viz.center = globalCenter;
+////		viz.zoom = globalZoom;
+//	}
 
 	private void generateHouseholds(Hexagons viz, Data data) {
 		viz.title = "Households";

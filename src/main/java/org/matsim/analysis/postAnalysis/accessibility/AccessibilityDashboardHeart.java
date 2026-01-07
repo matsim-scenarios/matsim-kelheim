@@ -1,11 +1,9 @@
-package org.matsim.analysis.postAnalysis.accessbility;
+package org.matsim.analysis.postAnalysis.accessibility;
 
 import org.matsim.application.analysis.accessibility.*;
-import org.matsim.application.analysis.pt.PublicTransitAnalysis;
 import org.matsim.application.analysis.traffic.TrafficAnalysis;
 import org.matsim.application.prepare.network.CreateAvroNetwork;
 import org.matsim.contrib.accessibility.Modes4Accessibility;
-import org.matsim.contrib.common.timeprofile.ProfileWriter;
 import org.matsim.simwrapper.Dashboard;
 import org.matsim.simwrapper.Data;
 import org.matsim.simwrapper.Header;
@@ -84,7 +82,7 @@ public class AccessibilityDashboardHeart implements Dashboard {
 
 				viz.title = "Traffic statistics";
 				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
+				viz.zoom = data.context().getMapZoomLevel();
 
 				viz.setShape(data.compute(CreateAvroNetwork.class, "network.avro"), "id");
 
@@ -140,7 +138,8 @@ public class AccessibilityDashboardHeart implements Dashboard {
 		viz.maxHeight = 0;
 
 
-		viz.file = data.computeWithPlaceholder(AccessibilityAnalysis.class, "%s/accessibilities_simwrapper.csv", poi);
+		viz.timeSelector = GridMap.TimeSelector.discrete;
+		viz.file = data.computeWithPlaceholder(AccessibilityAnalysisKelheim.class, "%s/accessibilities_simwrapper.csv", poi);
 		viz.valueColumn = columnName;
 		viz.secondValueColumn = "teleportedWalk_accessibility";
 		viz.diff = !modeName.equals(Modes4Accessibility.teleportedWalk.toString());
@@ -148,6 +147,15 @@ public class AccessibilityDashboardHeart implements Dashboard {
 		// Color Ramp
 		viz.setColorRamp(ColorScheme.RdBu, 11, false).
 			setColorRampBounds(true, -10, 10);
+
+		// add poi in background
+		String poiFilename = data.computeWithPlaceholder(PreparePois.class, "%s/pois.shp", poi, "--input-crs", coordinateSystem);
+		BackgroundLayer poiBackgroundLayer = new BackgroundLayer(poiFilename);
+		poiBackgroundLayer.setOnTop(true);
+		poiBackgroundLayer.setBorderWidth(5);
+		poiBackgroundLayer.setBorderColor("red");
+
+		viz.addBackgroundLayer("poi",poiBackgroundLayer);
 
 	}
 }

@@ -47,7 +47,7 @@ public class RunDrtOnlyScenario implements MATSimAppCommand {
 				controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
 			} else {
 				// No rebalancing strategy
-				controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.mode) {
+				controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.getMode()) {
 					@Override
 					public void install() {
 						bindModal(RebalancingStrategy.class).to(NoRebalancingStrategy.class).asEagerSingleton();

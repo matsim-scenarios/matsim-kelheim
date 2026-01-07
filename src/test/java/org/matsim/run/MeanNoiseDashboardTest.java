@@ -95,7 +95,8 @@ class MeanNoiseDashboardTest {
 		}
 
 		SimWrapper sw = SimWrapper.create();
-		sw.getConfigGroup().defaultParams().mapCenter = "11.89,48.91";
+		sw.getConfigGroup().defaultParams().setMapCenter("11.89,48.91");
+
 		sw.addDashboard(Dashboard.customize(new AverageKelheimNoiseDashboard(foldersSeeded, 3)).context("noise"));
 		try {
 			sw.generate(Path.of(path), true);

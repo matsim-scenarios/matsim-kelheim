@@ -72,7 +72,7 @@ class WaitingPointsBasedRebalancingStrategy implements RebalancingStrategy {
 	@Override
 	public List<Relocation> calcRelocations(Stream<? extends DvrpVehicle> rebalancableVehicles, double time) {
 		List<Relocation> relocations = new ArrayList<>();
-		List<? extends DvrpVehicle> idleVehicles = rebalancableVehicles.filter(v -> v.getServiceEndTime() > time + params.minServiceTime).toList();
+		List<? extends DvrpVehicle> idleVehicles = rebalancableVehicles.filter(v -> v.getServiceEndTime() > time + params.getMinServiceTime()).toList();
 		if (!idleVehicles.isEmpty()) {
 			// when there are idling vehicles that can be rebalanced
 			// we first identify the distribution of the vehicles

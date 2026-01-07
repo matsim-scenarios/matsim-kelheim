@@ -22,7 +22,7 @@ testingCustomerIds_extended <- as.character(c(1,
                                               13498 ))
 
 
-data_raw <- read.csv2("C:/Users/J/Documents/Thesis/thesis/fahrtanfragen.csv", na.strings = "")%>% 
+data_raw <- read.csv2("../shared-svn/projects/KelRide/data/KEXI/VIA_data/raw-data/fahrtanfragen.csv", na.strings = "")%>%
   filter(!Fahrgast.ID %in% testingCustomerIds_extended)
 
 
