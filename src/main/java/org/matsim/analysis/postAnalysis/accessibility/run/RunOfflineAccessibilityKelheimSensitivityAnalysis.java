@@ -12,7 +12,6 @@ import org.matsim.contrib.drt.estimator.impl.DirectTripBasedDrtEstimator;
 import org.matsim.contrib.drt.estimator.impl.distribution.NoDistribution;
 import org.matsim.contrib.drt.estimator.impl.trip_estimation.ConstantRideDurationEstimator;
 import org.matsim.contrib.drt.estimator.impl.waiting_time_estimation.ConstantWaitingTimeEstimator;
-import org.matsim.contrib.drt.run.DrtConfigGroup;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,15 +28,6 @@ import static org.matsim.analysis.postAnalysis.accessibility.run.RunOfflineAcces
 public class RunOfflineAccessibilityKelheimSensitivityAnalysis {
 
 	private static final Logger log = LogManager.getLogger(RunOfflineAccessibilityKelheimSensitivityAnalysis.class);
-	public static String stopsFileLand = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-land.xml";
-	public static String stopsFileStadt = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/kelheim-v3.0/input/kelheim-v3.0-drt-stops.xml";
-	public static String stopsFileStadtUndLand = "../public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-stadt-und-land.xml";
-
-	public static String stopsFileStadtUndLandUndNeustadt = "../public-svn/matsim/scenarios/countries/de/kelheim/kelheim-drt-accessibility-JB-master/input/drt-stops-stadt-und-land-und-neustadt.xml";
-
-	public static String stopsFile;
-	public static DrtConfigGroup drtConfigGroup;
-	private static String outputDir;
 	public static String coordinateSystem = "EPSG:25832";
 
 	protected RunOfflineAccessibilityKelheimSensitivityAnalysis() {
@@ -47,95 +37,29 @@ public class RunOfflineAccessibilityKelheimSensitivityAnalysis {
 
 	public static void main(String[] args) throws FactoryException, TransformException, IOException {
 
-//		if (args.length == 0) {
-//			outputDir = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/2025-09-18-b-doubleDetour/";
-//		} else if (args.length == 1) {
-//			outputDir = args[0];
-//		} else {
-//			throw new IllegalArgumentException("Please provide the output directory as an argument.");
-//		}
-
 		// CONFIGURATION
-		List<String> relevantPois = List.of("supermarket");
-//		List<String> relevantPois = List.of("train_station", "amazon", "supermarket");
-//		List<String> relevantPois = List.of("train_station");
+		// what POIs will are being examined
+		List<String> relevantPois = List.of("train_station","logistic","supermarket");
 
-		stopsFile = stopsFileStadtUndLandUndNeustadt;
-
-		AccessibilityConfigGroup accConfig = new AccessibilityConfigGroup();
-
-		accConfig.setTileSize_m(500);
-
-		String mapCenterString;
-//		{
-//			accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);
-//
-//			Coordinate leftBottomWgs84 = new Coordinate(11.805, 48.81);
-//			Coordinate topRightWgs84 = new Coordinate(12.095, 48.994);
-//			Coordinate leftBottom = transformCoordinate(CRS.decode("EPSG:4326", true), CRS.decode("EPSG:25832"), leftBottomWgs84);
-//			Coordinate rightTop = transformCoordinate(CRS.decode("EPSG:4326", true), CRS.decode("EPSG:25832"), topRightWgs84);
-//			mapCenterString = (leftBottomWgs84.x + topRightWgs84.x) / 2 + "," + (leftBottomWgs84.y + topRightWgs84.y) / 2;
-//
-////			//--
-		double left = 689951.8456988378893584;
-		double bottom = 5384612.2985062776133418;
-		double right = 729756.0493708059657365;
-		double top = 5433939.7461467878893018;
-		accConfig.setBoundingBoxLeft(left);
-		accConfig.setBoundingBoxBottom(bottom);
-		accConfig.setBoundingBoxRight(right);
-		accConfig.setBoundingBoxTop(top);
-		mapCenterString = "11.87632,48.81992";
-
-//
-//		}
-
-		{
-			accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
-			accConfig.setShapeFileCellBasedAccessibility("input/shp/lk-kelheim/lk-kelheim.shp");
-		}
-
-
-//		List<Double> timesHour = List.of(5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10., 24.);
-//
-//		List<Double> timesHour = List.of(7.5, 8.0, 8.5, 24.0);
+		// What times will we calculate accessibilty
 		List<Double> timesHour = List.of(7.5);
 
+		// For what modes
+		List<Modes4Accessibility> accModes = List.of( Modes4Accessibility.estimatedDrt);
 
-		List<Double> timesSeconds = new ArrayList<>(timesHour.stream().map(t -> t * 60 * 60).toList());
+		// With what directory are we working? Following code makes a copy, so as to leave original directory intact.
+		File dirToCopy = new File("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/0000-kelheim-scratch");
 
-//
-//		List<Double> timesHour = List.of(4.0, 8.0, 12.0, 16.0, 20.0, 24.0);
-//
-//
-//		List<Double> timesSeconds = new ArrayList<>(timesHour.stream().map(t -> t * 60 * 60).toList());
-//
-//		for (int min = 5; min < 60; min += 5) {
-//
-//			timesSeconds.add(8.0 * 60 * 60 + min * 60);
-//			timesSeconds.add(9.0 * 60 * 60 + min * 60);
-//
-//		}
-		accConfig.setTimeOfDay(timesSeconds);
+		// CONFIG
 
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.teleportedWalk, Modes4Accessibility.pt, Modes4Accessibility.car, Modes4Accessibility.estimatedDrt);
-//		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.pt, Modes4Accessibility.car, Modes4Accessibility.estimatedDrt);
-//				List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.pt);
-
+		AccessibilityConfigGroup accConfig = new AccessibilityConfigGroup();
+		accConfig.setTileSize_m(500);
+		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
+		accConfig.setShapeFileCellBasedAccessibility("input/shp/lk-kelheim/lk-kelheim.shp");
+		accConfig.setTimeOfDay(new ArrayList<>(timesHour.stream().map(t -> t * 60 * 60).toList()));
 		for (Modes4Accessibility mode : Modes4Accessibility.values()) {
 			accConfig.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
-
-//		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.estimatedDrt);
-
-
-		// Part 1: Generate Parameters for Estimator
-		// Part 2: Calculate Accessibility
-
-//		EstimatorParameters estimatorParameters = step1GenerateParams();
-
-
-		File dirToCopy = new File("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/0000-kelheim-scratch");
 
 
 		for (String asc : List.of("a", "b", "c")) {
@@ -177,9 +101,13 @@ public class RunOfflineAccessibilityKelheimSensitivityAnalysis {
 						throw new RuntimeException("Unknown case");
 				}
 
-				outputDir = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/2025-11-19-" + asc + "-" + los + "/";
-
+				String outputDir = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/2026-01-09-calibration/" + asc + "-" + los + "/";
 				FileUtils.copyDirectory(dirToCopy, new File(outputDir));
+
+
+
+				// Part 1: Generate Parameters for Estimator
+
 				DrtEstimator drtEstimator = new DirectTripBasedDrtEstimator.Builder()
 					.setWaitingTimeEstimator(new ConstantWaitingTimeEstimator(waitingTime))
 					.setWaitingTimeDistributionGenerator(new NoDistribution())
@@ -187,10 +115,17 @@ public class RunOfflineAccessibilityKelheimSensitivityAnalysis {
 					.setRideDurationDistributionGenerator(new NoDistribution())
 					.build();
 
-				step2CalculateAccessibility(drtEstimator, ascDrt, relevantPois, accConfig);
+				// Part 2: Calculate Accessibility
+				log.info("Starting Accessibility Calculation for " + ascDrt + " and " + los);
+				step2CalculateAccessibility(drtEstimator, ascDrt, relevantPois, accConfig, outputDir);
+
 
 				// Part 3: Create Dashboard
-				step3CreateDashboard(relevantPois, accModes, mapCenterString);
+				if(asc.equals("a") && los.equals("1")){
+					step3CreateDashboard(relevantPois, accModes, "", outputDir);
+
+				}
+
 
 
 			}

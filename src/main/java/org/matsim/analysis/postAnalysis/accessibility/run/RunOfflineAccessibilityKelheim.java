@@ -49,7 +49,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.DoubleStream;
 
 /**
  * Run this class to calculate accessibility for the Kelheim scenario for different modes (including DRT). This class is meant to be run after
@@ -63,7 +62,6 @@ public class RunOfflineAccessibilityKelheim {
 	public static String facilitiesFile = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/1_processed/osm_supermarkets_buffer5km/pois.xml";
 
 	public static DrtConfigGroup drtConfigGroup;
-	private static String outputDir;
 	public static String coordinateSystem = "EPSG:25832";
 
 	protected RunOfflineAccessibilityKelheim() {
@@ -75,12 +73,14 @@ public class RunOfflineAccessibilityKelheim {
 
 		// CONFIGURATION
 		// what POIs will are being examined
-		List<String> relevantPois = List.of("train_station", "logistic", "supermarket");
+		List<String> relevantPois = List.of("train_station");
+
 		// What times will we calculate accessibilty
-		List<Double> timesHour = DoubleStream.iterate(0, i -> i <= 24., i -> i + 0.5).boxed().toList();
+//		List<Double> timesHour = DoubleStream.iterate(0, i -> i <= 24., i -> i + 0.5).boxed().toList();
+		List<Double> timesHour = List.of(7.5);
 
 		// For what modes
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.teleportedWalk, Modes4Accessibility.pt, Modes4Accessibility.car, Modes4Accessibility.estimatedDrt);
+		List<Modes4Accessibility> accModes = List.of( Modes4Accessibility.estimatedDrt);
 		// What parameters will be used for DRT Estimator
 		double waitingTime = 300;
 		double slope = 1.22;
@@ -88,7 +88,7 @@ public class RunOfflineAccessibilityKelheim {
 		double ascDrt = 0.0;
 		// With what directory are we working? Following code makes a copy, so as to leave original directory intact.
 		File dirToCopy = new File("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/0000-kelheim-scratch");
-		outputDir = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/2026-01-04-a/";
+		String outputDir = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/2026-01-08-a/";
 		FileUtils.copyDirectory(dirToCopy, new File(outputDir));
 
 		// CONFIG
@@ -101,14 +101,6 @@ public class RunOfflineAccessibilityKelheim {
 		for (Modes4Accessibility mode : Modes4Accessibility.values()) {
 			accConfig.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
-		//		double left = 689951.8456988378893584;
-//		double bottom = 5384612.2985062776133418;
-//		double right = 729756.0493708059657365;
-//		double top = 5433939.7461467878893018;
-//		accConfig.setBoundingBoxLeft(left);
-//		accConfig.setBoundingBoxBottom(bottom);
-//		accConfig.setBoundingBoxRight(right);
-//		accConfig.setBoundingBoxTop(top);
 		String mapCenterString = "11.87632,48.81992";
 
 
@@ -125,10 +117,10 @@ public class RunOfflineAccessibilityKelheim {
 			.build();
 
 		// Part 2: Calculate Accessibility
-		step2CalculateAccessibility(drtEstimator, ascDrt, relevantPois, accConfig);
+		step2CalculateAccessibility(drtEstimator, ascDrt, relevantPois, accConfig, outputDir);
 
 		// Part 3: Create Dashboard
-		step3CreateDashboard(relevantPois, accModes, mapCenterString);
+//		step3CreateDashboard(relevantPois, accModes, mapCenterString);
 
 	}
 
@@ -138,7 +130,7 @@ public class RunOfflineAccessibilityKelheim {
 
 
 
-	private static EstimatorParameters step1GenerateParams() {
+	private static EstimatorParameters step1GenerateParams(String outputDir) {
 
 		DoubleList inVehicleTravelTime = new DoubleArrayList();
 		DoubleList directTravelDistance_m = new DoubleArrayList();
@@ -184,7 +176,7 @@ public class RunOfflineAccessibilityKelheim {
 
 
 
-	static void step2CalculateAccessibility(DrtEstimator drtEstimator, Double ascDrt, List<String> relevantPois, ConfigGroup accConfig) {
+	static void step2CalculateAccessibility(DrtEstimator drtEstimator, Double ascDrt, List<String> relevantPois, ConfigGroup accConfig, String outputDir) {
 
 		// input files
 		String eventsFile = ApplicationUtils.matchInput("output_events.xml.gz", Path.of(outputDir)).toString();
@@ -272,7 +264,7 @@ public class RunOfflineAccessibilityKelheim {
 
 		AccessibilityFromEvents.Builder builder = new AccessibilityFromEvents.Builder(scenario, eventsFile, relevantPois);
 
-		builder.addDrtEstimator(drtEstimator);
+		builder.setDrtEstimator(drtEstimator);
 
 
 		builder.build().run();
@@ -281,7 +273,7 @@ public class RunOfflineAccessibilityKelheim {
 
 
 
-	static void step3CreateDashboard(List<String> relevantPois, List<Modes4Accessibility> accModes, String mapCenterString) {
+	static void step3CreateDashboard(List<String> relevantPois, List<Modes4Accessibility> accModes, String mapCenterString, String outputDir) {
 
 		final Config config = ConfigUtils.createConfig();
 		config.controller().setOutputDirectory(outputDir);
