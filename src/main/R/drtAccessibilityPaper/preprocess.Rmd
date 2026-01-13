@@ -1,0 +1,132 @@
+---
+title: "preprocess"
+output: html_document
+date: "2025-12-26"
+---
+
+Read Libraries
+```{r}
+library(tidyverse)
+library(tmap)
+library(tmaptools)
+library(sf)
+library(osmdata)
+library(osmextract)
+
+
+```
+
+
+
+# DRT Stops
+
+Read and combine geojson's pulled from the kexi website: 
+```{r}
+shp_files <- list.files(
+  path = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/0_raw/kexiStopsLandKelheim",
+  pattern = "\\.geojson$",
+  full.names = TRUE
+)
+
+sf_list <- lapply(seq_along(shp_files), function(i) {
+  st_read(shp_files[i], quiet = TRUE) %>%
+    mutate(zone = i) %>%
+    select(geometry, zone)
+})
+
+sf_all <- do.call(rbind, sf_list)
+```
+
+Plot stops, colored by zone:
+
+```{r}
+tmap_mode("view")
+categorical_colors <- c('#a6cee3','#fb9a99','#b2df8a','#6a3d9a','#1f78b4','#e31a1c','#fdbf6f','#ff7f00','#cab2d6','#33a02c')
+tm_shape(sf_all)+
+  tm_dots(fill = "zone",  fill.scale = tm_scale_categorical(values = categorical_colors)) 
+```
+
+
+Save results
+
+```{r}
+
+st_write(sf_all, "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/1_processed/drt_stops/stops_25832.shp")
+
+
+sf_all %>% st_transform(25832) %>% 
+  mutate(
+    x = st_coordinates(.)[, 1],
+    y = st_coordinates(.)[, 2]
+  ) %>% st_drop_geometry() %>% 
+  select(x,y) %>% 
+  write_csv("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/1_processed/drt_stops/stops_25832.csv")
+
+```
+
+# Supermarkets
+
+Create buffer around Kelheim 
+```{r}
+
+shp_kelheim <- st_read("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/0_raw/shp_kelheim/lk-kelheim.shp")
+
+shp_kelheim_buff <- st_buffer(shp_kelheim, 5000) %>% st_transform(4326) 
+
+bbox_buf <- shp_kelheim_buff %>% st_bbox()
+
+
+```
+
+
+```{r}
+osm_data <- opq(bbox_buf) |>
+  add_osm_feature(key = "shop", value = "supermarket") %>% 
+  osmdata_sf()
+
+
+
+points <- osm_data$osm_points
+polygons <- st_make_valid(osm_data$osm_polygons) 
+polygon_centroids <- polygons %>% st_centroid()
+
+points_within_polygon <- points %>%
+  st_filter(polygons %>% st_buffer(5))
+
+points_clean <- points %>% filter(!osm_id %in% points_within_polygon$osm_id)
+
+points_combined <- bind_rows(
+  points_clean %>% mutate(source = "points") %>% select(osm_id,source),
+  polygon_centroids %>% mutate(source = "polygons") %>% select(osm_id,source))
+
+points_final <- points_combined %>% st_filter(shp_kelheim_buff)
+
+tm_shape(shp_kelheim_buff) + tm_borders() + tm_shape(points_final) + tm_dots()
+          
+```
+
+Plot results 
+```{r}
+tmap_mode("view")
+  tm_shape(shp_kelheim, ext = 1.1)+
+  tm_borders() +
+tm_shape(points_final) +
+  tm_dots(fill = "blue", size = .4) 
+```
+
+
+Save Output
+```{r}
+st_write(points_final, "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/1_processed/osm_supermarkets_buffer5km/supermarkets_25832.shp")
+
+points_final %>% st_transform(25832) %>% 
+  mutate(
+    x = st_coordinates(.)[, 1],
+    y = st_coordinates(.)[, 2]
+  ) %>% st_drop_geometry() %>% 
+  select(x,y) %>% 
+  write_csv("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/1_processed/osm_supermarkets_buffer5km/supermarkets_25832.csv")
+
+
+```
+
