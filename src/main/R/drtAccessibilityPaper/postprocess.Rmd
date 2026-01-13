@@ -30,15 +30,24 @@ library(patchwork)
 # INPUTS
 
 ## Accessibility File
-Remember to set matsim-kelheim as working directory
+
+Set directories
 ```{r}
-main_time <- "7:30"
 # input directory
-base_dir <- "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/2026-01-12-b/"
+base_dir <- "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/kelheim-v3/"
+sensitivity_dir <- "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/kelheim-v3-sensitivity/"
 
 acc_dir <- paste0(base_dir,"analysis/accessibility/")
 figure_dir <-  paste0(base_dir, "figures-R/")
 dir.create(figure_dir)
+```
+
+
+
+Remember to set matsim-kelheim as working directory
+```{r}
+main_time <- "7:30"
+
 
 
 accessibility_full <- data.frame()
@@ -591,7 +600,7 @@ scenarios <- c("a-1","a-2","a-3","b-1","b-2","b-3","c-1","c-2","c-3")
 
 sensitivity_data_raw <- map_dfr(scenarios, function(scenario) {
   path <- paste0(
-    "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/2026-01-09-calibration/",
+    sensitivity_dir,
     scenario,
     "/analysis/accessibility/train_station/accessibilities.csv"
   )

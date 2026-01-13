@@ -132,8 +132,8 @@ map_regiostar_germany <- tm_shape(shp_regiostar) +
   # tm_shape(bbox_sf) +
   #tm_borders(col = "purple")
 
-map_regiostar_germany
-tmap_save(map_regiostar_germany, filename = paste0(figure_dir,"map_regiostar_germany.pdf"),   width = 12, height = 12, units = "cm",asp = 0)
+# map_regiostar_germany
+# tmap_save(map_regiostar_germany, filename = paste0(figure_dir,"map_regiostar_germany.pdf"),   width = 12, height = 12, units = "cm",asp = 0)
 
 
 
