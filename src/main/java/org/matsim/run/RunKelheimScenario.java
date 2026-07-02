@@ -4,6 +4,7 @@ import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import jakarta.annotation.Nullable;
+import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
 import org.matsim.analysis.postAnalysis.drt.DrtServiceQualityAnalysis;
@@ -22,6 +23,7 @@ import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.traffic.LinkStats;
 import org.matsim.application.options.SampleOptions;
+import org.matsim.application.options.ShpOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
 import org.matsim.application.prepare.longDistanceFreightGER.tripExtraction.ExtractRelevantFreightTrips;
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
@@ -48,12 +50,15 @@ import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.config.groups.RoutingConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
+import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
@@ -67,6 +72,7 @@ import org.matsim.contrib.vsp.pt.fare.DistanceBasedPtFareParams;
 import org.matsim.contrib.vsp.pt.fare.PtFareConfigGroup;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SplittableRandom;
@@ -77,9 +83,9 @@ import java.util.SplittableRandom;
 	MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
 	CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class
 })
-@MATSimApplication.Analysis({
-	LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
-})
+//@MATSimApplication.Analysis({
+//	LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
+//})
 public class RunKelheimScenario extends MATSimApplication {
 
 	public static final String VERSION = "3.1";
@@ -97,6 +103,9 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
 	private boolean drt;
 
+
+	@CommandLine.Option(names = "--with-drt-expandedServiceArea", defaultValue = "false", description = "enable DRT service")
+	private boolean drtExpandedServiceArea;
 	// a couple of CommandLine.Options below actually are not strictly necessary but rather allow for circumvention of settings directly via config and/or config options.... (ts 07/23)
 
 	/**
@@ -129,6 +138,8 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy. If unspecified, the starting" +
 		"points of the fleet will be set as waiting points", defaultValue = "")
 	private String waitingPointsPath;
+	private String expandedDrtStopsFile = "../../../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/1_processed/drt_stops/drt_stops.xml";
+	private String drtServiceAreaShp = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/0_raw/shp_kelheim/lk-kelheim.shp";
 
 
 	public RunKelheimScenario(@Nullable Config config) {
@@ -198,10 +209,15 @@ public class RunKelheimScenario extends MATSimApplication {
 				if (drtConfigGroup.getMode().equals(TransportMode.drt)) {
 					DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtConfigGroup;
 					addDrtCompanionParameters(drtWithExtensionsConfigGroup);
+
+					if (drtExpandedServiceArea) {
+						drtConfigGroup.setTransitStopFile(expandedDrtStopsFile);
+					}
 				}
 			}
 
 			ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
+			config.qsim().setSimStarttimeInterpretation(QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime);
 			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.scoring(), config.routing());
 		}
 
@@ -271,6 +287,25 @@ public class RunKelheimScenario extends MATSimApplication {
 				.getFactory()
 				.getRouteFactories()
 				.setRouteFactory(DrtRoute.class, new DrtRouteFactory());
+
+			if (drtExpandedServiceArea) {
+
+				// add 11km buffer around LK  to include those drt stops that are located outside of LK
+				Geometry serviceArea = new ShpOptions(drtServiceAreaShp, null, null)
+					.getGeometry().buffer(11000);
+
+				for (Link link : scenario.getNetwork().getLinks().values()) {
+					if (serviceArea.contains(MGC.coord2Point(link.getCoord()))) {
+
+						Set<String> updatedModes = new HashSet<>(link.getAllowedModes());
+						updatedModes.add(TransportMode.drt);
+						link.setAllowedModes(updatedModes);
+
+					}
+				}
+
+				NetworkUtils.cleanNetwork(scenario.getNetwork(), Set.of(TransportMode.drt));
+			}
 		}
 
 		if (bikeRnd) {
@@ -349,15 +384,17 @@ public class RunKelheimScenario extends MATSimApplication {
 			controler.addOverridingModule(new MultiModeDrtCompanionModule());
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
 
-			// Add speed limit to av vehicle
-			double maxSpeed = controler.getScenario()
+			boolean hasAvMode = multiModeDrtConfig.getModalElements().stream()
+				.anyMatch(drtCfg -> drtCfg.getMode().equals("av"));
+			VehicleType autonomousVehicleType = controler.getScenario()
 				.getVehicles()
 				.getVehicleTypes()
-				.get(Id.create("autonomous_vehicle", VehicleType.class))
-				.getMaximumVelocity();
-			controler.addOverridingModule(
-				new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
-					maxSpeed));
+				.get(Id.create("autonomous_vehicle", VehicleType.class));
+			if (hasAvMode && autonomousVehicleType != null) {
+				controler.addOverridingModule(
+					new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
+						autonomousVehicleType.getMaximumVelocity()));
+			}
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, baseFare, surcharge));

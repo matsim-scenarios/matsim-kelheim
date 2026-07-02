@@ -1,5 +1,6 @@
 package org.matsim.analysis.postAnalysis.accessibility;
 
+import org.matsim.analysis.postAnalysis.accessibility.prepare.PreparePoisInput;
 import org.matsim.application.analysis.accessibility.*;
 import org.matsim.application.analysis.traffic.TrafficAnalysis;
 import org.matsim.application.prepare.network.CreateAvroNetwork;
@@ -149,13 +150,13 @@ public class AccessibilityDashboardHeart implements Dashboard {
 			setColorRampBounds(true, -10, 10);
 
 		// add poi in background
-		String poiFilename = data.computeWithPlaceholder(PreparePois.class, "%s/pois.shp", poi, "--input-crs", coordinateSystem);
-		BackgroundLayer poiBackgroundLayer = new BackgroundLayer(poiFilename);
-		poiBackgroundLayer.setOnTop(true);
-		poiBackgroundLayer.setBorderWidth(5);
-		poiBackgroundLayer.setBorderColor("red");
-
-		viz.addBackgroundLayer("poi",poiBackgroundLayer);
+//		String poiFilename = data.computeWithPlaceholder(PreparePois.class, "%s/pois.shp", poi, "--input-crs", coordinateSystem);
+//		BackgroundLayer poiBackgroundLayer = new BackgroundLayer(poiFilename);
+//		poiBackgroundLayer.setOnTop(true);
+//		poiBackgroundLayer.setBorderWidth(5);
+//		poiBackgroundLayer.setBorderColor("red");
+//
+//		viz.addBackgroundLayer("poi",poiBackgroundLayer);
 
 	}
 }
