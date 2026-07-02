@@ -5,10 +5,7 @@ import org.matsim.application.analysis.accessibility.*;
 import org.matsim.application.analysis.traffic.TrafficAnalysis;
 import org.matsim.application.prepare.network.CreateAvroNetwork;
 import org.matsim.contrib.accessibility.Modes4Accessibility;
-import org.matsim.simwrapper.Dashboard;
-import org.matsim.simwrapper.Data;
-import org.matsim.simwrapper.Header;
-import org.matsim.simwrapper.Layout;
+import org.matsim.simwrapper.*;
 import org.matsim.simwrapper.viz.*;
 
 import java.util.List;
@@ -52,7 +49,7 @@ public class AccessibilityDashboardHeart implements Dashboard {
 	}
 
 	@Override
-	public void configure(Header header, Layout layout) {
+	public void configure(Header header, Layout layout, SimWrapperConfigGroup simWrapperConfigGroup) {
 
 
 		header.title = "Accessibility: " + modeStylized;
@@ -62,8 +59,7 @@ public class AccessibilityDashboardHeart implements Dashboard {
 		header.fullScreen = true;
 
 
-
-		for(String poi : pois) {
+		for (String poi : pois) {
 
 
 			layout.row("accessibility-" + poi)

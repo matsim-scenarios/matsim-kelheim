@@ -7,8 +7,6 @@ import jakarta.annotation.Nullable;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
-import org.matsim.analysis.postAnalysis.drt.DrtServiceQualityAnalysis;
-import org.matsim.analysis.postAnalysis.drt.DrtVehiclesRoadUsageAnalysis;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -20,8 +18,6 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.application.MATSimApplication;
-import org.matsim.application.analysis.CheckPopulation;
-import org.matsim.application.analysis.traffic.LinkStats;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.options.ShpOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
@@ -29,6 +25,7 @@ import org.matsim.application.prepare.longDistanceFreightGER.tripExtraction.Extr
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
+import org.matsim.contrib.common.conventions.vsp.SnzActivities;
 import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
@@ -46,7 +43,6 @@ import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
 import org.matsim.contrib.vsp.pt.fare.PtFareModule;
-import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -147,7 +143,8 @@ public class RunKelheimScenario extends MATSimApplication {
 	}
 
 	public RunKelheimScenario() {
-		super(String.format("input/v%s/kelheim-v%s-config.xml", VERSION, VERSION));
+		super();
+		configPath = String.format("input/v%s/kelheim-v%s-config.xml", VERSION, VERSION);
 	}
 
 	public static void main(String[] args) {
@@ -203,6 +200,10 @@ public class RunKelheimScenario extends MATSimApplication {
 			config.addModule(new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
 
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
+			if (multiModeDrtConfig.getModalElements().isEmpty()) {
+				throw new IllegalStateException("--with-drt requires a config with at least one DRT parameter set. "
+					+ "Use e.g. --config input/v" + VERSION + "/kelheim-v" + VERSION + "-25pct.kexi.config.xml");
+			}
 
 			for (DrtConfigGroup drtConfigGroup : multiModeDrtConfig.getModalElements()) {
 				//only the KEXI (conventionally driven drt) should get companions

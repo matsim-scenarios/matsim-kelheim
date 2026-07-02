@@ -2,10 +2,7 @@ package org.matsim.dashboard;
 
 
 import org.matsim.analysis.postAnalysis.drt.DrtPostProcessingAverageAnalysis;
-import org.matsim.simwrapper.Dashboard;
-import org.matsim.simwrapper.Data;
-import org.matsim.simwrapper.Header;
-import org.matsim.simwrapper.Layout;
+import org.matsim.simwrapper.*;
 import org.matsim.simwrapper.viz.*;
 
 import java.util.ArrayList;
@@ -34,7 +31,8 @@ public class AverageDrtDashboard implements Dashboard {
 	}
 
 	@Override
-	public void configure(Header header, Layout layout) {
+	public void configure(Header header, Layout layout, SimWrapperConfigGroup simWrapperConfigGroup) {
+
 		header.title = mode;
 		header.description = "Overview for the demand-responsive mode '" + mode + "'. This dashboard shows average values for " + noRuns +
 			" simulation runs. For the results of the specific runs please choose the according directory next to this dashboard.yaml.";

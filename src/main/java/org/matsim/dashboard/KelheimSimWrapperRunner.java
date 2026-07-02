@@ -92,7 +92,7 @@ final class KelheimSimWrapperRunner implements MATSimAppCommand {
 
 			}
 			//skip default dashboards
-			simwrapperCfg.setDefaultDashboards(SimWrapperConfigGroup.Mode.disabled);
+			simwrapperCfg.setDefaultDashboards(SimWrapperConfigGroup.DefaultDashboardsMode.disabled);
 			simwrapperCfg.defaultParams().setMapCenter("11.89223, 48.91265");
 
 			//add dashboards according to command line parameters

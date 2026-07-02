@@ -65,12 +65,13 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 	/**
 	 * Produces the dashboard.
 	 */
-	public void configure(Header header, Layout layout) {
+	public void configure(Header header, Layout layout, SimWrapperConfigGroup simWrapperConfigGroup) {
+
 		header.title = "Average Air Pollution";
 		header.description = "Shows the average air pollution and spatial distribution for several simulation runs.";
 
 		String linkDescription = "Displays the emissions for each link per meter. Be aware that emission values are provided in the simulation sample size!";
-		if (pathToCsvBase != null){
+		if (pathToCsvBase != null) {
 			linkDescription += String.format("%n Base is %s", pathToCsvBase);
 		}
 		String finalLinkDescription = linkDescription;
