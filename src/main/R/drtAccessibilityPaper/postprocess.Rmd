@@ -25,6 +25,8 @@ library(osmdata)
 library(xml2)
 library(xtable)
 library(patchwork)
+library(cowplot)
+
 ```
 
 # INPUTS
@@ -133,11 +135,12 @@ Define Palettes
 col_title <-  "Color: Accessibility\n[utils]"
 # col_vals <-  c("#B2182B", "#D6604D", "#F4A582" ,"#92C5DE", "#4393C3", "#2166AC")
 
-col_vals_div <- brewer.pal(7, "RdYlBu")
+col_vals_div <- brewer.pal(9, "RdYlBu")
 col_breaks_div <-  c(-Inf,seq(-7,7,by = 2), Inf)
 midpoint_div <- 0
 
-col_vals_pure <- viridis(9)
+# "#440154FF" "#472D7BFF" "#3B528BFF" "#2C728EFF" "#21908CFF" "#27AD81FF" "#5DC863FF" "#AADC32FF" "#FDE725FF"
+col_vals_pure <- viridis(8)
 col_breaks_pure <-  c(-Inf,seq(-14,-2,by = 2), Inf)
 midpoint_pure <- -8
 
@@ -324,6 +327,119 @@ generate_map <- function(mode1, poi1,time1, opacity, col_vals = NULL, col_breaks
 
 ```
 
+for manual legend
+```{r}
+
+
+build_legend_col <- function(acc_breaks,acc_colors,acc_mid, text) {
+  
+
+
+legend_df <- data.frame(
+  x = acc_mid,
+  y = 1
+)
+
+legend_plot <- ggplot(legend_df, aes(x = x, y = y, fill = x)) +
+
+  geom_tile(height = 0.8, width = 4) +
+
+  scale_fill_stepsn(
+    colours = acc_colors,
+    breaks = acc_breaks,
+    limits = c(min(acc_mid)-1, max(acc_mid) + 1),
+    name = text,
+    guide = guide_colorbar(
+      direction = "horizontal",
+      barwidth  = unit(90, "mm"),  # ← makes bins wider
+      barheight = unit(5, "mm")
+  )
+  ) +  scale_color_identity(guide = "legend") + theme_void() +
+  theme(
+    legend.position = "top",
+    legend.box = "vertical",
+    text = element_text(size = 14)
+  )
+
+return(get_legend(legend_plot))
+}
+
+build_legend_col <- function(acc_breaks, acc_colors, acc_mid, text) {
+
+  # Create a discrete legend dataframe
+  legend_df <- data.frame(
+    x = factor(acc_mid, levels = acc_mid),  # treat midpoints as discrete
+    y = 1
+  )
+
+  # Create the plot
+  p <- ggplot(legend_df, aes(x = x, y = y, fill = x)) +
+    geom_tile(height = 0.8, width = 4) +
+    
+    # Manual fill to force exact colors
+    scale_fill_manual(
+      values = setNames(acc_colors, acc_mid),  # map each midpoint to a color
+      name = text,
+      guide = guide_legend(
+        direction = "horizontal",
+        title.position = "top",
+        keywidth = unit(10, "mm"),   # width of each legend box
+        keyheight = unit(5, "mm")
+      )
+    ) +
+    
+    # Minimal theme for a clean legend
+    theme_void() +
+    theme(
+      legend.position = "top",
+      legend.box = "vertical",
+      text = element_text(size = 14)
+    )
+
+  # Extract the legend only
+  return(get_legend(p))
+}
+
+build_legend_loc <- function() {
+  legend_plot <- ggplot() +
+
+  # ---- Location legend ----
+  geom_point(aes(x = 0, y = 0, shape = "DRT Stop", color = "DRT Stop")) +
+  geom_point(aes(x = 0, y = 0, shape = "PT Stop", color = "PT Stop")) +
+  geom_point(aes(x = 0, y = 0, shape = "Major Roads", color = "Major Roads")) +
+  geom_point(aes(x = 0, y = 0, shape = "Opportunity", color = "Opportunity")) +
+
+  scale_shape_manual(
+    name = "Location:",
+    values = c(
+      "DRT Stop" = 16,
+      "PT Stop" = 18,
+      "Major Roads" = 3,
+      "Opportunity" = 17
+    ),
+  ) +
+  scale_color_manual(
+    name = "Location:",
+    values = c(
+      "DRT Stop" = "gray40",
+      "PT Stop" = "blue",
+      "Major Roads" = "gray40",
+      "Opportunity" = "red"
+    ),
+  ) +
+
+  theme_void() +
+  theme(
+    legend.position = "top",
+    legend.box = "vertical",
+    text = element_text(size = 14)
+  )
+
+return(get_legend(legend_plot))
+}
+
+```
+
 ## Run Accessibility Calculation
 
 ```{r}
@@ -335,11 +451,25 @@ for(poi1 in c("train_station","logistic","supermarket")){
   for(mode1 in c("car","pt","estimatedDrt")) {
     full_map <- generate_map(mode1,poi1,main_time,"off")
     file_name <- paste0(figure_dir,"fig3",subfigs[count],"_",mode1,"_",poi1,".pdf")
-    tmap_save(full_map, filename = file_name,   width = 8, height = 6, units = "cm") # ,asp = 0
+    tmap_save(full_map + tm_layout(legend.show = FALSE), filename = file_name,   width = 6,units = "cm") # ,asp = 0
     count <- count + 1
     
   }
 }
+
+legend_loc <- build_legend_loc()
+ggsave(legend_loc , filename = paste0(figure_dir,"fig3x_legend_loc.pdf"),width = 16,
+  height = 1,
+  units = "cm")
+
+
+legend3 <- build_legend_col(col_breaks_pure,c(col_vals_pure,"#FDE725FF"),seq(-15,-1,2),"Accessibility (utils):") 
+plot(legend3)
+ggsave(legend3 , filename = paste0(figure_dir,"fig3x_legend.pdf"),width = 16,
+  height = 1,
+  units = "cm")
+ 
+ 
 
 
 # temporal (difference plots DRT - PT)
@@ -348,13 +478,107 @@ for(poi in c("train_station")){
   for(time1 in times <- c(main_time,"8:30","24:00")){
     full_map <- generate_map(c("estimatedDrt","pt"), poi, time1, "off")
     file_name <- paste0(figure_dir,"fig4",subfigs[count],"_",paste(mode1,collapse="-"),"_",poi1,"_",time1, ".pdf")
-    tmap_save(full_map, filename = file_name,   width = 8, height = 6, units = "cm") # ,asp = 0
+    tmap_save(full_map + tm_layout(legend.show = FALSE), filename = file_name,  width = 6, units = "cm") # ,asp = 0
     count <- count + 1
   }
-}
-
+ }
+  
+  legend4 <- build_legend_col(col_breaks_div,col_vals_div,seq(-8,8,2),"Accessibility Diff (utils):") 
+  plot(legend4)
+  ggsave(legend4 , filename = paste0(figure_dir,"fig4x_legend.pdf"),width = 15,
+  height = 1,
+  units = "cm")
+  
+  
+full_map <- generate_map(c("estimatedDrt","pt"), "train_station", main_time, "off")
+ tmap_save(full_map + tm_layout(legend.show = FALSE), filename = paste0(figure_dir,"xxx_fig4.png"),  width = 6, units = "cm") # ,asp = 0
 
 ```
+
+
+Summary Plot Spatiotemporal
+```{r}
+temporal_plot <- accessibility_full %>% 
+  mutate(population = population * 4) %>% 
+  st_drop_geometry() %>% pivot_longer(ends_with("accessibility"),values_to = "accessibility",names_to = "mode") %>% 
+  mutate(mode = str_replace(mode, "_accessibility","")) %>% 
+  mutate(mode = factor(mode,levels = c("car","estimatedDrt","pt","teleportedWalk"), labels = c("Car","DRT","PT","Walk"))) %>% 
+  mutate(poi = factor(poi, levels = c("train_station","logistic","supermarket"), labels = c("Train Station","Logistic","Supermarket"))) %>% 
+  group_by(time,poi,mode) %>% summarise(accessibility = sum(accessibility * population)/sum(population)) %>% 
+  ggplot() +
+  geom_point(aes(time,accessibility, col = mode), size = .5) +
+  facet_wrap(~poi) +
+  scale_x_time(labels = scales::label_time("%H"),breaks = scales::breaks_width("6 hour"))+
+  theme_minimal(base_size = 14)+
+  theme(legend.position = "bottom") +
+  labs(x = "Time", y = "Accessibility (utils)")
+temporal_plot
+ggsave(temporal_plot, file = paste0(figure_dir,"fig4_5_temporal.pdf"),width = 20, height = 10, units = "cm", dpi = 300, device = cairo_pdf)
+
+temporal_plot
+ggsave(temporal_plot, file = paste0(figure_dir,"fig4_5_temporal.pdf"),width = 20, height = 10, units = "cm", dpi = 300, device = cairo_pdf)
+
+# PER POID
+
+prep <- accessibility_full %>% 
+  mutate(population = population * 4) %>% 
+  st_drop_geometry() %>% pivot_longer(ends_with("accessibility"),values_to = "accessibility",names_to = "mode") %>% 
+  mutate(mode = str_replace(mode, "_accessibility","")) %>% 
+  mutate(mode = factor(mode,levels = c("car","estimatedDrt","pt","teleportedWalk"), labels = c("Car","DRT","PT","Walk"))) %>% 
+  mutate(poi = factor(poi, levels = c("train_station","logistic","supermarket"), labels = c("Train Station","Logistic","Supermarket"))) %>% 
+  group_by(time,poi,mode) %>% summarise(accessibility = sum(accessibility * population)/sum(population))
+
+temporal_train <- prep %>% 
+  filter(poi == "Train Station") %>% 
+  ggplot() +
+  geom_point(aes(time,accessibility, col = mode), size = .5) +
+  # facet_wrap(~poi) +
+  scale_x_time(labels = scales::label_time("%H"),breaks = scales::breaks_width("6 hour"))+
+  theme_minimal(base_size = 14)+
+  coord_cartesian(ylim = c(-32,0))+
+  theme(legend.position = "bottom") +
+  labs(x = "Time", y = "Accessibility (utils)")
+
+temporal_logistic <- prep %>% 
+  filter(poi == "Logistic") %>% 
+  ggplot() +
+  geom_point(aes(time,accessibility, col = mode), size = .5) +
+  # facet_wrap(~poi) +
+  scale_x_time(labels = scales::label_time("%H"),breaks = scales::breaks_width("6 hour"))+
+  theme_minimal(base_size = 14)+
+  coord_cartesian(ylim = c(-32,0))+
+  theme(legend.position = "bottom") +
+  labs(x = "Time", y = "Accessibility (utils)")
+
+
+temporal_supermarket <- prep %>% 
+  filter(poi == "Supermarket") %>% 
+  ggplot() +
+  geom_point(aes(time,accessibility, col = mode), size = .5) +
+  # facet_wrap(~poi) +
+  scale_x_time(labels = scales::label_time("%H"),breaks = scales::breaks_width("6 hour"))+
+  theme_minimal(base_size = 14)+
+  coord_cartesian(ylim = c(-32,0))+
+  theme(legend.position = "bottom") +
+  labs(x = "Time", y = "Accessibility (utils)")
+
+ggsave(temporal_train  +   theme(legend.position = "none"), file = paste0(figure_dir,"fig4_5_temporal_train.pdf"), width = 9,height = 11,units = "cm", dpi = 300, device = cairo_pdf)
+
+ggsave(temporal_logistic +   theme(legend.position = "none"), file = paste0(figure_dir,"fig4_5_temporal_logisitic.pdf"), width = 9, height = 11,units = "cm", dpi = 300, device = cairo_pdf)
+
+
+ggsave(temporal_supermarket +   theme(legend.position = "none"), file = paste0(figure_dir,"fig4_5_temporal_supermarket.pdf"), width = 9,height = 11,units = "cm", dpi = 300, device = cairo_pdf)
+
+
+ggsave(get_legend(temporal_supermarket),file = paste0(figure_dir,"fig4_5_temporal_legend.pdf"),width = 10,height = 1,units = "cm")
+
+
+
+
+
+  
+```
+
 
 # EQUITY CALCULATION
 
@@ -383,7 +607,8 @@ equity_distribution_supermarket_730 <- accessibility_processed %>%
   st_drop_geometry() %>% 
   mutate(max_with_drt = pmax(pmax(pt_accessibility,estimatedDrt_accessibility),teleportedWalk_accessibility)) %>%
   mutate(max_without_drt = pmax(pt_accessibility,teleportedWalk_accessibility)) %>% 
-  select(population,`With DRT` = max_with_drt,`No DRT` = max_without_drt) %>% uncount(population) %>% 
+  select(population,`With DRT` = max_with_drt,`No DRT` = max_without_drt) %>%
+  uncount(population) %>% 
   pivot_longer(everything(), names_to = "scenario",values_to = "value")
 
 
@@ -435,6 +660,55 @@ plot_ecdf
 
 # save plot
 ggsave(plot_ecdf, file = paste0(figure_dir,"fig5_equity_ecdf.pdf"),width = 10, height = 10, units = "cm", dpi = 300, device = cairo_pdf)
+
+ggsave(plot_ecdf, file = paste0(figure_dir,"xxx_fig5_equity_ecdf.png"),width = 10, height = 10, units = "cm", dpi = 300)
+
+
+# ggsave(plot_ecdf, file = paste0(figure_dir,"xxx_graphical_abstract.pdf"),width = 15, height = 20, units = "cm", dpi = 300, device = cairo_pdf)
+
+```
+###V2
+```{r}
+
+percentiles <- seq(0.1, 1.0, by = 0.1)
+
+# general population
+df_percentiles <- tibble(
+  percentile = percentiles,
+  base_max_accessibility = quantile(
+    equity_distribution_supermarket_730 %>% filter(scenario == "No DRT") %>% pull(value),
+    probs = percentiles,
+    na.rm = TRUE
+  ),
+  policy_mobility_max_accessibility = quantile(
+    equity_distribution_supermarket_730 %>% filter(scenario == "With DRT") %>% pull(value),
+    probs = percentiles,
+    na.rm = TRUE
+  )
+) %>% 
+  pivot_longer(
+    cols = c(base_max_accessibility,
+             policy_mobility_max_accessibility),
+    names_to = "scenario",
+    values_to = "accessibility"
+  ) %>% 
+  mutate(scenario = factor(scenario, levels = c("base_max_accessibility", "policy_mobility_max_accessibility"), labels = c("Base Case", "Policy Mobility"))) %>% 
+  mutate(percentile = factor(percentile * 100))
+
+ggplot(df_percentiles,
+       aes(x = percentile,
+           y = accessibility,
+           fill = scenario)) +
+  geom_col(position = "dodge", width = 0.7) +
+  scale_fill_manual(values = c(
+  `Base Case` = "#B2B2B2",
+  `Policy Safety` = "#B32928",
+  `Policy Mobility` = "#468EC7",
+  `Policy Combined` = "#8422F4"
+)) +
+  labs(x = "Percentile", y = "Accessibility (utils)") +
+  theme_minimal(base_size = 14)
+
 
 ```
 
@@ -492,7 +766,7 @@ scatter_prep %>% filter(mode == "walk")  %>% filter(population_density > 3000) %
 
 ```{r}
 
-for(threshold in c(-6,-3)){
+for(threshold in c(-6)){
   supermarket_threshold <- accessibility_processed %>%
     filter(time == hm("7:30"), poi == "supermarket") %>% 
     filter(population_density > 5) %>% 
@@ -543,7 +817,8 @@ legend_only <- tm_add_legend(
   fill = c("yellow","#1b9e77","purple", "red"),
   lwd = 0,
   size = .4,
-  title = "Mode"
+  title = "Mode",
+  orientation = "horizontal"
 ) +
   tm_layout(
     legend.only = TRUE,

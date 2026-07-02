@@ -16,6 +16,7 @@ library(tidyverse)
 library(readxl)
 library(sf)
 library(tmap)
+library(tmaptools)
 ```
 
 
@@ -132,7 +133,7 @@ map_regiostar_germany <- tm_shape(shp_regiostar) +
   # tm_shape(bbox_sf) +
   #tm_borders(col = "purple")
 
-# map_regiostar_germany
+map_regiostar_germany
 # tmap_save(map_regiostar_germany, filename = paste0(figure_dir,"map_regiostar_germany.pdf"),   width = 12, height = 12, units = "cm",asp = 0)
 
 
@@ -144,8 +145,9 @@ Map of Bavaria
 ```{r}
 
 # Nearby Cities
-shp_nearby_cities <- shp_gemeinden %>% filter(GEN %in% c("Ingolstadt", "Regensburg","München","Nürnberg","Würzburg")) %>% st_centroid()
+shp_nearby_cities <- shp_gemeinden %>% filter(GEN %in% c("Regensburg","München","Nürnberg","Würzburg")) %>% st_centroid()
 
+shp_nearby_cities2 <- shp_gemeinden %>% filter(GEN == "Ingolstadt") %>% st_centroid()
 
 
 overview_map <- tm_shape(shp_bundesland) +
@@ -163,26 +165,25 @@ overview_map
 map_regiostar_bavaria <- tm_shape(shp_regiostar %>% st_intersection(shp_bayern), bbox = bb(shp_bayern, ext = 1.0)) +
   tm_fill(fill = regiostar_cat, popup.vars = c(regiostar_cat), fill.scale = tm_scale(values = regiostar_colors)) +
   tm_shape(shp_kelheim)+
-  tm_borders(col = "red")+
+  tm_borders(col = "red", lwd =2)+
   tm_shape(shp_bundesland) +
   tm_borders() +
+    tm_shape(shp_bundesland %>% filter(GEN == "Bayern")) +
+  tm_borders(col = "purple", lwd = 2) +
   tm_basemap("Esri.WorldGrayCanvas") +
   # tm_shape(rivers_sf %>% filter(S_NAME == "Donau")) +
   # tm_lines(col = "blue") +
   tm_shape(shp_nearby_cities) +
   tm_dots() +
-  tm_labels("GEN") +
-   tm_inset(
-    overview_map,
-    height = 12,
-    width = 9,
-    position = tm_pos_in(-.05,0.5)
-  )+
-  tm_layout(legend.show = FALSE)
+  tm_labels("GEN",just = "right") +
+  tm_shape(shp_nearby_cities2) +
+  tm_dots() +
+  tm_labels("GEN", just = "left")
+
 
 map_regiostar_bavaria
 
-tmap_save(map_regiostar_bavaria, filename = paste0(figure_dir,"fig2a_map_regiostar_bavaria.pdf"),   width = 12, height = 12, units = "cm",asp = 0)
+tmap_save(map_regiostar_bavaria, filename = paste0(figure_dir,"fig2a_map_regiostar_bavaria.pdf"),   width = 12, height = 9, units = "cm",asp = 0)
 
 ```
 
@@ -229,8 +230,9 @@ basemap <- get_tiles(
   zoom = 8
 )
 # zoomed in
-map_regiostar_kelheim <- tm_shape(shp_kelheim) +
-  tm_borders(col = "red") +
+map_regiostar_kelheim <-
+  tm_shape(shp_kelheim) +
+  tm_borders(col = "red",lwd = 2) +
   tm_basemap("Esri.WorldGrayCanvas") +
   tm_shape(rivers_sf %>% filter(S_NAME == "Donau")) +
   tm_lines(col = "blue") +
@@ -238,7 +240,14 @@ map_regiostar_kelheim <- tm_shape(shp_kelheim) +
   # tm_dots(col = "purple", size = 1)+
   tm_shape(sf_all)+
   tm_dots(fill = "zone",  fill.scale = tm_scale_categorical(values = categorical_colors)) +
-  tm_layout(legend.show = FALSE)
+  tm_layout(legend.show = FALSE)+
+   tm_inset(
+    overview_map,
+    height = 10,
+    width = 7,
+    position = tm_pos_in(0.62,0.52)
+  )
+
   # tm_shape(shp_nearby_cities) +
   # tm_dots() +
   # tm_labels("GEN")
@@ -248,61 +257,96 @@ map_regiostar_kelheim <- tm_shape(shp_kelheim) +
 map_regiostar_kelheim
 
 
-tmap_save(map_regiostar_kelheim, filename = paste0(figure_dir,"fig2b_map_regiostar_kelheim.pdf"),   width = 12, height = 12, units = "cm",asp = 0)
+tmap_save(map_regiostar_kelheim, filename = paste0(figure_dir,"fig2b_map_regiostar_kelheim.pdf"),   width = 9, height = 9, units = "cm",asp = 0)
 
 
 
 ```
+for japan powerpoint:
+```{r}
+
+
+bb <- st_bbox(shp_kelheim)
+
+xrange <- bb["xmax"] - bb["xmin"]
+yrange <- bb["ymax"] - bb["ymin"]
+
+bb2 <- bb
+bb2["xmin"] <- bb["xmin"] - xrange / 2
+bb2["xmax"] <- bb["xmax"] + xrange 
+bb2["ymin"] <- bb["ymin"] - yrange 
+bb2["ymax"] <- bb["ymax"] + yrange / 2
+
+tm_shape(shp_kelheim, bbox = st_as_sfc(bb2)) +
+  tm_borders(col = "red",lwd = 2) +
+  # tm_basemap("Esri.WorldGrayCanvas") +
+  tm_shape(rivers_sf %>% filter(S_NAME == "Donau")) +
+  tm_lines(col = "blue") +
+  tm_basemap("Stadia.StamenTerrainBackground", api = "996f61fe-f7b6-4641-bb2b-555eca9cdd21") +
+  tm_shape(shp_stadt_kelheim_centroid) +
+  tm_dots(col = "purple", size = .2)+
+  tm_shape(shp_nearby_cities) +
+  tm_dots(col = "purple", size = .2)+
+  tm_dots(col = "purple", size = .2)+
+  tm_shape(shp_nearby_cities2) +
+  tm_dots(col = "purple", size = .2)+
+  # tm_shape(sf_all)+
+  # tm_dots(fill = "zone",  fill.scale = tm_scale_categorical(values = categorical_colors)) +
+  tm_layout(legend.show = FALSE)
+```
+
+
 
 Bavaria for Appendix:
 
 ```{r}
-
-# Nearby Cities
-shp_nearby_cities <- shp_gemeinden %>% filter(GEN %in% c("Regensburg","München","Nürnberg","Würzburg")) %>% st_centroid()
-
-shp_nearby_cities2 <- shp_gemeinden %>% filter(GEN == "Ingolstadt") %>% st_centroid()
-
-
-
-# overview_map <- tm_shape(shp_bundesland) +
-#   tm_basemap("Esri.WorldGrayCanvas") +
-#   tm_borders(col = "black") +
-#   tm_shape(shp_bayern) +
-#   tm_fill(fill= "purple", lwd = 2) +
-#     tm_shape(shp_kelheim) +
-#   tm_fill(fill= "red", lwd = 2)
 # 
-# overview_map
-
-
-
-map_regiostar_bavaria <- tm_shape(shp_regiostar %>% st_intersection(shp_bayern), bbox = bb(shp_bayern, ext = 1.0)) +
-  tm_fill(fill = regiostar_cat, popup.vars = c(regiostar_cat), fill.scale = tm_scale(values = regiostar_colors)) +
-  tm_shape(shp_kelheim)+
-  tm_borders(col = "red")+
-  tm_shape(shp_bundesland) +
-  tm_borders() +
-  tm_basemap("Esri.WorldGrayCanvas") +
-  # tm_shape(rivers_sf %>% filter(S_NAME == "Donau")) +
-  # tm_lines(col = "blue") +
-  tm_shape(shp_nearby_cities) +
-  tm_dots() +
-  tm_labels("GEN") +
-  tm_shape(shp_nearby_cities2) +
-  tm_dots() +
-  tm_labels("GEN", just = "left", xmod = -.5)
-  #  tm_inset(
-  #   overview_map,
-  #   height = 12,
-  #   width = 9,
-  #   position = tm_pos_in(-.05,0.5)
-  # )+
-  # tm_layout(legend.show = FALSE)
-
-map_regiostar_bavaria
-
-tmap_save(map_regiostar_bavaria, filename = paste0(figure_dir,"fig8_map_regiostar_bavaria_appendix.pdf"))
+# # Nearby Cities
+# shp_nearby_cities <- shp_gemeinden %>% filter(GEN %in% c("Regensburg","München","Nürnberg","Würzburg")) %>% st_centroid()
+# 
+# shp_nearby_cities2 <- shp_gemeinden %>% filter(GEN == "Ingolstadt") %>% st_centroid()
+# 
+# 
+# 
+# # overview_map <- tm_shape(shp_bundesland) +
+# #   tm_basemap("Esri.WorldGrayCanvas") +
+# #   tm_borders(col = "black") +
+# #   tm_shape(shp_bayern) +
+# #   tm_fill(fill= "purple", lwd = 2) +
+# #     tm_shape(shp_kelheim) +
+# #   tm_fill(fill= "red", lwd = 2)
+# # 
+# # overview_map
+# 
+# 
+# 
+# map_regiostar_bavaria <- tm_shape(shp_regiostar %>% st_intersection(shp_bayern), bbox = bb(shp_bayern, ext = 1.0)) +
+#   tm_fill(fill = regiostar_cat, popup.vars = c(regiostar_cat), fill.scale = tm_scale(values = regiostar_colors)) +
+#   tm_shape(shp_kelheim)+
+#   tm_borders(col = "red")+
+#   tm_shape(shp_bundesland) +
+#   tm_borders() +
+#   tm_basemap("Esri.WorldGrayCanvas") +
+#   # tm_shape(rivers_sf %>% filter(S_NAME == "Donau")) +
+#   # tm_lines(col = "blue") +
+#   tm_shape(shp_nearby_cities) +
+#   tm_dots() +
+#   tm_labels("GEN") +
+#   tm_shape(shp_nearby_cities2) +
+#   tm_dots() +
+#   tm_labels("GEN", just = "left", xmod = -.5)
+# 
+#   #  tm_inset(
+#   #   overview_map,
+#   #   height = 12,
+#   #   width = 9,
+#   #   position = tm_pos_in(-.05,0.5)
+#   # )+
+#   # tm_layout(legend.show = FALSE)
+# 
+# map_regiostar_bavaria
+# 
+# tmap_save(map_regiostar_bavaria, filename = paste0(figure_dir,"fig8_map_regiostar_bavaria_appendix.pdf"))
 
 
 ```
