@@ -1,5 +1,6 @@
 package org.matsim.run;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.matsim.application.MATSimApplication;
 import org.matsim.core.config.Config;
@@ -10,6 +11,7 @@ import org.matsim.simwrapper.SimWrapperConfigGroup;
 /**
  * integration test.
  */
+@Tag("remote")
 public class RunKelheimIntegrationTest {
 
 	@Test
@@ -24,7 +26,7 @@ public class RunKelheimIntegrationTest {
 		config.qsim().setNumberOfThreads(1);
 		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
 
-		ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class).setDefaultDashboards(SimWrapperConfigGroup.Mode.disabled);
+		ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class).setDefaultDashboards(SimWrapperConfigGroup.DefaultDashboardsMode.disabled);
 
 		MATSimApplication.execute(RunKelheimScenario.class, config,
 			"run", "--1pct");
@@ -40,7 +42,7 @@ public class RunKelheimIntegrationTest {
 		config.controller().setLastIteration(1);
 		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
 
-		ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class).setDefaultDashboards(SimWrapperConfigGroup.Mode.disabled);
+		ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class).setDefaultDashboards(SimWrapperConfigGroup.DefaultDashboardsMode.disabled);
 		MATSimApplication.execute(RunKelheimScenario.class, config,
 			"run", "--1pct", "--with-drt");
 	}

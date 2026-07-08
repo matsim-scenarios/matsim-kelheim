@@ -30,6 +30,8 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<maven.compiler.release>21</maven.compiler.release>
+		<jacoco.version>0.8.15</jacoco.version>
+		<surefire.excludedGroups>remote</surefire.excludedGroups>
 	</properties>
 
 	<distributionManagement>
@@ -237,6 +239,7 @@
 					<reuseForks>false</reuseForks>
 					<!-- avoid out of memory errors: -->
 					<argLine>@{argLine} -Djava.awt.headless=true -Dmatsim.preferLocalDtds=true</argLine>
+					<excludedGroups>${surefire.excludedGroups}</excludedGroups>
 					<!--necessary in tu berlin gitlab. BUT not good in other places, so solve by command line switch only where needed.  kai, nov'18-->
 					<!--<useSystemClassLoader>false</useSystemClassLoader>-->
 				</configuration>
@@ -245,7 +248,7 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.8.12</version>
+				<version>${jacoco.version}</version>
 				<executions>
 					<execution>
 						<goals>
@@ -347,7 +350,7 @@
 				<executions>
 					<execution>
 						<id>checkstyle</id>
-						<phase>package</phase>
+						<phase>verify</phase>
 						<goals>
 							<goal>check</goal>
 						</goals>
@@ -363,6 +366,7 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.version}</version>
 				<reportSets>
 					<reportSet>
 						<reports>
@@ -374,6 +378,15 @@
 			</plugin>
 		</plugins>
 	</reporting>
+
+	<profiles>
+		<profile>
+			<id>remote-tests</id>
+			<properties>
+				<surefire.excludedGroups></surefire.excludedGroups>
+			</properties>
+		</profile>
+	</profiles>
 
 	<repositories>
 		<!--Note that in general repositories are not transitive, so they need to be repeated at every level where needed.-->

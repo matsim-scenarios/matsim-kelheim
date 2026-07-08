@@ -13,21 +13,25 @@ public class KelheimDrtFareModule extends AbstractDvrpModeModule {
 	private final double avFare;
 	private final double baseFare;
 	private final double surcharge;
+	private final String drtFareZoneShp;
 
-	public KelheimDrtFareModule(DrtConfigGroup drtCfg, Network network, double avFare, double baseFare, double surcharge) {
+	public KelheimDrtFareModule(DrtConfigGroup drtCfg, Network network, double avFare, double baseFare, double surcharge, String drtFareZoneShp) {
 		super(drtCfg.getMode());
 		this.drtCfg = drtCfg;
 		this.network = network;
 		this.avFare = avFare;
 		this.baseFare = baseFare;
 		this.surcharge = surcharge;
+		this.drtFareZoneShp = drtFareZoneShp;
 	}
 
 	@Override
 	public void install() {
 		// Default pricing scheme
 		KelheimDrtFareParams kelheimDrtFareParams = new KelheimDrtFareParams(baseFare, surcharge, getMode());
-		kelheimDrtFareParams.setShapeFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/kelheim/shp/KEXI-fare-shp/DrtFareZonalSystem2.shp");
+		if (!drtFareZoneShp.isBlank()) {
+			kelheimDrtFareParams.setShapeFile(drtFareZoneShp);
+		}
 
 		// Special price for Autonomous vehicles
 		if (getMode().equals("av")) {

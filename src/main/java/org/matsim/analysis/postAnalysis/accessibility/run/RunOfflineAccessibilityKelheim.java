@@ -296,7 +296,7 @@ public class RunOfflineAccessibilityKelheim {
 		if (mapCenterString != null) {
 			group.defaultParams().setMapCenter(mapCenterString);
 		}
-u		group.setDefaultDashboards(SimWrapperConfigGroup.DefaultDashboardsMode.disabled);
+		group.setDefaultDashboards(SimWrapperConfigGroup.DefaultDashboardsMode.disabled);
 
 
 		SimWrapper sw = SimWrapper.create(config)

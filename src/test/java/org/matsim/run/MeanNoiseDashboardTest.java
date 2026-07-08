@@ -6,6 +6,7 @@ import org.apache.avro.util.Utf8;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.analysis.postAnalysis.NoiseAverageAnalysis;
@@ -30,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Tag("remote")
 class MeanNoiseDashboardTest {
 
 	@RegisterExtension
