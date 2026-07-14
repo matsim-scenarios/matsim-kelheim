@@ -22,6 +22,7 @@ import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 import picocli.CommandLine;
 
 import java.io.BufferedWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -34,11 +35,11 @@ import java.util.Map;
 public class CreateDrtFleetStartLinkWeights implements MATSimAppCommand {
 	private static final Logger LOG = LogManager.getLogger(CreateDrtFleetStartLinkWeights.class);
 
-	@CommandLine.Option(names = "--population", required = true, description = "Population plans file.")
-	private Path populationFile;
+	@CommandLine.Option(names = "--population", required = true, description = "Population plans path or URL.")
+	private String populationFile;
 
-	@CommandLine.Option(names = "--network", required = true, description = "MATSim network file.")
-	private Path networkFile;
+	@CommandLine.Option(names = "--network", required = true, description = "MATSim network path or URL.")
+	private String networkFile;
 
 	@CommandLine.Option(names = "--drt-stops", required = true, description = "Transit schedule containing the DRT stops.")
 	private Path drtStopsFile;
@@ -52,9 +53,16 @@ public class CreateDrtFleetStartLinkWeights implements MATSimAppCommand {
 
 	@Override
 	public Integer call() throws Exception {
+		if (!isUrl(populationFile) && !Files.exists(Path.of(populationFile))) {
+			throw new IllegalArgumentException("Population does not exist: " + populationFile);
+		}
+		if (!isUrl(networkFile) && !Files.exists(Path.of(networkFile))) {
+			throw new IllegalArgumentException("Network does not exist: " + networkFile);
+		}
+
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile.toString());
-		new PopulationReader(scenario).readFile(populationFile.toString());
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
+		new PopulationReader(scenario).readFile(populationFile);
 		new TransitScheduleReader(scenario).readFile(drtStopsFile.toString());
 
 		Map<Id<Link>, Candidate> candidates = new LinkedHashMap<>();
@@ -140,6 +148,10 @@ public class CreateDrtFleetStartLinkWeights implements MATSimAppCommand {
 		double dx = first.getX() - second.getX();
 		double dy = first.getY() - second.getY();
 		return dx * dx + dy * dy;
+	}
+
+	private static boolean isUrl(String value) {
+		return value.startsWith("http://") || value.startsWith("https://");
 	}
 
 	private static final class Candidate {

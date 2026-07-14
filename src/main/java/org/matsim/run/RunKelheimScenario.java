@@ -36,6 +36,8 @@ import org.matsim.contrib.drt.optimizer.insertion.parallel.DrtParallelInserterPa
 import org.matsim.contrib.drt.optimizer.insertion.parallel.ParallelRequestInserterModule;
 import org.matsim.contrib.drt.optimizer.rebalancing.NoRebalancingStrategy;
 import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingStrategy;
+import org.matsim.contrib.drt.prebooking.PrebookingParams;
+import org.matsim.contrib.drt.prebooking.logic.ProbabilityBasedPrebookingLogicParams;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
@@ -66,6 +68,7 @@ import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
+import org.matsim.run.prepare.GenerateCounterfactualImmobilePlans;
 import org.matsim.rebalancing.WaitingPointsBasedRebalancingModule;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.SimWrapperModule;
@@ -92,7 +95,8 @@ import java.util.stream.IntStream;
 @MATSimApplication.Prepare({
 	CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
 	MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
-	CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class
+	CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class,
+	GenerateCounterfactualImmobilePlans.class
 })
 //@MATSimApplication.Analysis({
 //	LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
@@ -149,6 +153,15 @@ public class RunKelheimScenario extends MATSimApplication {
 
 	@CommandLine.Option(names = "--drt-service-quality-probe-stop-pair-input-files", defaultValue = "", description = "Comma-separated accessibility stop-pair CSV/CSV.GZ files. When set, probe only their unique directed stop pairs.")
 	private String drtServiceQualityProbeStopPairInputFiles;
+
+	@CommandLine.Option(names = "--prebooking", defaultValue = "false", description = "Enable probability-based prebooking for the conventional DRT mode.")
+	private boolean prebooking;
+
+	@CommandLine.Option(names = "--prebooking-probability", defaultValue = "1.0", description = "Probability that a conventional DRT trip is prebooked (0.0 to 1.0).")
+	private double prebookingProbability;
+
+	@CommandLine.Option(names = "--prebooking-submission-slack", defaultValue = "1800", description = "Seconds before planned departure at which a prebooking request is submitted.")
+	private double prebookingSubmissionSlack;
 	// a couple of CommandLine.Options below actually are not strictly necessary but rather allow for circumvention of settings directly via config and/or config options.... (ts 07/23)
 
 	/**
@@ -184,8 +197,11 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy. If unspecified, the starting" +
 		"points of the fleet will be set as waiting points", defaultValue = "")
 	private String waitingPointsPath;
-	private final String expandedDrtStopsFile = "../drt_stops_landkreis.xml";
-	private final String drtServiceAreaShp = "input/shp/lk-kelheim/lk-kelheim.shp";
+	@CommandLine.Option(names = "--drt-expanded-service-area-stops", defaultValue = "../drt_stops_landkreis.xml", description = "Transit stop file used with --with-drt-expandedServiceArea.")
+	private String expandedDrtStopsFile;
+
+	@CommandLine.Option(names = "--drt-study-area-shp", defaultValue = "input/shp/lk-kelheim/lk-kelheim.shp", description = "Study-area shapefile used to define the expanded DRT service area and eligible fleet start links.")
+	private String drtServiceAreaShp;
 
 
 	public RunKelheimScenario(@Nullable Config config) {
@@ -214,6 +230,23 @@ public class RunKelheimScenario extends MATSimApplication {
 			WEIGHT_8_PASSENGER
 		));
 		drtWithExtensionsConfigGroup.addParameterSet(drtCompanionParams);
+	}
+
+	static void addProbabilityBasedPrebooking(DrtConfigGroup drtConfigGroup, double probability, double submissionSlack) {
+		if (probability < 0 || probability > 1) {
+			throw new IllegalArgumentException("--prebooking-probability must be between 0.0 and 1.0.");
+		}
+		if (submissionSlack < 0) {
+			throw new IllegalArgumentException("--prebooking-submission-slack must not be negative.");
+		}
+
+		drtConfigGroup.getPrebookingParams().ifPresent(drtConfigGroup::removeParameterSet);
+		PrebookingParams prebookingParams = new PrebookingParams();
+		ProbabilityBasedPrebookingLogicParams logicParams = new ProbabilityBasedPrebookingLogicParams();
+		logicParams.setProbability(probability);
+		logicParams.setSubmissionSlack(submissionSlack);
+		prebookingParams.addParameterSet(logicParams);
+		drtConfigGroup.addParameterSet(prebookingParams);
 	}
 
 	@Nullable
@@ -259,6 +292,9 @@ public class RunKelheimScenario extends MATSimApplication {
 				if (drtConfigGroup.getMode().equals(TransportMode.drt)) {
 					DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtConfigGroup;
 					addDrtCompanionParameters(drtWithExtensionsConfigGroup);
+					if (prebooking) {
+						addProbabilityBasedPrebooking(drtConfigGroup, prebookingProbability, prebookingSubmissionSlack);
+					}
 
 					if (drtExpandedServiceArea) {
 						drtConfigGroup.setTransitStopFile(expandedDrtStopsFile);

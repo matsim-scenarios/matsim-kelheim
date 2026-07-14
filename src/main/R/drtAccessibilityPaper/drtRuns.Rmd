@@ -194,9 +194,17 @@ Prepare data
 ```{r}
 # data <- read_delim("/Users/jakob/git/matsim-kelheim/output/output-kelheim-v3.0-1pct-iter_1-plans_kelheim-v3-1-1pct-kexi-iter_300-output_plans/kelheim-v3.1-1pct-kexi-iter_1-plans_kelheim-v3-1-1pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
 
-probe_small <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-10-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
-probe_medium <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-100-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
-probe_large <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-1000-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+
+# train station 
+# probe_small <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-10-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+# probe_medium <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-100-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+# probe_large <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-1000-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+
+# supermarket 
+probe_small <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-10-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+probe_medium <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-100-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+probe_large <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-1000-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+
 
 probe_combined <- bind_rows(probe_small %>% mutate(vehicles = 10), probe_medium %>% mutate(vehicles = 100),probe_large %>% mutate(vehicles = 1000)) %>% 
   mutate(time = hms::as_hms(time)) %>% 
@@ -253,10 +261,11 @@ probe_combined %>%
   tm_facets(by = "vehicles")
 
 probe_combined %>% 
-  filter(time == 18*3600) %>%
-  group_by(originZone, vehicles) %>% 
-  summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor), originX = first(originX), originY = first(originY)) %>% 
-  st_as_sf(coords = c("originX","originY"), crs=25832) %>% 
+  filter(hour == 18) %>%
+  group_by(originStop, vehicles) %>% 
+  left_join(drt_stops, by = c("originStop" = "id")) %>% 
+  st_as_sf() %>% 
+  summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor)) %>% 
   tm_shape() + 
   tm_basemap("Esri.WorldGrayCanvas") +
   tm_dots(fill = "waitTime", size = .4, fill.scale = tm_scale_intervals(style = "quantile",n = 10)) +
@@ -265,11 +274,21 @@ probe_combined %>%
 ```
 ### accessibility
 ```{r}
-acc_small <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-10veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
+
+#train station
+# acc_small <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-10veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
+#   mutate(time = as_hms(time)) %>% mutate(vehicles = 10)
+# acc_medium <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-100veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
+#   mutate(time = as_hms(time))%>% mutate(vehicles = 100)
+# acc_large <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-1000veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
+#   mutate(time = as_hms(time))%>% mutate(vehicles = 1000)
+
+#supermarket
+acc_small <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-12-supermarket-10veh/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
   mutate(time = as_hms(time)) %>% mutate(vehicles = 10)
-acc_medium <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-100veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
+acc_medium <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-12-supermarket-100veh/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
   mutate(time = as_hms(time))%>% mutate(vehicles = 100)
-acc_large <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-1000veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
+acc_large <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-12-supermarket-1000veh/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
   mutate(time = as_hms(time))%>% mutate(vehicles = 1000)
 
 acc_combined <- bind_rows(acc_small,acc_medium,acc_large)

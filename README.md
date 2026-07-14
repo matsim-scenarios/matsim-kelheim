@@ -80,6 +80,22 @@ Here are the most common ways to analyse and visualize the results (and inputs):
 
 If you have questions, feel free to contact us [(VSP)](https://www.tu.berlin/vsp) any time  :)
 
+### Counterfactual plans for immobile adults
+
+Generate and inspect the counterfactual population before submitting MATSim jobs. The generator replaces the selected home-only plan of every non-freight adult with one synthetic mobile plan, sets `carAvail=never`, and records the donor and matching level as person attributes. It uses the same seed for reproducible hot-deck selection. `--input-population` and `--network` accept local paths or HTTP(S) URLs.
+
+```shell
+./mvnw -q exec:java -Dexec.mainClass=org.matsim.run.prepare.GenerateCounterfactualImmobilePlans -Dexec.args="--input-population input-plans.xml.gz --output-population counterfactual-plans.xml.gz --network input-network.xml.gz --study-area-shp input/shp/lk-kelheim/lk-kelheim.shp --seed 4711 --generation-run baseline"
+```
+
+Inspect `counterfactual-plans.xml.gz` in VIA or with the population analyses, then submit one scenario job per fleet size with the same plans and seed:
+
+```shell
+./mvnw -q exec:java -Dexec.mainClass=org.matsim.run.RunKelheimScenario -Dexec.args="run --config input/v3.1/kelheim-v3.1-25pct.kexi.config.xml --with-drt --plans counterfactual-plans.xml.gz --random-seed 4711 --drt-fleet-size 20"
+```
+
+Repeat the second command with the desired fleet sizes and analyze the completed runs with the existing accessibility workflow.
+
 ---
 ## More information
 
