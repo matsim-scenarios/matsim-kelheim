@@ -21,11 +21,15 @@ import org.matsim.contrib.accessibility.AccessibilityFromEvents;
 import org.matsim.contrib.accessibility.Modes4Accessibility;
 import org.matsim.contrib.drt.estimator.DrtEstimator;
 import org.matsim.contrib.drt.estimator.impl.DirectTripBasedDrtEstimator;
+import org.matsim.contrib.drt.estimator.impl.CsvServiceQualityDrtEstimator;
 import org.matsim.contrib.drt.estimator.impl.distribution.NoDistribution;
 import org.matsim.contrib.drt.estimator.impl.trip_estimation.ConstantRideDurationEstimator;
 import org.matsim.contrib.drt.estimator.impl.waiting_time_estimation.ConstantWaitingTimeEstimator;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
+import org.matsim.contrib.drt.routing.DrtStopFacility;
+import org.matsim.contrib.drt.routing.DrtStopFacilityImpl;
+import org.matsim.contrib.drt.routing.DrtStopNetwork;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
@@ -36,6 +40,7 @@ import org.matsim.core.controler.*;
 import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.facilities.*;
+import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
 import org.matsim.simwrapper.SimWrapper;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
 
@@ -49,6 +54,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
+
+import com.google.common.collect.ImmutableMap;
 
 /**
  * Run this class to calculate accessibility for the Kelheim scenario for different modes (including DRT). This class is meant to be run after
@@ -63,6 +71,10 @@ public class RunOfflineAccessibilityKelheim {
 
 	public static DrtConfigGroup drtConfigGroup;
 	public static String coordinateSystem = "EPSG:25832";
+	/** Optional stop-to-stop service-quality probe CSV. Leave blank to use the supplied conventional estimator. */
+//	public static String serviceQualityProbeFile = "";
+//	public static String serviceQualityProbeFile = "/Users/jakob/git/matsim-kelheim/output-probe-10-c-train-only/kelheim-v3.1-25pct-kexi-iter_1-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz";
+	public static String serviceQualityProbeFile = "/Users/jakob/git/matsim-kelheim/output-probe-1000-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz";
 
 	protected RunOfflineAccessibilityKelheim() {
 		// should not be instantiated
@@ -73,22 +85,27 @@ public class RunOfflineAccessibilityKelheim {
 
 		// CONFIGURATION
 		// what POIs will are being examined
-		List<String> relevantPois = List.of("train_station");
+//		List<String> relevantPois = List.of("train_station", "logistic", "supermarket");
+		List<String> relevantPois = List.of("supermarket");
+		boolean writeDrtStopPairs = false;
 
-		// What times will we calculate accessibilty
-//		List<Double> timesHour = DoubleStream.iterate(0, i -> i <= 24., i -> i + 0.5).boxed().toList();
-		List<Double> timesHour = List.of(7.5);
+		// What times will we calculate accessibility: every five minutes from 08:00 through 12:00.
+		List<Double> timesSeconds = IntStream.iterate(6 * 3600,
+			time -> time <= 21 * 3600, time -> time + 60 * 60)
+			.mapToDouble(time -> time)
+			.boxed()
+			.toList();
 
 		// For what modes
-		List<Modes4Accessibility> accModes = List.of( Modes4Accessibility.estimatedDrt);
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.estimatedDrt, Modes4Accessibility.teleportedWalk);
 		// What parameters will be used for DRT Estimator
 		double waitingTime = 300;
 		double slope = 1.22;
 		double intercept = 177.5;
 		double ascDrt = 0.0;
 		// With what directory are we working? Following code makes a copy, so as to leave original directory intact.
-		File dirToCopy = new File("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/0000-kelheim-scratch");
-		String outputDir = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/2026-01-08-a/";
+		File dirToCopy = new File("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/0000-kelheim-scratch");
+		String outputDir = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-12-supermarket-1000veh/";
 		FileUtils.copyDirectory(dirToCopy, new File(outputDir));
 
 		// CONFIG
@@ -97,7 +114,8 @@ public class RunOfflineAccessibilityKelheim {
 		accConfig.setTileSize_m(500);
 		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
 		accConfig.setShapeFileCellBasedAccessibility("input/shp/lk-kelheim/lk-kelheim.shp");
-		accConfig.setTimeOfDay(new ArrayList<>(timesHour.stream().map(t -> t * 60 * 60).toList()));
+		accConfig.setTimeOfDay(new ArrayList<>(timesSeconds));
+		accConfig.setWriteDrtStopPairs(writeDrtStopPairs);
 		for (Modes4Accessibility mode : Modes4Accessibility.values()) {
 			accConfig.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
@@ -120,7 +138,7 @@ public class RunOfflineAccessibilityKelheim {
 		step2CalculateAccessibility(drtEstimator, ascDrt, relevantPois, accConfig, outputDir);
 
 		// Part 3: Create Dashboard
-//		step3CreateDashboard(relevantPois, accModes, mapCenterString);
+		step3CreateDashboard(relevantPois, accModes, mapCenterString, outputDir);
 
 	}
 
@@ -262,13 +280,29 @@ public class RunOfflineAccessibilityKelheim {
 		// add pois to scenario as facilities
 		new MatsimFacilitiesReader(scenario).readFile(facilitiesFile);
 
+		DrtEstimator effectiveDrtEstimator = serviceQualityProbeFile.isBlank() ? drtEstimator
+			: new CsvServiceQualityDrtEstimator(serviceQualityProbeFile, createStopNetwork());
+
 		AccessibilityFromEvents.Builder builder = new AccessibilityFromEvents.Builder(scenario, eventsFile, relevantPois);
 
-		builder.setDrtEstimator(drtEstimator);
+		builder.setDrtEstimator(effectiveDrtEstimator);
 
 
 		builder.build().run();
 
+	}
+
+	private static DrtStopNetwork createStopNetwork() {
+		MutableScenario drtStopsScenario = (MutableScenario)ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		new TransitScheduleReader(drtStopsScenario).readFile(stopsFile);
+		ImmutableMap.Builder<org.matsim.api.core.v01.Id<DrtStopFacility>, DrtStopFacility> stops = ImmutableMap.builder();
+		for (var stop : drtStopsScenario.getTransitSchedule().getFacilities().values()) {
+			DrtStopFacility drtStop = new DrtStopFacilityImpl(
+				org.matsim.api.core.v01.Id.create(stop.getId(), DrtStopFacility.class), stop.getLinkId(), stop.getCoord(), stop.getAttributes());
+			stops.put(drtStop.getId(), drtStop);
+		}
+		ImmutableMap<org.matsim.api.core.v01.Id<DrtStopFacility>, DrtStopFacility> stopMap = stops.build();
+		return () -> stopMap;
 	}
 
 

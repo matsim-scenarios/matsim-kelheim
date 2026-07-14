@@ -4,6 +4,9 @@ import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import jakarta.annotation.Nullable;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
@@ -58,6 +61,7 @@ import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
 import org.matsim.core.utils.geometry.geotools.MGC;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
@@ -74,11 +78,15 @@ import org.matsim.contrib.vsp.pt.fare.PtFareConfigGroup;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
 import java.nio.file.Path;
+import java.io.IOException;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
+import java.util.stream.IntStream;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
@@ -116,10 +124,11 @@ public class RunKelheimScenario extends MATSimApplication {
 	private static final double DRT_SERVICE_BEGIN_TIME = 21600.;
 	private static final double DRT_SERVICE_END_TIME = 82800.;
 	private static final String DRT_VEHICLE_TYPE = "conventional_vehicle";
-	//	private static final List<Double> DRT_SERVICE_QUALITY_PROBE_TIMES = List.of(6., 8., 10., 12., 14., 16., 18., 20., 22.);
-	private static final List<Double> DRT_SERVICE_QUALITY_PROBE_TIMES = List.of(18.0);
+	private static final List<Integer> DRT_SERVICE_QUALITY_PROBE_TIMES = IntStream.iterate(6 * 3600,
+		time -> time <= 21 * 3600, time -> time + 60 * 60)
+		.boxed()
+		.toList();
 
-	private static final long DRT_FLEET_RANDOM_SEED = 4711;
 	@CommandLine.Mixin
 	private final SampleOptions sample = new SampleOptions(25, 10, 1);
 
@@ -132,8 +141,14 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--drt-fleet-size", defaultValue = "-1", description = "Replace the DRT fleet with this many conventional vehicles. If unset, keep the vehicles from the input file.")
 	private int drtFleetSize;
 
+	@CommandLine.Option(names = "--drt-fleet-start-link-weights", defaultValue = "", description = "Optional semicolon-delimited CSV/CSV.GZ with linkId and weight columns for population-weighted fleet placement.")
+	private String drtFleetStartLinkWeights;
+
 	@CommandLine.Option(names = "--write-drt-service-quality-probe", defaultValue = "false", description = "Write DRT service quality probes in the last iteration.")
 	private boolean writeDrtServiceQualityProbe;
+
+	@CommandLine.Option(names = "--drt-service-quality-probe-stop-pair-input-files", defaultValue = "", description = "Comma-separated accessibility stop-pair CSV/CSV.GZ files. When set, probe only their unique directed stop pairs.")
+	private String drtServiceQualityProbeStopPairInputFiles;
 	// a couple of CommandLine.Options below actually are not strictly necessary but rather allow for circumvention of settings directly via config and/or config options.... (ts 07/23)
 
 	/**
@@ -169,8 +184,8 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy. If unspecified, the starting" +
 		"points of the fleet will be set as waiting points", defaultValue = "")
 	private String waitingPointsPath;
-	private String expandedDrtStopsFile = "../drt_stops_landkreis.xml";
-	private String drtServiceAreaShp = "input/shp/lk-kelheim/lk-kelheim.shp";
+	private final String expandedDrtStopsFile = "../drt_stops_landkreis.xml";
+	private final String drtServiceAreaShp = "input/shp/lk-kelheim/lk-kelheim.shp";
 
 
 	public RunKelheimScenario(@Nullable Config config) {
@@ -258,14 +273,23 @@ public class RunKelheimScenario extends MATSimApplication {
 							});
 						parallelInserterParams.setWriteServiceQualityProbes(true);
 						String probeTimesString = DRT_SERVICE_QUALITY_PROBE_TIMES.stream()
-							.map(d -> String.valueOf(d * 3600))
+							.map(String::valueOf)
 							.collect(java.util.stream.Collectors.joining(","));
 
 						parallelInserterParams.setServiceQualityProbeTimes(probeTimesString);
-						parallelInserterParams.setServiceQualityProbeSpatialResolution(
-							DrtParallelInserterParams.ServiceQualityProbeSpatialResolution.ZONE_TO_ZONE
-						);
-						parallelInserterParams.setServiceQualityProbeZoneCellSize(500.);
+						if (drtServiceQualityProbeStopPairInputFiles.isBlank()) {
+							parallelInserterParams.setServiceQualityProbeSpatialResolution(
+								DrtParallelInserterParams.ServiceQualityProbeSpatialResolution.ZONE_TO_ZONE
+							);
+							parallelInserterParams.setServiceQualityProbeZoneCellSize(1000.);
+						} else {
+							parallelInserterParams.setServiceQualityProbeSpatialResolution(
+								DrtParallelInserterParams.ServiceQualityProbeSpatialResolution.STOP_TO_STOP
+							);
+							parallelInserterParams.setServiceQualityProbeStopPairInputFiles(
+								drtServiceQualityProbeStopPairInputFiles
+							);
+						}
 					}
 				}
 			}
@@ -544,19 +568,25 @@ public class RunKelheimScenario extends MATSimApplication {
 			.toList();
 		oldDrtVehicles.forEach(vehicles::removeVehicle);
 
-		List<Link> startLinks = (List<Link>) scenario.getNetwork().getLinks().values().stream()
+		List<Link> eligibleStartLinks = scenario.getNetwork().getLinks().values().stream()
+			.map(link -> (Link)link)
 			.filter(link -> link.getAllowedModes().contains(TransportMode.drt))
 			.filter(link -> serviceArea.contains(MGC.coord2Point(link.getCoord())))
 			.sorted(Comparator.comparing(link -> link.getId().toString()))
 			.toList();
 
-		if (startLinks.isEmpty()) {
+		if (eligibleStartLinks.isEmpty()) {
 			throw new IllegalStateException("Cannot generate DRT fleet: no DRT links found in the configured service area.");
 		}
 
-		SplittableRandom random = new SplittableRandom(DRT_FLEET_RANDOM_SEED);
+		List<WeightedStartLink> startLinks = drtFleetStartLinkWeights.isBlank()
+			? eligibleStartLinks.stream().map(link -> new WeightedStartLink(link, 1.)).toList()
+			: readWeightedStartLinks(drtFleetStartLinkWeights, eligibleStartLinks);
+		double totalWeight = startLinks.stream().mapToDouble(WeightedStartLink::weight).sum();
+		// This generator is deliberately independent of MatsimRandom, so fleet placement does not shift any global RNG stream.
+		SplittableRandom random = new SplittableRandom(randomSeed);
 		for (int i = 0; i < drtFleetSize; i++) {
-			Link startLink = startLinks.get(random.nextInt(startLinks.size()));
+			Link startLink = drawStartLink(startLinks, totalWeight, random);
 			Vehicle vehicle = vehicles.getFactory()
 				.createVehicle(Id.createVehicleId("KEXI-" + (i + 1)), vehicleType);
 			vehicle.getAttributes().putAttribute("dvrpMode", TransportMode.drt);
@@ -565,5 +595,53 @@ public class RunKelheimScenario extends MATSimApplication {
 			vehicle.getAttributes().putAttribute("serviceEndTime", DRT_SERVICE_END_TIME);
 			vehicles.addVehicle(vehicle);
 		}
+	}
+
+	private static List<WeightedStartLink> readWeightedStartLinks(String csvFile, List<Link> eligibleStartLinks) {
+		Map<Id<Link>, Link> eligibleById = new LinkedHashMap<>();
+		eligibleStartLinks.forEach(link -> eligibleById.put(link.getId(), link));
+		CSVFormat format = CSVFormat.DEFAULT.builder().setDelimiter(';').setHeader().setSkipHeaderRecord(true).build();
+		try (CSVParser parser = new CSVParser(IOUtils.getBufferedReader(csvFile), format)) {
+			Map<Id<Link>, WeightedStartLink> weightedLinks = new LinkedHashMap<>();
+			for (CSVRecord record : parser) {
+				Id<Link> linkId = Id.createLinkId(record.get("linkId"));
+				Link link = eligibleById.get(linkId);
+				if (link == null) {
+					throw new IllegalArgumentException("DRT fleet start-link weight references an ineligible or missing link: " + linkId);
+				}
+				double weight = Double.parseDouble(record.get("weight"));
+				if (!Double.isFinite(weight) || weight < 0) {
+					throw new IllegalArgumentException("Invalid DRT fleet start-link weight for " + linkId + ": " + weight);
+				}
+				if (weightedLinks.put(linkId, new WeightedStartLink(link, weight)) != null) {
+					throw new IllegalArgumentException("Duplicate DRT fleet start-link weight for " + linkId);
+				}
+			}
+			List<WeightedStartLink> result = weightedLinks.values().stream()
+				.filter(weightedLink -> weightedLink.weight() > 0)
+				.sorted(Comparator.comparing(weightedLink -> weightedLink.link().getId().toString()))
+				.toList();
+			if (result.isEmpty()) {
+				throw new IllegalArgumentException("No positive DRT fleet start-link weights found in " + csvFile);
+			}
+			return result;
+		} catch (IOException e) {
+			throw new RuntimeException("Could not read DRT fleet start-link weights from " + csvFile, e);
+		}
+	}
+
+	private static Link drawStartLink(List<WeightedStartLink> startLinks, double totalWeight, SplittableRandom random) {
+		double draw = random.nextDouble(totalWeight);
+		double cumulativeWeight = 0;
+		for (WeightedStartLink startLink : startLinks) {
+			cumulativeWeight += startLink.weight();
+			if (draw < cumulativeWeight) {
+				return startLink.link();
+			}
+		}
+		return startLinks.getLast().link();
+	}
+
+	private record WeightedStartLink(Link link, double weight) {
 	}
 }
