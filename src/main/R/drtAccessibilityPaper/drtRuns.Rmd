@@ -1,0 +1,374 @@
+---
+title: "Untitled"
+output: html_document
+date: "2026-07-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# PRELIM
+
+
+### libraries
+```{r}
+library(tidyverse)
+library(sf)
+library(tmap)
+library(lubridate)
+library(hms)
+library(xml2)
+```
+
+### basic paths
+```{r}
+output_path_base <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-03/output-300it-base-25pct/kelheim-v3.1-25pct-iter_300."
+
+output_path_small <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-03/output-300it-10veh-25pct/kelheim-v3.1-25pct-kexi-iter_300."
+
+output_path_medium <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-03/output-300it-100veh-25pct/kelheim-v3.1-25pct-kexi-iter_300."
+
+output_path_large <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-03/output-300it-1000veh-25pct/kelheim-v3.1-25pct-kexi-iter_300."
+
+```
+
+
+
+### read files
+```{r}
+
+kelheim_shp <- st_read("/Users/jakob/git/matsim-kelheim/input/shp/lk-kelheim/lk-kelheim.shp")
+
+
+trips_base <- read_delim(paste0(output_path_base,"output_trips.csv.zst"), delim = ";")
+trips_small <- read_delim(paste0(output_path_small,"output_trips.csv.zst"), delim = ";")
+trips_medium <- read_delim(paste0(output_path_medium,"output_trips.csv.zst"), delim = ";")
+trips_large <- read_delim(paste0(output_path_large,"output_trips.csv.zst"), delim = ";")
+
+
+persons_base <- read_delim(paste0(output_path_base,"output_persons.csv.zst"),delim = ";")
+persons_small <- read_delim(paste0(output_path_small,"output_persons.csv.zst"),delim = ";")
+persons_medium <- read_delim(paste0(output_path_medium,"output_persons.csv.zst"),delim = ";")
+persons_large <- read_delim(paste0(output_path_large,"output_persons.csv.zst"),delim = ";")
+
+drt_legs_small <- read_delim(paste0(output_path_small,"output_drt_legs_drt.csv"),delim = ";")
+drt_legs_medium <- read_delim(paste0(output_path_medium,"output_drt_legs_drt.csv"),delim = ";")
+drt_legs_large <- read_delim(paste0(output_path_large,"output_drt_legs_drt.csv"),delim = ";")
+
+occ_small <- read_delim(paste0(output_path_small,"output_occupancy_time_profiles_drt.txt"),delim = ";")
+occ_medium <- read_delim(paste0(output_path_medium,"output_occupancy_time_profiles_drt.txt"),delim = ";")
+occ_large <- read_delim(paste0(output_path_large,"output_occupancy_time_profiles_drt.txt"),delim = ";")
+
+
+persons_in_kelheim <- persons_small %>% filter(!is.na(home_x)) %>% st_as_sf(coords = c("home_x","home_y"), crs = 25832) %>% st_filter(kelheim_shp) %>% pull(person)
+```
+# ANALYSES
+## REAL DRT TRIPS
+### mode stats 
+```{r}
+mode_stats_small_trip <- trips_small %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_small = n()) %>% ungroup() %>% mutate(share_10veh = n_small/sum(n_small))
+
+mode_stats_medium_trip <- trips_medium %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_medium = n()) %>% ungroup() %>% mutate(share_100veh = n_medium/sum(n_medium)) 
+mode_stats_large_trip <- trips_large %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_large = n()) %>% ungroup() %>% mutate(share_1000veh = n_large/sum(n_large))
+
+mode_stats_small_trip %>% left_join(mode_stats_medium_trip) %>% left_join(mode_stats_large_trip) 
+
+```
+
+### score stats
+```{r}
+# Whole Population
+person_score_joined <- persons_base %>% select(person,executed_score_base = executed_score) %>% left_join(persons_small %>% select(person,executed_score_small = executed_score)) %>%  left_join(persons_medium %>% select(person,executed_score_medium = executed_score)) %>% left_join(persons_large %>% select(person,executed_score_large = executed_score))
+person_score_joined
+
+person_score_joined %>%
+  summarise(
+    across(
+      starts_with("exe"),
+      list(mean = mean, sum = sum)
+    )
+  )
+
+# Affected People
+drt_users_small <- trips_small %>% filter(main_mode == "drt") %>% pull(person) %>% unique()
+drt_users_medium <- trips_medium %>% filter(main_mode == "drt") %>% pull(person) %>% unique()
+drt_users_large <- trips_large %>% filter(main_mode == "drt") %>% pull(person) %>% unique()
+
+
+
+person_score_joined %>% filter(person %in% drt_users_small) %>% mutate(diff = executed_score_small - executed_score_base) %>% summarise(diff = mean(diff))
+
+person_score_joined %>% filter(person %in% drt_users_medium) %>% mutate(diff = executed_score_medium - executed_score_base) %>% summarise(diff = mean(diff))
+
+person_score_joined %>% filter(person %in% drt_users_large) %>% mutate(diff = executed_score_large - executed_score_base) %>% summarise(diff = mean(diff))
+
+```
+
+### requests
+
+
+```{r}
+bind_rows(drt_legs_small %>% mutate(vehicles = 10), drt_legs_medium %>% mutate(vehicles = 100), drt_legs_large %>% mutate(vehicles = 1000)) %>%
+  filter(!startsWith(personId,"COMP")) %>%
+  mutate(time = hms::as_hms(submissionTime)) %>%
+  mutate(hour = hour(time)) %>% 
+  mutate(vehicles = as.factor(vehicles)) %>% 
+  group_by(hour, vehicles) %>% count() %>% ggplot() + geom_line(aes(hour,n, col = vehicles)) + theme_minimal(base_size = 14) + labs(x = "Hour", y = "Requests")
+```
+
+
+### wait time and detour factor
+
+```{r}
+
+drt_legs_combined <- bind_rows(drt_legs_small %>% mutate(vehicles = 10), drt_legs_medium %>% mutate(vehicles = 100), drt_legs_large %>% mutate(vehicles = 1000)) %>%
+  filter(!startsWith(personId,"COMP")) %>% 
+  group_by(vehicles) %>%
+  summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>%
+  mutate(detourFactor = inVehicleRideTime/directRideTime) %>% 
+  mutate(vehicles = as.factor(vehicles))
+
+
+ggplot(drt_legs_combined) + geom_col(aes(vehicles, waitTime)) + theme_minimal(base_size = 14)
+ggplot(drt_legs_combined) + geom_col(aes(vehicles, directRideTime))+ theme_minimal(base_size = 14)
+ggplot(drt_legs_combined) + geom_col(aes(vehicles, inVehicleRideTime))+ theme_minimal(base_size = 14)
+ggplot(drt_legs_combined) + geom_col(aes(vehicles, detourFactor))+ theme_minimal(base_size = 14)
+
+
+# drt_legs_small %>% filter(!startsWith(personId,"COMP")) %>% summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>% mutate(detourFactor = inVehicleRideTime/directRideTime)
+# 
+# drt_legs_medium %>% filter(!startsWith(personId,"COMP")) %>% summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>% mutate(detourFactor = inVehicleRideTime/directRideTime)
+# 
+# drt_legs_large %>% filter(!startsWith(personId,"COMP")) %>% summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>% mutate(detourFactor = inVehicleRideTime/directRideTime)
+```
+
+### occupancy
+```{r}
+
+occ_small %>% mutate(fleet_size = 10) %>% 
+  bind_rows(occ_medium %>% mutate(fleet_size = 100)) %>% 
+  bind_rows(occ_large %>% mutate(fleet_size = 1000)) %>% 
+  filter(time <= hm("24:00")) %>% 
+  pivot_longer(-c(time,fleet_size), names_to = "status", values_to = "n") %>% 
+  # mutate(status = factor(status, levels = c("STAY","0 pax", "1 pax", "2 pax", "3 pax", "4 pax"))) %>% 
+  ggplot() + 
+  scale_x_time(minor_breaks = "1 hour", date_breaks = "3 hours",date_labels = "%H") +
+  geom_area(aes(time, n, fill = status)) + 
+  scale_fill_manual(values = c(
+    "STAY" = "gray",
+    "0 pax" = "white",
+    "1 pax" = "yellow",
+    "2 pax" = "orange",
+    "3 pax" = "red",
+    "4 pax" = "purple"
+  )) +
+  facet_grid(~fleet_size)+
+  theme_minimal(base_size = 16) + 
+  labs(x = "Time", y = "Number of Vehicles")
+```
+
+## POTENTIAL DRT TRIPS
+### probes
+
+The way we did it before was biased. We assumed potential trip has the same LOS as the average "realized" trips. However, in MATSim, only the people who had good DRT LOS would actually take it. The people with long wait times or detour factors wouldn't actually take the DRT, thus keeping the average LOS of realized trips relatively high. Our new methodology is way better; it essentially checks the LOS of also unrealized trips.
+
+read drt stops
+```{r}
+doc <- read_xml("/Users/jakob/git/matsim-kelheim/input/drt_stops_landkreis.xml")
+
+stops <- xml_find_all(doc, ".//stopFacility")
+
+drt_stops <- tibble(
+  id = as.numeric(xml_attr(stops, "id")),
+  x = as.numeric(xml_attr(stops, "x")),
+  y = as.numeric(xml_attr(stops, "y"))
+) %>%
+  st_as_sf(coords = c("x","y"), crs = 25832)
+```
+
+
+Prepare data
+
+```{r}
+# data <- read_delim("/Users/jakob/git/matsim-kelheim/output/output-kelheim-v3.0-1pct-iter_1-plans_kelheim-v3-1-1pct-kexi-iter_300-output_plans/kelheim-v3.1-1pct-kexi-iter_1-plans_kelheim-v3-1-1pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+
+probe_small <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-10-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+probe_medium <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-100-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+probe_large <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-1000-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+
+probe_combined <- bind_rows(probe_small %>% mutate(vehicles = 10), probe_medium %>% mutate(vehicles = 100),probe_large %>% mutate(vehicles = 1000)) %>% 
+  mutate(time = hms::as_hms(time)) %>% 
+  mutate(hour = hour(time)) %>% 
+  group_by(hour,vehicles,originStop,destinationStop) %>% 
+  summarise(waitTime = mean(waitTime), directRideTime = mean(directRideTime), rideTimeWithDetour = mean(rideTimeWithDetour),directRideDistance=mean(directRideDistance), rideDistanceWithDetour = mean(rideDistanceWithDetour), detourFactor = mean(detourFactor)) %>% 
+  mutate(hour = as.factor(hour))
+
+probe_combined 
+```
+
+
+```{r}
+probe_combined %>%
+  ggplot() + 
+  geom_boxplot(aes(hour,waitTime)) +
+  facet_grid(~vehicles) +
+  theme_minimal(base_size = 14) + 
+  labs(x = "Time", y = "Wait Time (sec)")
+
+probe_combined %>% 
+  ggplot() + 
+  geom_boxplot(aes(hour,detourFactor)) +
+  facet_grid(~vehicles) +
+  theme_minimal(base_size = 14) + 
+  labs(x = "Time", y = "Detour Factor")
+
+
+tmap_mode("plot")
+probe_combined %>% 
+  filter(hour == 18) %>% 
+  group_by(originStop, vehicles) %>% summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor)) %>% 
+  left_join(drt_stops, by = c("originStop" = "id")) %>% 
+  st_as_sf() %>% 
+  # group_by(originZone, vehicles) %>% 
+  # summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor), originX = first(originX), originY = first(originY)) %>%
+  # st_as_sf(coords = c("originX","originY"), crs=25832) %>%
+  tm_shape() + 
+  tm_basemap("Esri.WorldGrayCanvas") +
+  tm_dots(fill = "detourFactor", size = .4) + 
+  tm_title("Detour Factor by Origin") + 
+  tm_facets(by = "vehicles")
+
+
+probe_combined %>% 
+ filter(hour == 18) %>% 
+  group_by(destinationStop, vehicles) %>% summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor)) %>% 
+  left_join(drt_stops, by = c("destinationStop" = "id")) %>% 
+  st_as_sf() %>% 
+  tm_shape() + 
+  tm_basemap("Esri.WorldGrayCanvas") +
+  tm_dots(fill = "detourFactor", size = .4) + 
+  tm_title("Detour Factor by Destination") + 
+  tm_facets(by = "vehicles")
+
+probe_combined %>% 
+  filter(time == 18*3600) %>%
+  group_by(originZone, vehicles) %>% 
+  summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor), originX = first(originX), originY = first(originY)) %>% 
+  st_as_sf(coords = c("originX","originY"), crs=25832) %>% 
+  tm_shape() + 
+  tm_basemap("Esri.WorldGrayCanvas") +
+  tm_dots(fill = "waitTime", size = .4, fill.scale = tm_scale_intervals(style = "quantile",n = 10)) +
+  tm_title("Wait Time by Origin")+ 
+  tm_facets(by = "vehicles")
+```
+### accessibility
+```{r}
+acc_small <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-10veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
+  mutate(time = as_hms(time)) %>% mutate(vehicles = 10)
+acc_medium <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-100veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
+  mutate(time = as_hms(time))%>% mutate(vehicles = 100)
+acc_large <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-1000veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
+  mutate(time = as_hms(time))%>% mutate(vehicles = 1000)
+
+acc_combined <- bind_rows(acc_small,acc_medium,acc_large)
+
+
+
+acc_combined %>% 
+  mutate(hour = hour(time), minute = minute(time), vehicles = as.factor(vehicles)) %>%
+  mutate(population = population * 4) %>% 
+  mutate(population_density = population / (0.5*0.5)) %>% 
+  # filter(minute == 0) %>% 
+# filter(time == hm("8:00")) %>% arrange(id) %>% 
+  st_drop_geometry() %>% 
+  group_by(vehicles,hour) %>% 
+  summarise(estimatedDrt_accessibility = sum(estimatedDrt_accessibility*population)/sum(population)) %>% #teleportedWalk_accessibility = mean(teleportedWalk_accessibility), 
+  ggplot() +
+  geom_col(aes(hour,estimatedDrt_accessibility)) + # fill = hour, position = "dodge"
+  facet_grid(~vehicles) +
+  labs(x = "Hour", y = "DRT Accessibility (utils)", title = "DRT Accessibility Averaged over Hour for Three Fleet Sizes") +
+  theme_minimal(base_size = 14)
+
+
+```
+
+```{r}
+
+```
+
+
+#XXX
+```{r}
+persons_base
+
+
+# 25,184 adult agents living in Kelheim
+persons_base %>% filter(person %in% persons_in_kelheim) %>% filter(age >=18)
+
+# 5,622  immobile adult agents living in kelheim = 22.3%. In the MiD it is 14%
+persons_base %>% filter(person %in% persons_in_kelheim) %>% filter(age >=18) %>% left_join(trips_base %>% group_by(person) %>% count()) %>% filter(is.na(n))
+
+
+# all kelheim adult agents have car availability
+persons_base %>% filter(age >=18) %>% group_by(carAvail) %>% count() %>% ungroup() %>% mutate(share = n/sum(n)*100.)
+
+
+
+
+```
+
+
+# DEPRECATED 
+mode stats file
+```{r}
+mode_stats_small <- read_delim(paste0(output_path_small,"modestats.csv"),delim = ";") %>% 
+  pivot_longer(-iteration, names_to = "mode",values_to = "share") %>%  
+  filter(mode!="freight") 
+
+mode_stats_small%>% 
+  ggplot() + geom_line(aes(iteration,share, col = mode))
+
+mode_stats_large <- read_delim(paste0(output_path_large,"modestats.csv"),delim = ";") %>% 
+  pivot_longer(-iteration, names_to = "mode",values_to = "share") %>%  
+  filter(mode!="freight") 
+
+mode_stats_large%>% 
+  ggplot() + geom_line(aes(iteration,share, col = mode))
+
+
+
+mode_stats_small %>% filter(iteration == 300) %>% left_join(mode_stats_large %>% filter(iteration == 300), by = c("iteration","mode")) %>% mutate(diff = share.y - share.x)
+
+
+# who is using drt - distributed around study area 
+# trips_small %>% filter(main_mode == "drt") %>% select(person) %>% left_join(persons_raw) %>% st_as_sf(coords = c("home_x","home_y"), crs = 25832) %>% tm_shape()+ tm_dots()
+
+
+```
+
+
+wait time & detour factor 
+```{r}
+data <- read_delim(paste0(output_path_small,"drt_service_quality_probes.csv.gz"), delim = ";")
+
+data %>% mutate(time = as.factor(time / 3600)) %>% ggplot() + geom_boxplot(aes(time,waitTime))
+
+tmap_mode("view")
+data %>% filter(time == 16*3600) %>% group_by(originZone) %>% summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor), originX = first(originX), originY = first(originY)) %>% st_as_sf(coords = c("originX","originY"), crs=25832) %>% tm_shape() + tm_dots(fill = "detourFactor", size = 2)
+
+data %>% filter(time == 16*3600) %>% group_by(originZone) %>% summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor), originX = first(originX), originY = first(originY)) %>% st_as_sf(coords = c("originX","originY"), crs=25832) %>% tm_shape() + tm_dots(fill = "waitTime", size = 2)
+
+
+```
+
+
+```{r}
+read_delim("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-03/output-300it-10veh-1pct-500m/kelheim-v3.1-1pct-kexi-iter_300.drt_service_quality_probes.csv.gz", delim = ";") %>% filter(time == 21600) %>% summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor))
+
+read_delim("/Users/jakob/git/matsim-kelheim/output/output-kelheim-v3.0-1pct-iter_1-plans_kelheim-v3-1-1pct-kexi-iter_300-output_plans/kelheim-v3.1-1pct-kexi-iter_1-plans_kelheim-v3-1-1pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") %>% view() 
+
+summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor))
+```
+
