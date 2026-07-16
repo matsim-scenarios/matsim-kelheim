@@ -10,6 +10,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
+import org.matsim.analysis.postAnalysis.accessibility.run.RunOfflineAccessibilityKelheim;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -98,9 +99,9 @@ import java.util.stream.IntStream;
 	CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class,
 	GenerateCounterfactualImmobilePlans.class
 })
-//@MATSimApplication.Analysis({
-//	LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
-//})
+@MATSimApplication.Analysis({
+	RunOfflineAccessibilityKelheim.class
+})
 
 
 //--config

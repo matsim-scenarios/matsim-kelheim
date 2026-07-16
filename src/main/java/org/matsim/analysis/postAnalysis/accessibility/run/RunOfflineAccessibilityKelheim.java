@@ -5,17 +5,15 @@ import it.unimi.dsi.fastutil.doubles.DoubleList;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.geotools.api.referencing.FactoryException;
-import org.geotools.api.referencing.operation.TransformException;
 import org.matsim.analysis.postAnalysis.accessibility.AccessibilityDashboardHeart;
 import org.matsim.analysis.postAnalysis.accessibility.OverviewDashboardHeart;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.application.ApplicationUtils;
+import org.matsim.application.MATSimAppCommand;
 import org.matsim.contrib.accessibility.AccessibilityConfigGroup;
 import org.matsim.contrib.accessibility.AccessibilityFromEvents;
 import org.matsim.contrib.accessibility.Modes4Accessibility;
@@ -43,9 +41,9 @@ import org.matsim.facilities.*;
 import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
 import org.matsim.simwrapper.SimWrapper;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
+import picocli.CommandLine;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
@@ -54,7 +52,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.IntStream;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -62,88 +59,158 @@ import com.google.common.collect.ImmutableMap;
  * Run this class to calculate accessibility for the Kelheim scenario for different modes (including DRT). This class is meant to be run after
  * a simulation (offline).
  */
-public class RunOfflineAccessibilityKelheim {
+@CommandLine.Command(
+	name = "offline-accessibility",
+	description = "Calculate Kelheim accessibility from a MATSim output directory.",
+	mixinStandardHelpOptions = true,
+	showDefaultValues = true
+)
+public class RunOfflineAccessibilityKelheim implements MATSimAppCommand {
 
 	private static final Logger log = LogManager.getLogger(RunOfflineAccessibilityKelheim.class);
 
-	public static String stopsFile = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/1_processed/drt_stops/drt_stops.xml";
-	public static String facilitiesFile = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/1_processed/osm_supermarkets_buffer5km/pois.xml";
+	public static String stopsFile = "input/v3.1/expanded-service-area/drt_stops_landkreis.xml";
+	public static String facilitiesFile = "input/v3.1/expanded-service-area/pois.xml";
 
 	public static DrtConfigGroup drtConfigGroup;
 	public static String coordinateSystem = "EPSG:25832";
-	/** Optional stop-to-stop service-quality probe CSV. Leave blank to use the supplied conventional estimator. */
-//	public static String serviceQualityProbeFile = "";
-//	public static String serviceQualityProbeFile = "/Users/jakob/git/matsim-kelheim/output-probe-10-c-train-only/kelheim-v3.1-25pct-kexi-iter_1-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz";
-	public static String serviceQualityProbeFile = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300.drt_service_quality_probes.csv.gz";
+	private static final String DEFAULT_POIS = "train_station,logistic,supermarket";
+	private static final String DEFAULT_MODES = "estimatedDrt,teleportedWalk,pt,car";
+	private static final String DEFAULT_TIMES = "21600,25200,28800,32400,36000,39600,43200,46800,50400,54000,57600,61200,64800,68400,72000,75600";
+	private static final double DEFAULT_WAITING_TIME = 300;
+	private static final double DEFAULT_SLOPE = 1.22;
+	private static final double DEFAULT_INTERCEPT = 177.5;
+	private static final double DEFAULT_ASC_DRT = 0.0;
 
-	protected RunOfflineAccessibilityKelheim() {
-		// should not be instantiated
-		throw new UnsupportedOperationException();
+	@CommandLine.Option(names = "--directory", required = true, description = "MATSim output directory.")
+	private Path directory;
+
+	@CommandLine.Option(names = "--pois", defaultValue = DEFAULT_POIS, description = "Comma-separated POI activity types.")
+	private String pois;
+
+	@CommandLine.Option(names = "--modes", defaultValue = DEFAULT_MODES, description = "Comma-separated accessibility modes.")
+	private String modes;
+
+	@CommandLine.Option(names = "--times", defaultValue = DEFAULT_TIMES, description = "Comma-separated times in seconds after midnight.")
+	private String times;
+
+	@CommandLine.Option(names = "--dashboard", description = "Calculate accessibility and generate dashboards afterwards.")
+	private boolean dashboard;
+
+	@CommandLine.Option(names = "--dashboard-only", description = "Generate dashboards from existing accessibility results without calculating accessibility.")
+	private boolean dashboardOnly;
+
+	@CommandLine.Option(names = "--use-default-drt-estimator", description = "Use the hard-coded DRT waiting-time and detour estimator instead of a service-probe file.")
+	private boolean useDefaultDrtEstimator;
+
+	public RunOfflineAccessibilityKelheim() {
 	}
 
-	public static void main(String[] args) throws FactoryException, TransformException, IOException {
+	public static void main(String[] args) {
+		new RunOfflineAccessibilityKelheim().execute(args);
+	}
 
-		// CONFIGURATION
-		// what POIs will are being examined
-		List<String> relevantPois = List.of("train_station", "logistic", "supermarket");
-//		List<String> relevantPois = List.of("supermarket");
-		boolean writeDrtStopPairs = false;
-
-		// What times will we calculate accessibility: every five minutes from 08:00 through 12:00.
-		List<Double> timesSeconds = IntStream.iterate(6 * 3600,
-			time -> time <= 21 * 3600, time -> time + 60 * 60)
-			.mapToDouble(time -> time)
-			.boxed()
-			.toList();
-
-		// For what modes
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.estimatedDrt, Modes4Accessibility.teleportedWalk, Modes4Accessibility.pt, Modes4Accessibility.car);
-		// What parameters will be used for DRT Estimator
-		double waitingTime = 300;
-		double slope = 1.22;
-		double intercept = 177.5;
-		double ascDrt = 0.0;
-		// With what directory are we working? Following code makes a copy, so as to leave original directory intact.
-//		File dirToCopy = new File("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/0000-kelheim-scratch");
-		String dirToCopy = null;
-		String outputDir = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-1000__seed-4711";
-		if (dirToCopy != null) {
-			FileUtils.copyDirectory(new File(dirToCopy), new File(outputDir));
-
+	@Override
+	public Integer call() throws Exception {
+		if (dashboard && dashboardOnly) {
+			throw new IllegalArgumentException("--dashboard and --dashboard-only are mutually exclusive.");
+		}
+		if (!Files.isDirectory(directory)) {
+			throw new IllegalArgumentException("MATSim output directory does not exist or is not a directory: " + directory);
 		}
 
-		// CONFIG
+		List<String> relevantPois = parsePois(pois);
+		List<Modes4Accessibility> accModes = parseModes(modes);
+		List<Double> timesSeconds = parseTimes(times);
+		String outputDir = directory.toString();
 
+		if (!dashboardOnly) {
+			AccessibilityConfigGroup accConfig = createAccessibilityConfig(timesSeconds, accModes);
+			DrtEstimator drtEstimator = createDefaultDrtEstimator();
+			DrtEstimator effectiveDrtEstimator = useDefaultDrtEstimator
+				? drtEstimator
+				: new CsvServiceQualityDrtEstimator(findServiceQualityProbe(directory).toString(), createStopNetwork());
+
+			step2CalculateAccessibility(effectiveDrtEstimator, DEFAULT_ASC_DRT, relevantPois, accConfig, outputDir);
+		}
+
+		if (dashboard || dashboardOnly) {
+			step3CreateDashboard(relevantPois, accModes, "11.87632,48.81992", outputDir);
+		}
+
+		return 0;
+	}
+
+	private static AccessibilityConfigGroup createAccessibilityConfig(List<Double> timesSeconds, List<Modes4Accessibility> accModes) {
 		AccessibilityConfigGroup accConfig = new AccessibilityConfigGroup();
 		accConfig.setTileSize_m(500);
 		accConfig.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromShapeFile);
 		accConfig.setShapeFileCellBasedAccessibility("input/shp/lk-kelheim/lk-kelheim.shp");
 		accConfig.setTimeOfDay(new ArrayList<>(timesSeconds));
-		accConfig.setWriteDrtStopPairs(writeDrtStopPairs);
+		accConfig.setWriteDrtStopPairs(false);
 		for (Modes4Accessibility mode : Modes4Accessibility.values()) {
 			accConfig.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
-		String mapCenterString = "11.87632,48.81992";
+		return accConfig;
+	}
 
-
-
-		// Part 1: Generate Parameters for Estimator
-// commented out because estimator params are configured at beginning of script
-//		EstimatorParameters estimatorParameters = step1GenerateParams();
-
-		DrtEstimator drtEstimator = new DirectTripBasedDrtEstimator.Builder()
-			.setWaitingTimeEstimator(new ConstantWaitingTimeEstimator(waitingTime))
+	private static DrtEstimator createDefaultDrtEstimator() {
+		return new DirectTripBasedDrtEstimator.Builder()
+			.setWaitingTimeEstimator(new ConstantWaitingTimeEstimator(DEFAULT_WAITING_TIME))
 			.setWaitingTimeDistributionGenerator(new NoDistribution())
-			.setRideDurationEstimator(new ConstantRideDurationEstimator(slope, intercept))
+			.setRideDurationEstimator(new ConstantRideDurationEstimator(DEFAULT_SLOPE, DEFAULT_INTERCEPT))
 			.setRideDurationDistributionGenerator(new NoDistribution())
 			.build();
+	}
 
-		// Part 2: Calculate Accessibility
-		step2CalculateAccessibility(drtEstimator, ascDrt, relevantPois, accConfig, outputDir);
+	static Path findServiceQualityProbe(Path directory) throws IOException {
+		List<Path> probes;
+		try (var files = Files.list(directory)) {
+			probes = files.filter(Files::isRegularFile)
+				.filter(path -> path.getFileName().toString().endsWith(".drt_service_quality_probes.csv")
+					|| path.getFileName().toString().endsWith(".drt_service_quality_probes.csv.gz"))
+				.toList();
+		}
+		if (probes.size() != 1) {
+			throw new IllegalArgumentException("Expected exactly one service quality probe in " + directory + ", found " + probes.size()
+				+ ". Supply --use-default-drt-estimator to use the hard-coded estimator.");
+		}
+		return probes.get(0);
+	}
 
-		// Part 3: Create Dashboard
-		step3CreateDashboard(relevantPois, accModes, mapCenterString, outputDir);
+	static List<String> parsePois(String value) {
+		List<String> result = parseCommaSeparated(value);
+		if (result.isEmpty()) throw new IllegalArgumentException("--pois must not be empty.");
+		return result;
+	}
 
+	static List<Modes4Accessibility> parseModes(String value) {
+		try {
+			List<Modes4Accessibility> result = parseCommaSeparated(value).stream().map(Modes4Accessibility::valueOf).toList();
+			if (result.isEmpty()) throw new IllegalArgumentException("--modes must not be empty.");
+			return result;
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException("Invalid --modes value: " + value + ". Available values: " + List.of(Modes4Accessibility.values()), e);
+		}
+	}
+
+	static List<Double> parseTimes(String value) {
+		try {
+			List<Double> result = parseCommaSeparated(value).stream().map(Double::parseDouble).toList();
+			if (result.isEmpty() || result.stream().anyMatch(time -> time < 0)) {
+				throw new IllegalArgumentException("--times must contain non-negative times.");
+			}
+			return result;
+		} catch (NumberFormatException e) {
+			throw new IllegalArgumentException("Invalid --times value: " + value, e);
+		}
+	}
+
+	private static List<String> parseCommaSeparated(String value) {
+		return java.util.Arrays.stream(value.split(","))
+			.map(String::strip)
+			.filter(item -> !item.isEmpty())
+			.toList();
 	}
 
 
@@ -284,12 +351,9 @@ public class RunOfflineAccessibilityKelheim {
 		// add pois to scenario as facilities
 		new MatsimFacilitiesReader(scenario).readFile(facilitiesFile);
 
-		DrtEstimator effectiveDrtEstimator = serviceQualityProbeFile.isBlank() ? drtEstimator
-			: new CsvServiceQualityDrtEstimator(serviceQualityProbeFile, createStopNetwork());
-
 		AccessibilityFromEvents.Builder builder = new AccessibilityFromEvents.Builder(scenario, eventsFile, relevantPois);
 
-		builder.setDrtEstimator(effectiveDrtEstimator);
+		builder.setDrtEstimator(drtEstimator);
 
 
 		builder.build().run();
@@ -338,10 +402,16 @@ public class RunOfflineAccessibilityKelheim {
 
 
 		SimWrapper sw = SimWrapper.create(config)
-			.addDashboard(new OverviewDashboardHeart(relevantPois, coordinateSystem))
-			.addDashboard(new AccessibilityDashboardHeart(coordinateSystem, relevantPois, Modes4Accessibility.car))
-			.addDashboard(new AccessibilityDashboardHeart(coordinateSystem, relevantPois, Modes4Accessibility.pt))
-			.addDashboard(new AccessibilityDashboardHeart(coordinateSystem, relevantPois, Modes4Accessibility.estimatedDrt));
+			.addDashboard(new OverviewDashboardHeart(relevantPois, coordinateSystem));
+		if (accModes.contains(Modes4Accessibility.car)) {
+			sw.addDashboard(new AccessibilityDashboardHeart(coordinateSystem, relevantPois, Modes4Accessibility.car));
+		}
+		if (accModes.contains(Modes4Accessibility.pt)) {
+			sw.addDashboard(new AccessibilityDashboardHeart(coordinateSystem, relevantPois, Modes4Accessibility.pt));
+		}
+		if (accModes.contains(Modes4Accessibility.estimatedDrt)) {
+			sw.addDashboard(new AccessibilityDashboardHeart(coordinateSystem, relevantPois, Modes4Accessibility.estimatedDrt));
+		}
 
 
 
