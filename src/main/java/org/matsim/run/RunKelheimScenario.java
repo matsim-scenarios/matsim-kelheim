@@ -33,6 +33,7 @@ import org.matsim.contrib.common.conventions.vsp.SnzActivities;
 import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
+import org.matsim.contrib.drt.optimizer.insertion.DrtInsertionSearchParams;
 import org.matsim.contrib.drt.optimizer.insertion.parallel.DrtParallelInserterParams;
 import org.matsim.contrib.drt.optimizer.insertion.parallel.ParallelRequestInserterModule;
 import org.matsim.contrib.drt.optimizer.rebalancing.NoRebalancingStrategy;

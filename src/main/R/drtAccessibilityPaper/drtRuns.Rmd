@@ -309,47 +309,200 @@ probe_combined %>%
 
 ```
 ### accessibility
+
+TRAIN STATION
 ```{r}
 
-#train station
-# acc_small <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-10veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
-#   mutate(time = as_hms(time)) %>% mutate(vehicles = 10)
-# acc_medium <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-100veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
-#   mutate(time = as_hms(time))%>% mutate(vehicles = 100)
-# acc_large <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-10-b-1000veh/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
-#   mutate(time = as_hms(time))%>% mutate(vehicles = 1000)
+acc_old <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/kelheim-v3/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>%
+  mutate(time = as_hms(time)) %>% mutate(fleet = "old")
+acc_small <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-100__seed-4711/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>%
+  mutate(time = as_hms(time)) %>% mutate(fleet = "small")
+acc_medium <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-250__seed-4711/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>%
+  mutate(time = as_hms(time))%>% mutate(fleet = "medium")
+acc_large <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-1000__seed-4711/analysis/accessibility/train_station/accessibilities_simwrapper.csv") %>%
+  mutate(time = as_hms(time))%>% mutate(fleet = "large")
 
-#supermarket
-acc_small <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-12-supermarket-10veh/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
-  mutate(time = as_hms(time)) %>% mutate(vehicles = 10)
-acc_medium <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-12-supermarket-100veh/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
-  mutate(time = as_hms(time))%>% mutate(vehicles = 100)
-acc_large <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-12-supermarket-1000veh/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% 
-  mutate(time = as_hms(time))%>% mutate(vehicles = 1000)
-
-acc_combined <- bind_rows(acc_small,acc_medium,acc_large)
+acc_combined <- bind_rows(acc_old,acc_small,acc_medium,acc_large)
 
 
 
 acc_combined %>% 
-  mutate(hour = hour(time), minute = minute(time), vehicles = as.factor(vehicles)) %>%
+  mutate(hour = hour(time), minute = minute(time)) %>%
   mutate(population = population * 4) %>% 
   mutate(population_density = population / (0.5*0.5)) %>% 
+  mutate(fleet = factor(fleet, levels = c("old","small","medium","large"))) %>% 
   # filter(minute == 0) %>% 
 # filter(time == hm("8:00")) %>% arrange(id) %>% 
   st_drop_geometry() %>% 
-  group_by(vehicles,hour) %>% 
+  group_by(fleet,hour) %>% 
   summarise(estimatedDrt_accessibility = sum(estimatedDrt_accessibility*population)/sum(population)) %>% #teleportedWalk_accessibility = mean(teleportedWalk_accessibility), 
   ggplot() +
   geom_col(aes(hour,estimatedDrt_accessibility)) + # fill = hour, position = "dodge"
-  facet_grid(~vehicles) +
-  labs(x = "Hour", y = "DRT Accessibility (utils)", title = "DRT Accessibility Averaged over Hour for Three Fleet Sizes") +
+  facet_grid(~fleet) +
+  labs(x = "Hour", y = "DRT Accessibility (utils)", title = "DRT Accessibility Averaged over Hour for Three Fleet Sizes (TRAIN)") +
   theme_minimal(base_size = 14)
+
+
+acc_combined %>% 
+  mutate(hour = hour(time), minute = minute(time)) %>%
+  mutate(population = population * 4) %>% 
+  mutate(population_density = population / (0.5*0.5)) %>% 
+  mutate(fleet = factor(fleet, levels = c("old","small","medium","large"))) %>% 
+  # filter(minute == 0) %>% 
+# filter(time == hm("8:00")) %>% arrange(id) %>% 
+  st_drop_geometry() %>% 
+  filter(hour >=7 & hour <=10) %>% 
+  group_by(fleet) %>% 
+  summarise(estimatedDrt_accessibility = sum(estimatedDrt_accessibility*population)/sum(population), car_accessibility = sum(car_accessibility * population)/sum(population), pt_accessibility = sum(pt_accessibility * population)/sum(population), teleportedWalk_accessibility = sum(teleportedWalk_accessibility * population)/sum(population)) %>%
+    pivot_longer(ends_with("accessibility"), names_to = "mode", values_to = "accessibility") %>% 
+mutate(
+  mode = case_when(
+    mode == "teleportedWalk_accessibility" ~ "walk",
+    mode == "estimatedDrt_accessibility"   ~ "drt",
+    mode == "pt_accessibility"             ~ "pt",
+    mode == "car_accessibility"            ~ "car",
+    TRUE ~ mode
+  )
+) %>% 
+  ggplot() +
+  geom_col(aes(fleet,accessibility)) + # fill = hour, position = "dodge"
+  facet_grid(~mode) +
+  labs(x = "Hour", y = "DRT Accessibility (utils)", title = "Accessibility 7-10AM to Train Station") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+
+
+
+
+
+```
+SUPERMARKET
+```{r}
+acc_old <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/kelheim-v3/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>%
+  mutate(time = as_hms(time)) %>% mutate(fleet = "old")
+
+acc_small <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-100__seed-4711/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>%
+  mutate(time = as_hms(time)) %>% mutate(fleet = "small")
+acc_medium <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-250__seed-4711/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>%
+  mutate(time = as_hms(time))%>% mutate(fleet = "medium")
+acc_large <- read_csv("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-1000__seed-4711/analysis/accessibility/supermarket/accessibilities_simwrapper.csv") %>%
+  mutate(time = as_hms(time))%>% mutate(fleet = "large")
+
+acc_combined <- bind_rows(acc_old,acc_small,acc_medium,acc_large)
+
+
+
+acc_combined %>% 
+  mutate(hour = hour(time), minute = minute(time)) %>%
+  mutate(population = population * 4) %>% 
+  mutate(population_density = population / (0.5*0.5)) %>% 
+  mutate(fleet = factor(fleet, levels = c("old","small","medium","large"))) %>% 
+  # filter(minute == 0) %>% 
+# filter(time == hm("8:00")) %>% arrange(id) %>% 
+  st_drop_geometry() %>% 
+  group_by(fleet,hour) %>% 
+  summarise(estimatedDrt_accessibility = sum(estimatedDrt_accessibility*population)/sum(population)) %>% #teleportedWalk_accessibility = mean(teleportedWalk_accessibility), 
+  ggplot() +
+  geom_col(aes(hour,estimatedDrt_accessibility)) + # fill = hour, position = "dodge"
+  facet_grid(~fleet) +
+  labs(x = "Hour", y = "DRT Accessibility (utils)", title = "DRT Accessibility Averaged over Hour for Three Fleet Sizes (SUPERMARKET)") +
+  theme_minimal(base_size = 14)
+
+
+acc_combined %>% 
+  mutate(hour = hour(time), minute = minute(time)) %>%
+  mutate(population = population * 4) %>% 
+  mutate(population_density = population / (0.5*0.5)) %>% 
+  mutate(fleet = factor(fleet, levels = c("old","small","medium","large"))) %>% 
+  # filter(minute == 0) %>% 
+# filter(time == hm("8:00")) %>% arrange(id) %>% 
+  st_drop_geometry() %>% 
+  filter(hour >=7 & hour <=10) %>% 
+  group_by(fleet) %>% 
+  summarise(estimatedDrt_accessibility = sum(estimatedDrt_accessibility*population)/sum(population), car_accessibility = sum(car_accessibility * population)/sum(population), pt_accessibility = sum(pt_accessibility * population)/sum(population), teleportedWalk_accessibility = sum(teleportedWalk_accessibility * population)/sum(population)) %>%
+    pivot_longer(ends_with("accessibility"), names_to = "mode", values_to = "accessibility") %>% 
+mutate(
+  mode = case_when(
+    mode == "teleportedWalk_accessibility" ~ "walk",
+    mode == "estimatedDrt_accessibility"   ~ "drt",
+    mode == "pt_accessibility"             ~ "pt",
+    mode == "car_accessibility"            ~ "car",
+    TRUE ~ mode
+  )
+) %>% 
+  ggplot() +
+  geom_col(aes(fleet,accessibility)) + # fill = hour, position = "dodge"
+  facet_grid(~mode) +
+  labs(x = "Hour", y = "DRT Accessibility (utils)", title = "Accessibility 7-10AM to Supermarket") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+
+
 
 
 ```
 
+
 ```{r}
+# Prepare max_with_drt and max_without_drt vlaues
+equity_distribution_supermarket_800 <- acc_combined %>% 
+  filter(time == hm("8:00")) %>% 
+  st_drop_geometry() %>% 
+  mutate(max_with_drt = pmax(pmax(pt_accessibility,estimatedDrt_accessibility),teleportedWalk_accessibility)) %>%
+  mutate(max_without_drt = pmax(pt_accessibility,teleportedWalk_accessibility)) %>% 
+  select(population,fleet,`With DRT` = max_with_drt,`No DRT` = max_without_drt) %>%
+  uncount(population) %>%
+  pivot_longer(ends_with("DRT"), names_to = "scenario",values_to = "value") %>% 
+  mutate(scenario = paste0(scenario," (",fleet,")")) %>% 
+  filter(scenario == "No DRT (old)" | str_starts(scenario, "With")) %>% 
+  mutate(scenario = factor(scenario, levels = c("No DRT (old)","With DRT (old)", "With DRT (small)", "With DRT (medium)", "With DRT (large)")))
+
+
+lines_and_labels <- equity_distribution_supermarket_800 %>%
+  filter(scenario %in% c("No DRT (old)", "With DRT (large)")) %>% 
+  group_by(scenario) %>%
+  summarise(
+    q10    = quantile(value, 0.10, na.rm = TRUE),
+    q25    = quantile(value, 0.25, na.rm = TRUE),
+    q50 = median(value, na.rm = TRUE),
+    q75    = quantile(value, 0.75, na.rm = TRUE),
+    q90 = quantile(value, 0.90, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  select(-scenario) %>% data.table::transpose(keep.names = "variable") %>% 
+  mutate(y1 = as.numeric(str_replace(variable,"q","0."))) %>% 
+  mutate(y2 = y1) %>% 
+  select(x1=V1, x2=V2, y1,y2) %>% 
+  mutate(diff = round(x2-x1,2))
+  
+# also calculate mean
+means <- equity_distribution_supermarket_800 %>% group_by(scenario) %>% summarise(mean = mean(value)) %>% pull(mean)
+
+# plug together plot
+plot_ecdf <- ggplot() +
+  # ggplot(lines_and_labels) +
+  # geom_segment(aes(x = -20, xend = x1, y = y1, yend = y2), color = "gray30", linetype = "dashed", lwd = 0.3) +
+  # geom_segment(aes(x = x1, xend = x2, y = y1, yend = y2), color = "gray30") +
+  # geom_text(aes(x = x1 - 0.5, y= y2+.05, label = paste0("Δ = ", diff)),hjust=1, inherit.aes = FALSE, size = 4)+
+  stat_ecdf(data = equity_distribution_supermarket_800, mapping =  aes(value, col = scenario), linewidth = 1) +
+  # scale_color_manual(values = c(`No DRT` = "#1b9e77",`With DRT` = "purple")) +
+  labs(x = "Accessibility (utils)", y = "Cumulative Share (≤ x)")+
+  theme_minimal(base_size = 12)+ 
+  # theme(legend.position = "bottom") +
+  # theme( panel.grid.minor.y = element_blank())+
+  coord_cartesian(xlim = c(-15, 1))+
+  
+  scale_y_continuous(
+    limits = c(0, 1),
+    breaks = seq(0, 1, by = 0.2)
+  )
+  # geom_point(data = data.frame(x = means, y = c(.385,.43)), aes(x,y), col = "red", shape = "diamond", size = 3)+
+  # geom_line(data = data.frame(x = means, y = c(.385,.43)), aes(x,y), col = "red") +
+  # geom_text(aes(x = means[1] - .5,y = 0.415, label = paste0("Δ = ", round(means[2]-means[1],2))),hjust=1, inherit.aes = FALSE, size = 4, color = "red")
+
+plot_ecdf
 
 ```
 

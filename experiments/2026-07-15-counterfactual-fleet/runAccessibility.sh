@@ -2,8 +2,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
-#SBATCH --time=48:00:00
+#SBATCH --mem=128G
+#SBATCH --time=12:00:00
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=rehmann@vsp.tu-berlin.de
 #SBATCH --output=logs/%x-%j.out
@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 RUN_ROOT="${SLURM_SUBMIT_DIR:-$SCRIPT_DIR}"
 cd "$RUN_ROOT"
 
-JAVA_HEAP="${JAVA_HEAP:-60G}"
+JAVA_HEAP="${JAVA_HEAP:-100G}"
 RUN_MODE="${RUN_MODE:-calculate}"
 MODES="${MODES:-estimatedDrt teleportedWalk pt car}"
 TIMES="${TIMES:-21600 25200 28800 32400 36000 39600 43200 46800 50400 54000 57600 61200 64800 68400 72000 75600}"
@@ -50,7 +50,7 @@ TIMES_CSV="${TIMES// /,}"
 POIS_CSV="${POIS// /,}"
 
 shopt -s nullglob
-jars=(matsim-kelheim-2024.2*.jar)
+jars=(matsim-kelheim-2024.2*accessibility.jar)
 if (( ${#jars[@]} != 1 )); then
 	echo "Expected exactly one matsim-kelheim-2024.2*.jar in $RUN_ROOT, found ${#jars[@]}." >&2
 	exit 2

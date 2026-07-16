@@ -9,7 +9,9 @@ DRY_RUN=false
 
 # Matrix options. Edit these lists to choose exactly which existing runs to analyze.
 SCENARIO_DIRS=(
-	"output/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-1000__seed-4711"
+  "output/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-1000__seed-4711",
+  "output/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-500__seed-4711",
+	"output/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-500__seed-4711"
 )
 POIS=(train_station logistic supermarket)
 
