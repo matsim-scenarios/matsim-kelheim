@@ -26,11 +26,23 @@ library(xml2)
 ```{r}
 output_path_base <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-03/output-300it-base-25pct/kelheim-v3.1-25pct-iter_300."
 
-output_path_small <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-03/output-300it-10veh-25pct/kelheim-v3.1-25pct-kexi-iter_300."
 
-output_path_medium <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-03/output-300it-100veh-25pct/kelheim-v3.1-25pct-kexi-iter_300."
+# BASE DEMAND
 
-output_path_large <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-03/output-300it-1000veh-25pct/kelheim-v3.1-25pct-kexi-iter_300."
+# output_path_small <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-100__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
+# # 
+# output_path_medium <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-250__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
+
+output_path_large <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
+
+
+# AUGMENTED DEMAND
+
+output_path_small <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-counterfactual__prebooking-off__fleet-100__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans."
+
+output_path_medium <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-counterfactual__prebooking-off__fleet-250__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans."
+# 
+# output_path_large <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-counterfactual__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans."
 
 ```
 
@@ -68,10 +80,10 @@ persons_in_kelheim <- persons_small %>% filter(!is.na(home_x)) %>% st_as_sf(coor
 ## REAL DRT TRIPS
 ### mode stats 
 ```{r}
-mode_stats_small_trip <- trips_small %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_small = n()) %>% ungroup() %>% mutate(share_10veh = n_small/sum(n_small))
+mode_stats_small_trip <- trips_small %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_small = n()) %>% ungroup() %>% mutate(share_small = n_small/sum(n_small)*100)
 
-mode_stats_medium_trip <- trips_medium %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_medium = n()) %>% ungroup() %>% mutate(share_100veh = n_medium/sum(n_medium)) 
-mode_stats_large_trip <- trips_large %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_large = n()) %>% ungroup() %>% mutate(share_1000veh = n_large/sum(n_large))
+mode_stats_medium_trip <- trips_medium %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_medium = n()) %>% ungroup() %>% mutate(share_medium = n_medium/sum(n_medium)*100) 
+mode_stats_large_trip <- trips_large %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_large = n()) %>% ungroup() %>% mutate(share_large = n_large/sum(n_large) *100)
 
 mode_stats_small_trip %>% left_join(mode_stats_medium_trip) %>% left_join(mode_stats_large_trip) 
 
@@ -110,12 +122,11 @@ person_score_joined %>% filter(person %in% drt_users_large) %>% mutate(diff = ex
 
 
 ```{r}
-bind_rows(drt_legs_small %>% mutate(vehicles = 10), drt_legs_medium %>% mutate(vehicles = 100), drt_legs_large %>% mutate(vehicles = 1000)) %>%
+bind_rows(drt_legs_small %>% mutate(fleet = "small"), drt_legs_medium %>% mutate(fleet = "medium"), drt_legs_large %>% mutate(fleet = "large")) %>%
   filter(!startsWith(personId,"COMP")) %>%
   mutate(time = hms::as_hms(submissionTime)) %>%
   mutate(hour = hour(time)) %>% 
-  mutate(vehicles = as.factor(vehicles)) %>% 
-  group_by(hour, vehicles) %>% count() %>% ggplot() + geom_line(aes(hour,n, col = vehicles)) + theme_minimal(base_size = 14) + labs(x = "Hour", y = "Requests")
+  group_by(hour, fleet) %>% count() %>% ggplot() + geom_line(aes(hour,n, col = fleet)) + theme_minimal(base_size = 14) + labs(x = "Hour", y = "Requests")
 ```
 
 
@@ -123,18 +134,20 @@ bind_rows(drt_legs_small %>% mutate(vehicles = 10), drt_legs_medium %>% mutate(v
 
 ```{r}
 
-drt_legs_combined <- bind_rows(drt_legs_small %>% mutate(vehicles = 10), drt_legs_medium %>% mutate(vehicles = 100), drt_legs_large %>% mutate(vehicles = 1000)) %>%
+drt_legs_combined <- bind_rows(drt_legs_small %>% mutate(fleet = "small"), drt_legs_medium %>% mutate(fleet = "medium"), drt_legs_large %>% mutate(fleet = "large")) %>%
   filter(!startsWith(personId,"COMP")) %>% 
-  group_by(vehicles) %>%
+  group_by(fleet) %>%
+  mutate(fleet = factor(fleet, levels = c("small","medium","large"))) %>% 
   summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>%
-  mutate(detourFactor = inVehicleRideTime/directRideTime) %>% 
-  mutate(vehicles = as.factor(vehicles))
+  mutate(detourFactor = inVehicleRideTime/directRideTime)
+
+drt_legs_combined
 
 
-ggplot(drt_legs_combined) + geom_col(aes(vehicles, waitTime)) + theme_minimal(base_size = 14)
-ggplot(drt_legs_combined) + geom_col(aes(vehicles, directRideTime))+ theme_minimal(base_size = 14)
-ggplot(drt_legs_combined) + geom_col(aes(vehicles, inVehicleRideTime))+ theme_minimal(base_size = 14)
-ggplot(drt_legs_combined) + geom_col(aes(vehicles, detourFactor))+ theme_minimal(base_size = 14)
+ggplot(drt_legs_combined) + geom_col(aes(fleet, waitTime)) + theme_minimal(base_size = 14)
+ggplot(drt_legs_combined) + geom_col(aes(fleet, directRideTime))+ theme_minimal(base_size = 14)
+ggplot(drt_legs_combined) + geom_col(aes(fleet, inVehicleRideTime))+ theme_minimal(base_size = 14)
+ggplot(drt_legs_combined) + geom_col(aes(fleet, detourFactor))+ theme_minimal(base_size = 14)
 
 
 # drt_legs_small %>% filter(!startsWith(personId,"COMP")) %>% summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>% mutate(detourFactor = inVehicleRideTime/directRideTime)
@@ -147,11 +160,12 @@ ggplot(drt_legs_combined) + geom_col(aes(vehicles, detourFactor))+ theme_minimal
 ### occupancy
 ```{r}
 
-occ_small %>% mutate(fleet_size = 10) %>% 
-  bind_rows(occ_medium %>% mutate(fleet_size = 100)) %>% 
-  bind_rows(occ_large %>% mutate(fleet_size = 1000)) %>% 
+occ_small %>% mutate(fleet = "small") %>% 
+  bind_rows(occ_medium %>% mutate(fleet = "medium")) %>% 
+  bind_rows(occ_large %>% mutate(fleet = "large")) %>% 
+  mutate(fleet = factor(fleet, levels = c("small","medium","large"))) %>% 
   filter(time <= hm("24:00")) %>% 
-  pivot_longer(-c(time,fleet_size), names_to = "status", values_to = "n") %>% 
+  pivot_longer(-c(time,fleet), names_to = "status", values_to = "n") %>% 
   # mutate(status = factor(status, levels = c("STAY","0 pax", "1 pax", "2 pax", "3 pax", "4 pax"))) %>% 
   ggplot() + 
   scale_x_time(minor_breaks = "1 hour", date_breaks = "3 hours",date_labels = "%H") +
@@ -164,7 +178,7 @@ occ_small %>% mutate(fleet_size = 10) %>%
     "3 pax" = "red",
     "4 pax" = "purple"
   )) +
-  facet_grid(~fleet_size)+
+  facet_grid(~fleet)+
   theme_minimal(base_size = 16) + 
   labs(x = "Time", y = "Number of Vehicles")
 ```
@@ -176,7 +190,7 @@ The way we did it before was biased. We assumed potential trip has the same LOS 
 
 read drt stops
 ```{r}
-doc <- read_xml("/Users/jakob/git/matsim-kelheim/input/drt_stops_landkreis.xml")
+doc <- read_xml("/Users/jakob/git/matsim-kelheim/input/v3.1/expanded-service-area/drt_stops_landkreis.xml")
 
 stops <- xml_find_all(doc, ".//stopFacility")
 
@@ -201,15 +215,20 @@ Prepare data
 # probe_large <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-1000-c-train-only-0it-5min/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
 
 # supermarket 
-probe_small <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-10-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
-probe_medium <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-100-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
-probe_large <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-1000-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+# probe_small <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-10-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+# probe_medium <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-100-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+# probe_large <- read_delim("/Users/jakob/git/matsim-kelheim/output-probe-1000-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz", delim = ";") 
+
+probe_small <- read_delim(paste0(output_path_small,"drt_service_quality_probes.csv.gz"), delim = ";")
+probe_medium <- read_delim(paste0(output_path_medium,"drt_service_quality_probes.csv.gz"), delim = ";")
+probe_large <- read_delim(paste0(output_path_large,"drt_service_quality_probes.csv.gz"), delim = ";")
 
 
-probe_combined <- bind_rows(probe_small %>% mutate(vehicles = 10), probe_medium %>% mutate(vehicles = 100),probe_large %>% mutate(vehicles = 1000)) %>% 
+probe_combined <- bind_rows(probe_small %>% mutate(fleet = "small"), probe_medium %>% mutate(fleet = "medium"),probe_large %>% mutate(fleet = "large")) %>% 
+  mutate(fleet = factor(fleet, levels = c("small","medium","large"))) %>% 
   mutate(time = hms::as_hms(time)) %>% 
   mutate(hour = hour(time)) %>% 
-  group_by(hour,vehicles,originStop,destinationStop) %>% 
+  group_by(hour,fleet,originStop,destinationStop) %>% 
   summarise(waitTime = mean(waitTime), directRideTime = mean(directRideTime), rideTimeWithDetour = mean(rideTimeWithDetour),directRideDistance=mean(directRideDistance), rideDistanceWithDetour = mean(rideDistanceWithDetour), detourFactor = mean(detourFactor)) %>% 
   mutate(hour = as.factor(hour))
 
@@ -221,14 +240,14 @@ probe_combined
 probe_combined %>%
   ggplot() + 
   geom_boxplot(aes(hour,waitTime)) +
-  facet_grid(~vehicles) +
+  facet_grid(~fleet) +
   theme_minimal(base_size = 14) + 
   labs(x = "Time", y = "Wait Time (sec)")
 
 probe_combined %>% 
   ggplot() + 
-  geom_boxplot(aes(hour,detourFactor)) +
-  facet_grid(~vehicles) +
+  geom_boxplot(aes(hour, detourFactor)) +
+  facet_grid(~fleet) +
   theme_minimal(base_size = 14) + 
   labs(x = "Time", y = "Detour Factor")
 
@@ -236,7 +255,7 @@ probe_combined %>%
 tmap_mode("plot")
 probe_combined %>% 
   filter(hour == 18) %>% 
-  group_by(originStop, vehicles) %>% summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor)) %>% 
+  group_by(originStop, fleet) %>% summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor)) %>% 
   left_join(drt_stops, by = c("originStop" = "id")) %>% 
   st_as_sf() %>% 
   # group_by(originZone, vehicles) %>% 
@@ -246,31 +265,48 @@ probe_combined %>%
   tm_basemap("Esri.WorldGrayCanvas") +
   tm_dots(fill = "detourFactor", size = .4) + 
   tm_title("Detour Factor by Origin") + 
-  tm_facets(by = "vehicles")
+  tm_facets(by = "fleet")
 
 
 probe_combined %>% 
  filter(hour == 18) %>% 
-  group_by(destinationStop, vehicles) %>% summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor)) %>% 
+  group_by(destinationStop, fleet) %>% summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor)) %>% 
   left_join(drt_stops, by = c("destinationStop" = "id")) %>% 
   st_as_sf() %>% 
   tm_shape() + 
   tm_basemap("Esri.WorldGrayCanvas") +
   tm_dots(fill = "detourFactor", size = .4) + 
   tm_title("Detour Factor by Destination") + 
-  tm_facets(by = "vehicles")
+  tm_facets(by = "fleet")
 
 probe_combined %>% 
   filter(hour == 18) %>%
-  group_by(originStop, vehicles) %>% 
+  group_by(originStop, fleet) %>% 
   left_join(drt_stops, by = c("originStop" = "id")) %>% 
   st_as_sf() %>% 
-  summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor)) %>% 
+  summarise(`Wait Time (min)` = mean(waitTime)/60, detourFactor = mean(detourFactor)) %>% 
   tm_shape() + 
   tm_basemap("Esri.WorldGrayCanvas") +
-  tm_dots(fill = "waitTime", size = .4, fill.scale = tm_scale_intervals(style = "quantile",n = 10)) +
-  tm_title("Wait Time by Origin")+ 
-  tm_facets(by = "vehicles")
+  tm_dots(fill = "Wait Time (min)", size = .4, fill.scale = tm_scale_intervals(style = "fixed",breaks = c(0,2,4,6,8,10,Inf))) +
+  tm_title("Wait Time by Origin at 18:00")+ 
+  tm_place_legends_right() +
+  tm_facets(by = "fleet")
+
+
+probe_combined %>% 
+  filter(fleet == "small") %>%
+  filter(hour %in% c("6","8","10","12","14","16","18","20")) %>% 
+  group_by(originStop, hour) %>% 
+  left_join(drt_stops, by = c("originStop" = "id")) %>% 
+  st_as_sf() %>% 
+  summarise(`Wait Time (min)` = mean(waitTime)/60, detourFactor = mean(detourFactor)) %>% 
+  tm_shape() + 
+  tm_basemap("Esri.WorldGrayCanvas") +
+  tm_dots(fill = "Wait Time (min)", size = .4, fill.scale = tm_scale_intervals(style = "fixed",breaks = c(seq(0,20,2),Inf))) +
+  tm_title("Wait Time by Origin, Small Fleet Size")+ 
+  tm_place_legends_right() +
+  tm_facets(by = "hour",nrow = 2, ncol = 4)
+
 ```
 ### accessibility
 ```{r}
@@ -319,6 +355,54 @@ acc_combined %>%
 
 
 #XXX
+
+
+### Kai Analysis
+
+
+```{r}
+comb <- persons_base %>%  filter(subpopulation == "person") %>% st_as_sf(coords = c("home_x","home_y"), crs=25832) %>% st_filter(kelheim_shp) %>% select(person,executed_score) %>% st_join(acc_combined %>% filter(vehicles == 10, time == hm("12:00")),join = st_nearest_feature)  
+
+
+ggplot(comb) + geom_point(aes(executed_score, car_accessibility), alpha = 0.1, size = 0.1)
+ggplot(comb) + geom_point(aes(executed_score, pt_accessibility), alpha = 0.1, size = 0.1)
+ggplot(comb) + geom_point(aes(executed_score, teleportedWalk_accessibility), alpha = 0.1, size = 0.1)
+
+cor(comb$executed_score,comb$teleportedWalk_accessibility)
+
+
+library(purrr)
+
+vars_x <- c("executed_score")
+
+
+vars_y <- c(
+  "car_accessibility","pt_accessibility","teleportedWalk_accessibility"
+)
+
+pairs <- expand_grid(var1 = vars_x, var2 = vars_y)
+
+result <- pairs %>%
+  mutate(
+    test = map2(var1, var2, ~ cor.test(comb[[.x]], comb[[.y]])),
+    correlation = map_dbl(test, "estimate"),
+    p_value = map_dbl(test, "p.value"),
+    stars = case_when(
+      p_value < 0.001 ~ "***",
+      p_value < 0.01  ~ "**",
+      p_value < 0.05  ~ "*",
+      TRUE ~ ""
+    ),
+    corr_rounded = sprintf("%.3f%s", round(correlation, 3), stars)
+  ) %>%
+  select(var1, var2, correlation, p_value, corr_rounded)
+
+result
+```
+
+
+
+### immobile analysis
 ```{r}
 persons_base
 

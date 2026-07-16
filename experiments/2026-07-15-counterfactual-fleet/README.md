@@ -1,6 +1,6 @@
 # Counterfactual-demand DRT fleet experiment
 
-This directory submits 16 independent Slurm jobs: base and counterfactual demand, fleet sizes 100/250/500/1000, and probability-based DRT prebooking off/on. All counterfactual cases use the same already-generated population; no demand is regenerated while varying fleet size.
+This directory contains separate submitters for two no-DRT base runs (base and counterfactual demand) and the 16-job DRT policy matrix: base and counterfactual demand, fleet sizes 100/250/500/1000, and probability-based DRT prebooking off/on. All counterfactual cases use the same already-generated population; no demand is regenerated while varying fleet size.
 
 ## Upload layout
 
@@ -20,21 +20,25 @@ The config continues to load the base network, population, vehicles, and transit
 
 ## Submit
 
-From this directory, inspect the 16 commands without submitting:
+From this directory, inspect or submit the two no-DRT base cases:
+
+```bash
+./submit-base-matrix.sh --dry-run
+./submit-base-matrix.sh
+```
+
+Inspect or submit the DRT policy matrix:
 
 ```bash
 ./submit-policy-matrix.sh --dry-run
-```
-
-Submit all jobs:
-
-```bash
 ./submit-policy-matrix.sh
 ```
 
 The command records submitted Slurm IDs in `submission.tsv`. Output directories are deterministic, for example `output/2026-07-14-counterfactual-fleet/demand-counterfactual__prebooking-on__fleet-500__seed-4711`.
 
-The seed dimension is defined once as `SEEDS=(4711)` in `submit-policy-matrix.sh`. Extend that list, for example to `SEEDS=(4711 1234)`, to submit independent replications.
+Submit the matrix from the upload directory. The job runner uses Slurm's `SLURM_SUBMIT_DIR`, rather than the temporary spool directory where Slurm copies the batch script, to resolve all relative input paths.
+
+All base controls are at the top of `submit-base-matrix.sh`: `DEMANDS=(base counterfactual)` and `SEEDS=(4711)`. Policy controls are independently configured at the top of `submit-policy-matrix.sh`: `DEMANDS`, `FLEET_SIZES`, `PREBOOKING_SETTINGS`, and `SEEDS`. Extend either seed list, for example to `SEEDS=(4711 1234)`, to submit independent replications.
 
 To submit a single case, use:
 

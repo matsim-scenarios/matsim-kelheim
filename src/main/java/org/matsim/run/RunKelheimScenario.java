@@ -197,10 +197,10 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy. If unspecified, the starting" +
 		"points of the fleet will be set as waiting points", defaultValue = "")
 	private String waitingPointsPath;
-	@CommandLine.Option(names = "--drt-expanded-service-area-stops", defaultValue = "../drt_stops_landkreis.xml", description = "Transit stop file used with --with-drt-expandedServiceArea.")
+	@CommandLine.Option(names = "--drt-expanded-service-area-stops", defaultValue = "expanded-service-area/drt_stops_landkreis.xml", description = "Transit stop file used with --with-drt-expandedServiceArea. Relative paths are resolved against the configuration file.")
 	private String expandedDrtStopsFile;
 
-	@CommandLine.Option(names = "--drt-study-area-shp", defaultValue = "input/shp/lk-kelheim/lk-kelheim.shp", description = "Study-area shapefile used to define the expanded DRT service area and eligible fleet start links.")
+	@CommandLine.Option(names = "--drt-study-area-shp", defaultValue = "input/shp/lk-kelheim/lk-kelheim.shp", description = "Study-area shapefile used to define the expanded DRT service area and eligible fleet start links. Relative paths are resolved against the working directory.")
 	private String drtServiceAreaShp;
 
 

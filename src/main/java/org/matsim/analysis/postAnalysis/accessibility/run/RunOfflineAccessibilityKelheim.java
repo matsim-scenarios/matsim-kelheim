@@ -74,7 +74,7 @@ public class RunOfflineAccessibilityKelheim {
 	/** Optional stop-to-stop service-quality probe CSV. Leave blank to use the supplied conventional estimator. */
 //	public static String serviceQualityProbeFile = "";
 //	public static String serviceQualityProbeFile = "/Users/jakob/git/matsim-kelheim/output-probe-10-c-train-only/kelheim-v3.1-25pct-kexi-iter_1-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz";
-	public static String serviceQualityProbeFile = "/Users/jakob/git/matsim-kelheim/output-probe-1000-d-supermarket-only-0it-hourly/kelheim-v3.1-25pct-kexi-iter_0-plans_kelheim-v3-1-25pct-kexi-iter_300-output_plans.drt_service_quality_probes.csv.gz";
+	public static String serviceQualityProbeFile = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300.drt_service_quality_probes.csv.gz";
 
 	protected RunOfflineAccessibilityKelheim() {
 		// should not be instantiated
@@ -85,8 +85,8 @@ public class RunOfflineAccessibilityKelheim {
 
 		// CONFIGURATION
 		// what POIs will are being examined
-//		List<String> relevantPois = List.of("train_station", "logistic", "supermarket");
-		List<String> relevantPois = List.of("supermarket");
+		List<String> relevantPois = List.of("train_station", "logistic", "supermarket");
+//		List<String> relevantPois = List.of("supermarket");
 		boolean writeDrtStopPairs = false;
 
 		// What times will we calculate accessibility: every five minutes from 08:00 through 12:00.
@@ -97,16 +97,20 @@ public class RunOfflineAccessibilityKelheim {
 			.toList();
 
 		// For what modes
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.estimatedDrt, Modes4Accessibility.teleportedWalk);
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.estimatedDrt, Modes4Accessibility.teleportedWalk, Modes4Accessibility.pt, Modes4Accessibility.car);
 		// What parameters will be used for DRT Estimator
 		double waitingTime = 300;
 		double slope = 1.22;
 		double intercept = 177.5;
 		double ascDrt = 0.0;
 		// With what directory are we working? Following code makes a copy, so as to leave original directory intact.
-		File dirToCopy = new File("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/0000-kelheim-scratch");
-		String outputDir = "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-12-supermarket-1000veh/";
-		FileUtils.copyDirectory(dirToCopy, new File(outputDir));
+//		File dirToCopy = new File("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/0000-kelheim-scratch");
+		String dirToCopy = null;
+		String outputDir = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-1000__seed-4711";
+		if (dirToCopy != null) {
+			FileUtils.copyDirectory(new File(dirToCopy), new File(outputDir));
+
+		}
 
 		// CONFIG
 
@@ -197,9 +201,9 @@ public class RunOfflineAccessibilityKelheim {
 	static void step2CalculateAccessibility(DrtEstimator drtEstimator, Double ascDrt, List<String> relevantPois, ConfigGroup accConfig, String outputDir) {
 
 		// input files
-		String eventsFile = ApplicationUtils.matchInput("output_events.xml.gz", Path.of(outputDir)).toString();
-		String networkFile = ApplicationUtils.matchInput("output_network.xml.gz", Path.of(outputDir)).toString();
-		String transportScheduleFile = ApplicationUtils.matchInput("output_transitSchedule.xml.gz", Path.of(outputDir)).toString();
+		String eventsFile = ApplicationUtils.matchInput("output_events.xml", Path.of(outputDir)).toString();
+		String networkFile = ApplicationUtils.matchInput("output_network.xml", Path.of(outputDir)).toString();
+		String transportScheduleFile = ApplicationUtils.matchInput("output_transitSchedule.xml", Path.of(outputDir)).toString();
 
 
 
