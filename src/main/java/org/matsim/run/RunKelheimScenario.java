@@ -156,16 +156,6 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--drt-service-quality-probe-stop-pair-input-files", defaultValue = "", description = "Comma-separated accessibility stop-pair CSV/CSV.GZ files. When set, probe only their unique directed stop pairs.")
 	private String drtServiceQualityProbeStopPairInputFiles;
 
-	@CommandLine.Option(names = "--prebooking", defaultValue = "false", description = "Enable probability-based prebooking for the conventional DRT mode.")
-	private boolean prebooking;
-
-	@CommandLine.Option(names = "--prebooking-probability", defaultValue = "1.0", description = "Probability that a conventional DRT trip is prebooked (0.0 to 1.0).")
-	private double prebookingProbability;
-
-	@CommandLine.Option(names = "--prebooking-submission-slack", defaultValue = "1800", description = "Seconds before planned departure at which a prebooking request is submitted.")
-	private double prebookingSubmissionSlack;
-	// a couple of CommandLine.Options below actually are not strictly necessary but rather allow for circumvention of settings directly via config and/or config options.... (ts 07/23)
-
 	/**
 	 * the KEXI service has a zone-dependent fare system which is why we are using a custom fare implementation. Via this option, one can set a flat (constant) price for the AV service.
 	 */
@@ -294,9 +284,6 @@ public class RunKelheimScenario extends MATSimApplication {
 				if (drtConfigGroup.getMode().equals(TransportMode.drt)) {
 					DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtConfigGroup;
 					addDrtCompanionParameters(drtWithExtensionsConfigGroup);
-					if (prebooking) {
-						addProbabilityBasedPrebooking(drtConfigGroup, prebookingProbability, prebookingSubmissionSlack);
-					}
 
 					if (drtExpandedServiceArea) {
 						drtConfigGroup.setTransitStopFile(expandedDrtStopsFile);
