@@ -24,28 +24,105 @@ library(xml2)
 
 ### basic paths
 ```{r}
+library(tibble)
+
+df_full <- tribble(
+  ~fleet_size, ~demand,      ~path,
+  NA_integer_, "base","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/base__demand-base__seed-4711/kelheim-v3.1-25pct-iter_300.",
+  10L,"base","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-10__seed-4711/kelheim-v3.1-25pct-kexi-iter_300.",
+  50L,"base","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-50__seed-4711/kelheim-v3.1-25pct-kexi-iter_300.",
+  100L,"base","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-100__seed-4711/kelheim-v3.1-25pct-kexi-iter_300.",
+  500L,"base","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-500__seed-4711/kelheim-v3.1-25pct-kexi-iter_300.",
+  1000L,"base","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300.",
+  NA_integer_, "augmented","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/base__demand-counterfactual__seed-4711/kelheim-v3.1-25pct-iter_300-plans_counterfactual-25pct-plans.",
+  10L,"augmented","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-10__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.",
+  50L,"augmented","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-50__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.",
+  100L,"augmented","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-100__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.",
+  500L,"augmented","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-500__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.",
+  1000L,"augmented","/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans."
+)
+```
 
 
-# BASE DEMAND
-output_path_base <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/base__demand-base__seed-4711/kelheim-v3.1-25pct-iter_300."
-output_path_10 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-10__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
-output_path_50 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-50__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
-output_path_100 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-100__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
-output_path_500 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-500__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
-output_path_1000 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
+```{r}
 
-output_path_small = output_path_10
-output_path_medium = output_path_100
-output_path_large = output_path_1000
+library(purrr)
 
-# AUGMENTED DEMAND
+library(sf)
 
-# output_path_base <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/base__demand-counterfactual__seed-4711/kelheim-v3.1-25pct-iter_300-plans_counterfactual-25pct-plans."
-# output_path_10 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-10__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
-# output_path_50 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-50__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
-# output_path_100 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-100__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
-# output_path_500 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-500__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
-# output_path_1000 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
+df_full2 <- df_full %>%
+  mutate(
+    trips = purrr::map(
+      path,
+      ~ readr::read_delim(
+        paste0(.x, "output_trips.csv.zst"),
+        delim = ";",
+        show_col_types = FALSE
+      )
+    ),
+
+    persons = purrr::map(
+      path,
+      ~ readr::read_delim(
+        paste0(.x, "output_persons.csv.zst"),
+        delim = ";",
+        show_col_types = FALSE
+      )
+    ),
+
+    drt_legs = purrr::map2(
+      path,
+      fleet_size,
+      ~ if (!is.na(.y)) {
+        readr::read_delim(
+          paste0(.x, "output_drt_legs_drt.csv"),
+          delim = ";",
+          show_col_types = FALSE
+        )
+      } else {
+        NULL
+      }
+    ),
+
+    occupancy = purrr::map2(
+      path,
+      fleet_size,
+      ~ if (!is.na(.y)) {
+        readr::read_delim(
+          paste0(.x, "output_occupancy_time_profiles_drt.txt"),
+          delim = ";",
+          show_col_types = FALSE
+        )
+      } else {
+        NULL
+      }
+    )
+  )
+```
+
+
+```{r}
+# 
+# # BASE DEMAND
+# output_path_base <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/base__demand-base__seed-4711/kelheim-v3.1-25pct-iter_300."
+# output_path_10 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-10__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
+# output_path_50 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-50__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
+# output_path_100 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-100__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
+# output_path_500 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-500__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
+# output_path_1000 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-base__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300."
+# 
+# output_path_small = output_path_10
+# output_path_medium = output_path_100
+# output_path_large = output_path_1000
+# 
+# # AUGMENTED DEMAND
+# 
+# # output_path_base <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/base__demand-counterfactual__seed-4711/kelheim-v3.1-25pct-iter_300-plans_counterfactual-25pct-plans."
+# # output_path_10 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-10__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
+# # output_path_50 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-50__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
+# # output_path_100 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-100__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
+# # output_path_500 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-500__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
+# # output_path_1000 <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-15-counterfactual-fleet/policy__demand-counterfactual__prebooking-off__fleet-1000__seed-4711/kelheim-v3.1-25pct-kexi-iter_300-plans_counterfactual-25pct-plans.annealingRates.txt"
 
 ```
 
@@ -86,6 +163,7 @@ persons_in_kelheim <- persons_small %>% filter(!is.na(home_x)) %>% st_as_sf(coor
 mode_stats_small_trip <- trips_small %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_small = n()) %>% ungroup() %>% mutate(share_small = n_small/sum(n_small)*100)
 
 mode_stats_medium_trip <- trips_medium %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_medium = n()) %>% ungroup() %>% mutate(share_medium = n_medium/sum(n_medium)*100) 
+
 mode_stats_large_trip <- trips_large %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_large = n()) %>% ungroup() %>% mutate(share_large = n_large/sum(n_large) *100)
 
 mode_stats_small_trip %>% left_join(mode_stats_medium_trip) %>% left_join(mode_stats_large_trip) 
