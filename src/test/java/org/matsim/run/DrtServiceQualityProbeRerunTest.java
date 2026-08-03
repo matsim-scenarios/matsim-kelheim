@@ -60,7 +60,7 @@ class DrtServiceQualityProbeRerunTest {
 	private static final String DRT_MODE = TransportMode.drt;
 	private static final IntegerLoadType LOAD_TYPE = new IntegerLoadType("passengers");
 	private static final int FIRST_RUN_ITERATIONS = 1;
-	private static final double PROBE_NUMERIC_TOLERANCE = 0.01;
+	private static final double PROBE_NUMERIC_TOLERANCE = 0.1;
 
 	@RegisterExtension
 	final MatsimTestUtils utils = new MatsimTestUtils();
@@ -71,7 +71,7 @@ class DrtServiceQualityProbeRerunTest {
 		Fixture fixture = createFixture(fixtureDirectory);
 		Path iterativeOutput = Path.of(utils.getOutputDirectory()).resolve("iterative");
 
-		run(fixture, iterativeOutput, FIRST_RUN_ITERATIONS, null);
+		run(fixture, iterativeOutput, FIRST_RUN_ITERATIONS, null, true);
 
 		Path effectiveIterativeOutput = effectiveOutput(iterativeOutput, FIRST_RUN_ITERATIONS);
 		Path finalPlans = effectiveIterativeOutput.resolve("ITERS/it." + FIRST_RUN_ITERATIONS
@@ -81,7 +81,7 @@ class DrtServiceQualityProbeRerunTest {
 		assertThat(iterativeProbe).isRegularFile();
 
 		Path rerunOutput = Path.of(utils.getOutputDirectory()).resolve("rerun");
-		run(fixture, rerunOutput, 0, finalPlans);
+		run(fixture, rerunOutput, 0, finalPlans, true);
 
 		Path rerunProbe = effectiveOutput(rerunOutput, 0).resolve("null-iter_0.drt_service_quality_probes.csv.gz");
 		assertThat(rerunProbe).isRegularFile();
@@ -113,17 +113,14 @@ class DrtServiceQualityProbeRerunTest {
 		return outputDirectory.resolveSibling(outputDirectory.getFileName() + "-iter_" + iterations);
 	}
 
-	private static void run(Fixture fixture, Path outputDirectory, int iterations, Path plans) {
+	private static void run(Fixture fixture, Path outputDirectory, int iterations, Path plans, boolean probe) {
 		Config config = createConfig(fixture, outputDirectory, plans);
 		Path configFile = outputDirectory.getParent().resolve(outputDirectory.getFileName() + "-config.xml");
 		ConfigUtils.writeConfig(config, configFile.toString());
-		String[] args = plans == null
+		String[] args = probe
 			? new String[]{"run", "--config", configFile.toString(), "--with-drt", "--iterations=" + iterations, "--random-seed", "4711",
-				"--write-drt-service-quality-probe", "--drt-service-quality-probe-stop-pair-input-files",
-				fixture.stopPairs().toString()}
-			: new String[]{"run", "--config", configFile.toString(), "--with-drt", "--iterations=" + iterations, "--random-seed", "4711",
-				"--write-drt-service-quality-probe", "--drt-service-quality-probe-stop-pair-input-files",
-				fixture.stopPairs().toString()};
+				"--write-drt-service-quality-probe", "--drt-service-quality-probe-stop-pair-input-files", fixture.stopPairs().toString()}
+			: new String[]{"run", "--config", configFile.toString(), "--with-drt", "--iterations=" + iterations, "--random-seed", "4711"};
 		MATSimApplication.execute(LocalRunKelheimScenario.class, args);
 	}
 

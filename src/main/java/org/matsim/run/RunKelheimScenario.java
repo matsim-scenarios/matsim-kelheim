@@ -11,6 +11,8 @@ import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.KelheimMainModeIdentifier;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
 import org.matsim.analysis.postAnalysis.accessibility.run.RunOfflineAccessibilityKelheim;
+import org.matsim.analysis.postAnalysis.drt.DrtServiceQualityAnalysis;
+import org.matsim.analysis.postAnalysis.drt.DrtVehiclesRoadUsageAnalysis;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -22,6 +24,8 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.application.MATSimApplication;
+import org.matsim.application.analysis.CheckPopulation;
+import org.matsim.application.analysis.traffic.LinkStats;
 import org.matsim.application.options.SampleOptions;
 import org.matsim.application.options.ShpOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
@@ -34,8 +38,7 @@ import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
 import org.matsim.contrib.drt.optimizer.insertion.DrtInsertionSearchParams;
-import org.matsim.contrib.drt.optimizer.insertion.parallel.DrtParallelInserterParams;
-import org.matsim.contrib.drt.optimizer.insertion.parallel.ParallelRequestInserterModule;
+import org.matsim.contrib.drt.optimizer.insertion.parallel.DrtServiceQualityProbeParams;
 import org.matsim.contrib.drt.optimizer.rebalancing.NoRebalancingStrategy;
 import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingStrategy;
 import org.matsim.contrib.drt.prebooking.PrebookingParams;
@@ -91,7 +94,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
-import java.util.stream.IntStream;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
@@ -101,7 +103,7 @@ import java.util.stream.IntStream;
 	GenerateCounterfactualImmobilePlans.class
 })
 @MATSimApplication.Analysis({
-	RunOfflineAccessibilityKelheim.class
+	LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class, RunOfflineAccessibilityKelheim.class
 })
 
 
@@ -130,10 +132,7 @@ public class RunKelheimScenario extends MATSimApplication {
 	private static final double DRT_SERVICE_BEGIN_TIME = 21600.;
 	private static final double DRT_SERVICE_END_TIME = 82800.;
 	private static final String DRT_VEHICLE_TYPE = "conventional_vehicle";
-	private static final List<Integer> DRT_SERVICE_QUALITY_PROBE_TIMES = IntStream.iterate(6 * 3600,
-		time -> time <= 21 * 3600, time -> time + 60 * 60)
-		.boxed()
-		.toList();
+	private static final List<Integer> DRT_SERVICE_QUALITY_PROBE_TIMES = List.of(28800, 32400);
 
 	@CommandLine.Mixin
 	private final SampleOptions sample = new SampleOptions(25, 10, 1);
@@ -271,47 +270,49 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		if (drt) {
-			config.addModule(new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
 
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
+
+
 			if (multiModeDrtConfig.getModalElements().isEmpty()) {
-				throw new IllegalStateException("--with-drt requires a config with at least one DRT parameter set. "
-					+ "Use e.g. --config input/v" + VERSION + "/kelheim-v" + VERSION + "-25pct.kexi.config.xml");
+				multiModeDrtConfig.addDrtConfigGroup(new DrtWithExtensionsConfigGroup());
 			}
 
 			for (DrtConfigGroup drtConfigGroup : multiModeDrtConfig.getModalElements()) {
 				//only the KEXI (conventionally driven drt) should get companions
 				if (drtConfigGroup.getMode().equals(TransportMode.drt)) {
-					DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtConfigGroup;
-					addDrtCompanionParameters(drtWithExtensionsConfigGroup);
+					if (drtConfigGroup instanceof DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup) {
+						addDrtCompanionParameters(drtWithExtensionsConfigGroup);
+					}
 
 					if (drtExpandedServiceArea) {
 						drtConfigGroup.setTransitStopFile(expandedDrtStopsFile);
 					}
 
 					if (writeDrtServiceQualityProbe) {
-						DrtParallelInserterParams parallelInserterParams = drtConfigGroup.getDrtParallelInserterParams()
+						DrtServiceQualityProbeParams probeParams = drtConfigGroup.getDrtServiceQualityProbeParams()
 							.orElseGet(() -> {
-								DrtParallelInserterParams params = new DrtParallelInserterParams();
+								DrtServiceQualityProbeParams params = new DrtServiceQualityProbeParams();
 								drtConfigGroup.addParameterSet(params);
 								return params;
 							});
-						parallelInserterParams.setWriteServiceQualityProbes(true);
+						probeParams.setWriteServiceQualityProbes(true);
+						probeParams.setServiceQualityProbeOutputFile("drt_service_quality_probes.csv.gz");
 						String probeTimesString = DRT_SERVICE_QUALITY_PROBE_TIMES.stream()
 							.map(String::valueOf)
 							.collect(java.util.stream.Collectors.joining(","));
 
-						parallelInserterParams.setServiceQualityProbeTimes(probeTimesString);
+						probeParams.setServiceQualityProbeTimes(probeTimesString);
 						if (drtServiceQualityProbeStopPairInputFiles.isBlank()) {
-							parallelInserterParams.setServiceQualityProbeSpatialResolution(
-								DrtParallelInserterParams.ServiceQualityProbeSpatialResolution.ZONE_TO_ZONE
+							probeParams.setServiceQualityProbeSpatialResolution(
+								DrtServiceQualityProbeParams.SpatialResolution.ZONE_TO_ZONE
 							);
-							parallelInserterParams.setServiceQualityProbeZoneCellSize(1000.);
+							probeParams.setServiceQualityProbeZoneCellSize(1000.);
 						} else {
-							parallelInserterParams.setServiceQualityProbeSpatialResolution(
-								DrtParallelInserterParams.ServiceQualityProbeSpatialResolution.STOP_TO_STOP
+							probeParams.setServiceQualityProbeSpatialResolution(
+								DrtServiceQualityProbeParams.SpatialResolution.STOP_TO_STOP
 							);
-							parallelInserterParams.setServiceQualityProbeStopPairInputFiles(
+							probeParams.setServiceQualityProbeStopPairInputFiles(
 								drtServiceQualityProbeStopPairInputFiles
 							);
 						}
@@ -521,9 +522,6 @@ public class RunKelheimScenario extends MATSimApplication {
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, baseFare, surcharge, drtFareZoneShp));
-				if (writeDrtServiceQualityProbe && drtCfg.getMode().equals(TransportMode.drt)) {
-					controler.addOverridingQSimModule(new ParallelRequestInserterModule(drtCfg));
-				}
 				if (rebalancing && drtCfg.getMode().equals("av")) {
 					controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
 				} else {
