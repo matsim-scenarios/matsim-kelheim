@@ -14,6 +14,7 @@ import org.matsim.analysis.postAnalysis.accessibility.run.RunOfflineAccessibilit
 import org.matsim.analysis.postAnalysis.drt.DrtServiceQualityAnalysis;
 import org.matsim.analysis.postAnalysis.drt.DrtVehiclesRoadUsageAnalysis;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Identifiable;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.PersonDepartureEvent;
@@ -37,18 +38,15 @@ import org.matsim.contrib.common.conventions.vsp.SnzActivities;
 import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
-import org.matsim.contrib.drt.optimizer.insertion.DrtInsertionSearchParams;
 import org.matsim.contrib.drt.optimizer.insertion.parallel.DrtServiceQualityProbeParams;
 import org.matsim.contrib.drt.optimizer.rebalancing.NoRebalancingStrategy;
 import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingStrategy;
-import org.matsim.contrib.drt.prebooking.PrebookingParams;
-import org.matsim.contrib.drt.prebooking.logic.ProbabilityBasedPrebookingLogicParams;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.DrtConfigs;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
-import org.matsim.contrib.drt.run.MultiModeDrtModule;
+import org.matsim.contrib.drt.run.	MultiModeDrtModule;
 import org.matsim.contrib.dvrp.run.AbstractDvrpModeModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
@@ -87,13 +85,8 @@ import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParamete
 
 import java.nio.file.Path;
 import java.io.IOException;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SplittableRandom;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
@@ -132,6 +125,7 @@ public class RunKelheimScenario extends MATSimApplication {
 	private static final double DRT_SERVICE_BEGIN_TIME = 21600.;
 	private static final double DRT_SERVICE_END_TIME = 82800.;
 	private static final String DRT_VEHICLE_TYPE = "conventional_vehicle";
+	private static final int DRT_VEHICLE_SEATS = 8;
 	private static final List<Integer> DRT_SERVICE_QUALITY_PROBE_TIMES = List.of(28800, 32400);
 
 	@CommandLine.Mixin
@@ -145,6 +139,9 @@ public class RunKelheimScenario extends MATSimApplication {
 
 	@CommandLine.Option(names = "--drt-fleet-size", defaultValue = "-1", description = "Replace the DRT fleet with this many conventional vehicles. If unset, keep the vehicles from the input file.")
 	private int drtFleetSize;
+
+	@CommandLine.Option(names = "--drt-vehicle-capacity", defaultValue = "8", description = "How many seats the DRT vehicle has.")
+	private int drtVehicleCapacity;
 
 	@CommandLine.Option(names = "--drt-fleet-start-link-weights", defaultValue = "", description = "Optional semicolon-delimited CSV/CSV.GZ with linkId and weight columns for population-weighted fleet placement.")
 	private String drtFleetStartLinkWeights;
@@ -194,6 +191,9 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--drt-study-area-shp", defaultValue = "input/shp/lk-kelheim/lk-kelheim.shp", description = "Study-area shapefile used to define the expanded DRT service area and eligible fleet start links. Relative paths are resolved against the working directory.")
 	private String drtServiceAreaShp;
 
+	@CommandLine.Option(names = "--network-change-events-path", defaultValue = "", description = "Path to NetworkChangeEvents File")
+	private String networkChangeEvents;
+
 
 	public RunKelheimScenario(@Nullable Config config) {
 		super(config);
@@ -223,22 +223,6 @@ public class RunKelheimScenario extends MATSimApplication {
 		drtWithExtensionsConfigGroup.addParameterSet(drtCompanionParams);
 	}
 
-	static void addProbabilityBasedPrebooking(DrtConfigGroup drtConfigGroup, double probability, double submissionSlack) {
-		if (probability < 0 || probability > 1) {
-			throw new IllegalArgumentException("--prebooking-probability must be between 0.0 and 1.0.");
-		}
-		if (submissionSlack < 0) {
-			throw new IllegalArgumentException("--prebooking-submission-slack must not be negative.");
-		}
-
-		drtConfigGroup.getPrebookingParams().ifPresent(drtConfigGroup::removeParameterSet);
-		PrebookingParams prebookingParams = new PrebookingParams();
-		ProbabilityBasedPrebookingLogicParams logicParams = new ProbabilityBasedPrebookingLogicParams();
-		logicParams.setProbability(probability);
-		logicParams.setSubmissionSlack(submissionSlack);
-		prebookingParams.addParameterSet(logicParams);
-		drtConfigGroup.addParameterSet(prebookingParams);
-	}
 
 	@Nullable
 	@Override
@@ -373,6 +357,12 @@ public class RunKelheimScenario extends MATSimApplication {
 			addRunOption(config, "plans", getRunOptionLabel(plans));
 		}
 
+		if(!Objects.equals(networkChangeEvents, "")
+		){
+			config.network().setTimeVariantNetwork(true);
+			config.network().setChangeEventsInputFile("networkChangeEvents.xml");
+		}
+
 		return config;
 	}
 
@@ -383,7 +373,24 @@ public class RunKelheimScenario extends MATSimApplication {
 			registerDrtRouteFactory(scenario);
 		}
 
-		ScenarioUtils.loadScenario(scenario);
+
+		if (!Objects.equals(networkChangeEvents, "")) {
+			Set<Id<Person>> personsToRemove = scenario.getPopulation().getPersons().values()
+				.stream()
+				.filter(x ->
+					!x.getAttributes().getAsMap().containsKey("counterfactual_immobile_target")
+						|| x.getAttributes().getAttribute("counterfactual_immobile_target") != "true")
+				.map(Identifiable::getId)
+				.collect(Collectors.toSet());
+
+
+			for (Id<Person> personId : personsToRemove) {
+				scenario.getPopulation().removePerson(personId);
+			}
+		}
+
+
+			ScenarioUtils.loadScenario(scenario);
 		return scenario;
 	}
 
@@ -584,6 +591,8 @@ public class RunKelheimScenario extends MATSimApplication {
 		if (vehicleType == null) {
 			throw new IllegalStateException("Cannot generate DRT fleet: vehicle type '" + DRT_VEHICLE_TYPE + "' is missing.");
 		}
+
+		vehicleType.getCapacity().setSeats(DRT_VEHICLE_SEATS);
 
 		List<Id<Vehicle>> oldDrtVehicles = vehicles.getVehicles().values().stream()
 			.filter(vehicle -> TransportMode.drt.equals(vehicle.getAttributes().getAttribute("dvrpMode")))

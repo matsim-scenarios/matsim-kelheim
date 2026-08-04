@@ -52,6 +52,10 @@ library(sf)
 
 df_full2 <- df_full %>%
   mutate(
+    run_id = paste(demand, if_else(is.na(fleet_size), "baseline", paste0("fleet-", fleet_size)), sep = "__"),
+    fleet_label = if_else(is.na(fleet_size), "baseline", paste0("fleet-", fleet_size))
+  ) %>%
+  mutate(
     trips = purrr::map(
       path,
       ~ readr::read_delim(
@@ -133,69 +137,86 @@ df_full2 <- df_full %>%
 
 kelheim_shp <- st_read("/Users/jakob/git/matsim-kelheim/input/shp/lk-kelheim/lk-kelheim.shp")
 
-
-trips_base <- read_delim(paste0(output_path_base,"output_trips.csv.zst"), delim = ";")
-trips_small <- read_delim(paste0(output_path_small,"output_trips.csv.zst"), delim = ";")
-trips_medium <- read_delim(paste0(output_path_medium,"output_trips.csv.zst"), delim = ";")
-trips_large <- read_delim(paste0(output_path_large,"output_trips.csv.zst"), delim = ";")
-
-
-persons_base <- read_delim(paste0(output_path_base,"output_persons.csv.zst"),delim = ";")
-persons_small <- read_delim(paste0(output_path_small,"output_persons.csv.zst"),delim = ";")
-persons_medium <- read_delim(paste0(output_path_medium,"output_persons.csv.zst"),delim = ";")
-persons_large <- read_delim(paste0(output_path_large,"output_persons.csv.zst"),delim = ";")
-
-drt_legs_small <- read_delim(paste0(output_path_small,"output_drt_legs_drt.csv"),delim = ";")
-drt_legs_medium <- read_delim(paste0(output_path_medium,"output_drt_legs_drt.csv"),delim = ";")
-drt_legs_large <- read_delim(paste0(output_path_large,"output_drt_legs_drt.csv"),delim = ";")
-
-occ_small <- read_delim(paste0(output_path_small,"output_occupancy_time_profiles_drt.txt"),delim = ";")
-occ_medium <- read_delim(paste0(output_path_medium,"output_occupancy_time_profiles_drt.txt"),delim = ";")
-occ_large <- read_delim(paste0(output_path_large,"output_occupancy_time_profiles_drt.txt"),delim = ";")
-
-
-persons_in_kelheim <- persons_small %>% filter(!is.na(home_x)) %>% st_as_sf(coords = c("home_x","home_y"), crs = 25832) %>% st_filter(kelheim_shp) %>% pull(person)
+df_full2 <- df_full2 %>%
+  mutate(
+    persons_in_kelheim = purrr::map(
+      persons,
+      ~ .x %>%
+        filter(!is.na(home_x), !is.na(home_y)) %>%
+        st_as_sf(coords = c("home_x", "home_y"), crs = 25832) %>%
+        st_filter(kelheim_shp) %>%
+        st_drop_geometry() %>%
+        pull(person)
+    )
+  )
 ```
 # ANALYSES
 ## REAL DRT TRIPS
 ### mode stats 
 ```{r}
-mode_stats_small_trip <- trips_small %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_small = n()) %>% ungroup() %>% mutate(share_small = n_small/sum(n_small)*100)
+mode_stats <- purrr::pmap_dfr(
+  list(df_full2$trips, df_full2$persons_in_kelheim, df_full2$run_id, df_full2$demand, df_full2$fleet_label),
+  function(trips, kelheim_persons, run_id, demand, fleet_label) {
+    trips %>%
+      filter(person %in% kelheim_persons) %>%
+      count(main_mode, name = "n") %>%
+      mutate(
+        share = n / sum(n) * 100,
+        run_id = run_id,
+        demand = demand,
+        fleet = fleet_label
+      )
+  }
+)
 
-mode_stats_medium_trip <- trips_medium %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_medium = n()) %>% ungroup() %>% mutate(share_medium = n_medium/sum(n_medium)*100) 
-
-mode_stats_large_trip <- trips_large %>% filter(person %in% persons_in_kelheim) %>% select(main_mode) %>% group_by(main_mode) %>% summarise(n_large = n()) %>% ungroup() %>% mutate(share_large = n_large/sum(n_large) *100)
-
-mode_stats_small_trip %>% left_join(mode_stats_medium_trip) %>% left_join(mode_stats_large_trip) 
+mode_stats %>% filter(main_mode == "ride")
 
 ```
 
 ### score stats
 ```{r}
-# Whole Population
-person_score_joined <- persons_base %>% select(person,executed_score_base = executed_score) %>% left_join(persons_small %>% select(person,executed_score_small = executed_score)) %>%  left_join(persons_medium %>% select(person,executed_score_medium = executed_score)) %>% left_join(persons_large %>% select(person,executed_score_large = executed_score))
-person_score_joined
+person_scores <- purrr::map2_dfr(
+  df_full2$persons,
+  df_full2$run_id,
+  ~ .x %>% select(person, executed_score) %>% mutate(run_id = .y)
+)
 
-person_score_joined %>%
+score_stats <- person_scores %>%
+  left_join(df_full2 %>% select(run_id, demand, fleet = fleet_label), by = "run_id") %>%
+  group_by(run_id, demand, fleet) %>%
   summarise(
-    across(
-      starts_with("exe"),
-      list(mean = mean, sum = sum)
-    )
+    mean_score = mean(executed_score, na.rm = TRUE),
+    total_score = sum(executed_score, na.rm = TRUE),
+    .groups = "drop"
   )
 
-# Affected People
-drt_users_small <- trips_small %>% filter(main_mode == "drt") %>% pull(person) %>% unique()
-drt_users_medium <- trips_medium %>% filter(main_mode == "drt") %>% pull(person) %>% unique()
-drt_users_large <- trips_large %>% filter(main_mode == "drt") %>% pull(person) %>% unique()
+baseline_scores <- person_scores %>%
+  left_join(df_full2 %>% select(run_id, demand, fleet = fleet_label), by = "run_id") %>%
+  filter(fleet == "baseline") %>%
+  select(demand, person, baseline_score = executed_score)
 
+drt_score_differences <- purrr::pmap_dfr(
+  list(df_full2$trips, df_full2$run_id, df_full2$demand, df_full2$fleet_label),
+  function(trips, current_run_id, current_demand, current_fleet) {
+    if (current_fleet == "baseline") return(tibble())
 
+    trips %>%
+      filter(main_mode == "drt") %>%
+      distinct(person) %>%
+      left_join(person_scores %>% filter(.data$run_id == current_run_id), by = "person") %>%
+      left_join(baseline_scores %>% filter(.data$demand == current_demand), by = "person") %>%
+      summarise(
+        run_id = current_run_id,
+        demand = current_demand,
+        fleet = current_fleet,
+        n_drt_users = n(),
+        mean_score_difference = mean(executed_score - baseline_score, na.rm = TRUE)
+      )
+  }
+)
 
-person_score_joined %>% filter(person %in% drt_users_small) %>% mutate(diff = executed_score_small - executed_score_base) %>% summarise(diff = mean(diff))
-
-person_score_joined %>% filter(person %in% drt_users_medium) %>% mutate(diff = executed_score_medium - executed_score_base) %>% summarise(diff = mean(diff))
-
-person_score_joined %>% filter(person %in% drt_users_large) %>% mutate(diff = executed_score_large - executed_score_base) %>% summarise(diff = mean(diff))
+score_stats
+drt_score_differences
 
 ```
 
@@ -203,11 +224,23 @@ person_score_joined %>% filter(person %in% drt_users_large) %>% mutate(diff = ex
 
 
 ```{r}
-bind_rows(drt_legs_small %>% mutate(fleet = "small"), drt_legs_medium %>% mutate(fleet = "medium"), drt_legs_large %>% mutate(fleet = "large")) %>%
-  filter(!startsWith(personId,"COMP")) %>%
-  mutate(time = hms::as_hms(submissionTime)) %>%
-  mutate(hour = hour(time)) %>% 
-  group_by(hour, fleet) %>% count() %>% ggplot() + geom_line(aes(hour,n, col = fleet)) + theme_minimal(base_size = 14) + labs(x = "Hour", y = "Requests")
+drt_legs_all <- purrr::map2_dfr(
+  df_full2$drt_legs,
+  df_full2$run_id,
+  ~ if (is.null(.x)) tibble() else .x %>% mutate(run_id = .y)
+) %>%
+  left_join(df_full2 %>% select(run_id, demand, fleet = fleet_label), by = "run_id") %>%
+  filter(!startsWith(personId, "COMP")) %>%
+  mutate(time = hms::as_hms(submissionTime), hour = hour(time))
+
+request_counts <- drt_legs_all %>%
+  count(demand, fleet, hour, name = "requests")
+
+ggplot(request_counts) +
+  geom_line(aes(hour, requests, colour = fleet, group = fleet)) +
+  facet_grid(~ demand) +
+  theme_minimal(base_size = 14) +
+  labs(x = "Hour", y = "Requests")
 ```
 
 
@@ -215,38 +248,39 @@ bind_rows(drt_legs_small %>% mutate(fleet = "small"), drt_legs_medium %>% mutate
 
 ```{r}
 
-drt_legs_combined <- bind_rows(drt_legs_small %>% mutate(fleet = "small"), drt_legs_medium %>% mutate(fleet = "medium"), drt_legs_large %>% mutate(fleet = "large")) %>%
-  filter(!startsWith(personId,"COMP")) %>% 
-  group_by(fleet) %>%
-  mutate(fleet = factor(fleet, levels = c("small","medium","large"))) %>% 
-  summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>%
+drt_legs_combined <- drt_legs_all %>%
+  group_by(demand, fleet) %>%
+  summarise(waitTime = mean(waitTime, na.rm = TRUE), inVehicleRideTime = mean(inVehicleRideTime, na.rm = TRUE), directRideTime = mean(directRideTime, na.rm = TRUE), .groups = "drop") %>%
   mutate(detourFactor = inVehicleRideTime/directRideTime)
 
 drt_legs_combined
 
 
-ggplot(drt_legs_combined) + geom_col(aes(fleet, waitTime)) + theme_minimal(base_size = 14)
-ggplot(drt_legs_combined) + geom_col(aes(fleet, directRideTime))+ theme_minimal(base_size = 14)
-ggplot(drt_legs_combined) + geom_col(aes(fleet, inVehicleRideTime))+ theme_minimal(base_size = 14)
-ggplot(drt_legs_combined) + geom_col(aes(fleet, detourFactor))+ theme_minimal(base_size = 14)
-
-
-# drt_legs_small %>% filter(!startsWith(personId,"COMP")) %>% summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>% mutate(detourFactor = inVehicleRideTime/directRideTime)
-# 
-# drt_legs_medium %>% filter(!startsWith(personId,"COMP")) %>% summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>% mutate(detourFactor = inVehicleRideTime/directRideTime)
-# 
-# drt_legs_large %>% filter(!startsWith(personId,"COMP")) %>% summarise(waitTime = mean(waitTime),inVehicleRideTime = mean(inVehicleRideTime),directRideTime = mean(directRideTime)) %>% mutate(detourFactor = inVehicleRideTime/directRideTime)
+for (metric in c("waitTime", "directRideTime", "inVehicleRideTime", "detourFactor")) {
+  print(
+    ggplot(drt_legs_combined) +
+      geom_col(aes(fleet, .data[[metric]])) +
+      facet_grid(~ demand) +
+      theme_minimal(base_size = 14) +
+      labs(x = "Fleet", y = metric)
+  )
+}
 ```
 
 ### occupancy
 ```{r}
 
-occ_small %>% mutate(fleet = "small") %>% 
-  bind_rows(occ_medium %>% mutate(fleet = "medium")) %>% 
-  bind_rows(occ_large %>% mutate(fleet = "large")) %>% 
-  mutate(fleet = factor(fleet, levels = c("small","medium","large"))) %>% 
+occupancy_all <- purrr::map2_dfr(
+  df_full2$occupancy,
+  df_full2$run_id,
+  ~ if (is.null(.x)) tibble() else .x %>% mutate(run_id = .y)
+) %>%
+  left_join(df_full2 %>% select(run_id, demand, fleet = fleet_label), by = "run_id")
+
+occupancy_all %>%
+  mutate(fleet = factor(fleet, levels = unique(df_full2$fleet_label))) %>%
   filter(time <= hm("24:00")) %>% 
-  pivot_longer(-c(time,fleet), names_to = "status", values_to = "n") %>% 
+  pivot_longer(-c(time, run_id, demand, fleet), names_to = "status", values_to = "n") %>%
   # mutate(status = factor(status, levels = c("STAY","0 pax", "1 pax", "2 pax", "3 pax", "4 pax"))) %>% 
   ggplot() + 
   scale_x_time(minor_breaks = "1 hour", date_breaks = "3 hours",date_labels = "%H") +
@@ -259,7 +293,7 @@ occ_small %>% mutate(fleet = "small") %>%
     "3 pax" = "red",
     "4 pax" = "purple"
   )) +
-  facet_grid(~fleet)+
+  facet_grid(demand ~ fleet)+
   theme_minimal(base_size = 16) + 
   labs(x = "Time", y = "Number of Vehicles")
 ```
@@ -708,4 +742,3 @@ read_delim("/Users/jakob/git/matsim-kelheim/output/output-kelheim-v3.0-1pct-iter
 
 summarise(waitTime = mean(waitTime), detourFactor = mean(detourFactor))
 ```
-
