@@ -1,6 +1,7 @@
 package org.matsim.dashboard;
 
 import org.matsim.analysis.postAnalysis.NoiseAverageAnalysis;
+import org.matsim.core.config.ConfigGroup;
 import org.matsim.simwrapper.*;
 import org.matsim.simwrapper.viz.ColorScheme;
 import org.matsim.simwrapper.viz.GridMap;
@@ -35,7 +36,7 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 	}
 
 	@Override
-	public void configure(Header header, Layout layout) {
+	public void configure(Header header, Layout layout, SimWrapperConfigGroup simwrapperConfig) {
 
 		header.title = "Average Noise";
 		header.description = "Shows the average noise footprint and spatial distribution for several simulation runs.";
@@ -52,7 +53,7 @@ public class AverageKelheimNoiseDashboard implements Dashboard {
 				viz.description = "Maximum Noise Level per day [dB]";
 				viz.height = 12.0;
 				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
+				viz.zoom = data.context().getMapZoomLevel();
 				viz.minValue = minDb;
 				viz.maxValue = maxDb;
 				viz.setShape(new CreateAverageDashboards().copyVizNetwork(dirs, ".avro"), "id");

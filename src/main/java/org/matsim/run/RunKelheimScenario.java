@@ -3,12 +3,18 @@ package org.matsim.run;
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import jakarta.annotation.Nullable;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.locationtech.jts.geom.Geometry;
 import org.matsim.analysis.KelheimMainModeIdentifier;
-import org.matsim.analysis.ModeChoiceCoverageControlerListener;
 import org.matsim.analysis.personMoney.PersonMoneyEventsAnalysisModule;
+import org.matsim.analysis.postAnalysis.accessibility.run.RunOfflineAccessibilityKelheim;
 import org.matsim.analysis.postAnalysis.drt.DrtServiceQualityAnalysis;
 import org.matsim.analysis.postAnalysis.drt.DrtVehiclesRoadUsageAnalysis;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Identifiable;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.PersonDepartureEvent;
@@ -22,14 +28,17 @@ import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.CheckPopulation;
 import org.matsim.application.analysis.traffic.LinkStats;
 import org.matsim.application.options.SampleOptions;
+import org.matsim.application.options.ShpOptions;
 import org.matsim.application.prepare.CreateLandUseShp;
-import org.matsim.application.prepare.freight.tripExtraction.ExtractRelevantFreightTrips;
+import org.matsim.application.prepare.longDistanceFreightGER.tripExtraction.ExtractRelevantFreightTrips;
 import org.matsim.application.prepare.network.CreateNetworkFromSumo;
 import org.matsim.application.prepare.population.*;
 import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
+import org.matsim.contrib.common.conventions.vsp.SnzActivities;
 import org.matsim.contrib.drt.extension.DrtWithExtensionsConfigGroup;
 import org.matsim.contrib.drt.extension.companions.DrtCompanionParams;
 import org.matsim.contrib.drt.extension.companions.MultiModeDrtCompanionModule;
+import org.matsim.contrib.drt.optimizer.insertion.parallel.DrtServiceQualityProbeParams;
 import org.matsim.contrib.drt.optimizer.rebalancing.NoRebalancingStrategy;
 import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingStrategy;
 import org.matsim.contrib.drt.routing.DrtRoute;
@@ -37,50 +46,71 @@ import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.drt.run.DrtConfigs;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
-import org.matsim.contrib.drt.run.MultiModeDrtModule;
+import org.matsim.contrib.drt.run.	MultiModeDrtModule;
 import org.matsim.contrib.dvrp.run.AbstractDvrpModeModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.contrib.dvrp.run.DvrpQSimComponents;
 import org.matsim.contrib.dvrp.trafficmonitoring.DvrpModeLimitedMaxSpeedTravelTimeModule;
 import org.matsim.contrib.vsp.pt.fare.PtFareModule;
-import org.matsim.contrib.vsp.scenario.SnzActivities;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.config.groups.RoutingConfigGroup;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
+import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.scoring.functions.ScoringParametersForPerson;
+import org.matsim.core.utils.geometry.geotools.MGC;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.drtFare.KelheimDrtFareModule;
 import org.matsim.extensions.pt.routing.ptRoutingModes.PtIntermodalRoutingModesConfigGroup;
 import org.matsim.run.prepare.PrepareNetwork;
 import org.matsim.run.prepare.PreparePopulation;
+import org.matsim.run.prepare.GenerateCounterfactualImmobilePlans;
 import org.matsim.rebalancing.WaitingPointsBasedRebalancingModule;
 import org.matsim.simwrapper.SimWrapperConfigGroup;
 import org.matsim.simwrapper.SimWrapperModule;
+import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleType;
+import org.matsim.vehicles.Vehicles;
 import picocli.CommandLine;
 import org.matsim.contrib.vsp.pt.fare.DistanceBasedPtFareParams;
 import org.matsim.contrib.vsp.pt.fare.PtFareConfigGroup;
 import playground.vsp.scoring.IncomeDependentUtilityOfMoneyPersonScoringParameters;
 
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Set;
-import java.util.SplittableRandom;
+import java.nio.file.Path;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @CommandLine.Command(header = ":: Open Kelheim Scenario ::", version = RunKelheimScenario.VERSION, mixinStandardHelpOptions = true)
 @MATSimApplication.Prepare({
 	CreateNetworkFromSumo.class, CreateTransitScheduleFromGtfs.class, TrajectoryToPlans.class, GenerateShortDistanceTrips.class,
 	MergePopulations.class, ExtractRelevantFreightTrips.class, DownSamplePopulation.class, PrepareNetwork.class, ExtractHomeCoordinates.class,
-	CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class
+	CreateLandUseShp.class, ResolveGridCoordinates.class, PreparePopulation.class, CleanPopulation.class, FixSubtourModes.class, SplitActivityTypesDuration.class,
+	GenerateCounterfactualImmobilePlans.class
 })
 @MATSimApplication.Analysis({
-	LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class
+	LinkStats.class, CheckPopulation.class, DrtServiceQualityAnalysis.class, DrtVehiclesRoadUsageAnalysis.class, RunOfflineAccessibilityKelheim.class
 })
+
+
+//--config
+//input/v3.1/kelheim-v3.1-25pct.kexi.config.xml
+//--1pct
+//--with-drt
+//--with-drt-expandedServiceArea
+//--iterations=1
+//	--drt-fleet-size=10
+//	--write-drt-service-quality-probe
+//--config:controller.overwriteFiles=deleteDirectoryIfExists
+//--config:swissRailRaptor.useIntermodalAccessEgress=false
+//run
 public class RunKelheimScenario extends MATSimApplication {
 
 	public static final String VERSION = "3.1";
@@ -92,13 +122,35 @@ public class RunKelheimScenario extends MATSimApplication {
 	private static final double WEIGHT_6_PASSENGER = 18.;
 	private static final double WEIGHT_7_PASSENGER = 1.;
 	private static final double WEIGHT_8_PASSENGER = 0.;
+	private static final double DRT_SERVICE_BEGIN_TIME = 21600.;
+	private static final double DRT_SERVICE_END_TIME = 82800.;
+	private static final String DRT_VEHICLE_TYPE = "conventional_vehicle";
+	private static final int DRT_VEHICLE_SEATS = 8;
+	private static final List<Integer> DRT_SERVICE_QUALITY_PROBE_TIMES = List.of(28800, 32400);
+
 	@CommandLine.Mixin
 	private final SampleOptions sample = new SampleOptions(25, 10, 1);
 
 	@CommandLine.Option(names = "--with-drt", defaultValue = "false", description = "enable DRT service")
 	private boolean drt;
 
-	// a couple of CommandLine.Options below actually are not strictly necessary but rather allow for circumvention of settings directly via config and/or config options.... (ts 07/23)
+	@CommandLine.Option(names = "--with-drt-expandedServiceArea", defaultValue = "false", description = "enable DRT service")
+	private boolean drtExpandedServiceArea;
+
+	@CommandLine.Option(names = "--drt-fleet-size", defaultValue = "-1", description = "Replace the DRT fleet with this many conventional vehicles. If unset, keep the vehicles from the input file.")
+	private int drtFleetSize;
+
+	@CommandLine.Option(names = "--drt-vehicle-capacity", defaultValue = "8", description = "How many seats the DRT vehicle has.")
+	private int drtVehicleCapacity;
+
+	@CommandLine.Option(names = "--drt-fleet-start-link-weights", defaultValue = "", description = "Optional semicolon-delimited CSV/CSV.GZ with linkId and weight columns for population-weighted fleet placement.")
+	private String drtFleetStartLinkWeights;
+
+	@CommandLine.Option(names = "--write-drt-service-quality-probe", defaultValue = "false", description = "Write DRT service quality probes in the last iteration.")
+	private boolean writeDrtServiceQualityProbe;
+
+	@CommandLine.Option(names = "--drt-service-quality-probe-stop-pair-input-files", defaultValue = "", description = "Comma-separated accessibility stop-pair CSV/CSV.GZ files. When set, probe only their unique directed stop pairs.")
+	private String drtServiceQualityProbeStopPairInputFiles;
 
 	/**
 	 * the KEXI service has a zone-dependent fare system which is why we are using a custom fare implementation. Via this option, one can set a flat (constant) price for the AV service.
@@ -124,12 +176,23 @@ public class RunKelheimScenario extends MATSimApplication {
 	@CommandLine.Option(names = "--surcharge", defaultValue = "1.0", description = "Surcharge of KEXI trip from / to train station")
 	private double surcharge;
 
+	@CommandLine.Option(names = "--drt-fare-zone-shp", defaultValue = "", description = "Optional DRT fare-zone shapefile. If unset, every DRT trip is charged the base fare.")
+	private String drtFareZoneShp;
+
 	@CommandLine.Option(names = "--rebalancing", description = "enable waiting point based rebalancing strategy or not", defaultValue = "false")
 	private boolean rebalancing;
 
 	@CommandLine.Option(names = "--waiting-points", description = "waiting points for rebalancing strategy. If unspecified, the starting" +
 		"points of the fleet will be set as waiting points", defaultValue = "")
 	private String waitingPointsPath;
+	@CommandLine.Option(names = "--drt-expanded-service-area-stops", defaultValue = "expanded-service-area/drt_stops_landkreis.xml", description = "Transit stop file used with --with-drt-expandedServiceArea. Relative paths are resolved against the configuration file.")
+	private String expandedDrtStopsFile;
+
+	@CommandLine.Option(names = "--drt-study-area-shp", defaultValue = "input/shp/lk-kelheim/lk-kelheim.shp", description = "Study-area shapefile used to define the expanded DRT service area and eligible fleet start links. Relative paths are resolved against the working directory.")
+	private String drtServiceAreaShp;
+
+	@CommandLine.Option(names = "--network-change-events-path", defaultValue = "", description = "Path to NetworkChangeEvents File")
+	private String networkChangeEvents;
 
 
 	public RunKelheimScenario(@Nullable Config config) {
@@ -137,7 +200,8 @@ public class RunKelheimScenario extends MATSimApplication {
 	}
 
 	public RunKelheimScenario() {
-		super(String.format("input/v%s/kelheim-v%s-config.xml", VERSION, VERSION));
+		super();
+		configPath = String.format("input/v%s/kelheim-v%s-config.xml", VERSION, VERSION);
 	}
 
 	public static void main(String[] args) {
@@ -159,6 +223,7 @@ public class RunKelheimScenario extends MATSimApplication {
 		drtWithExtensionsConfigGroup.addParameterSet(drtCompanionParams);
 	}
 
+
 	@Nullable
 	@Override
 	protected Config prepareConfig(Config config) {
@@ -179,30 +244,68 @@ public class RunKelheimScenario extends MATSimApplication {
 
 		SimWrapperConfigGroup sw = ConfigUtils.addOrGetModule(config, SimWrapperConfigGroup.class);
 
-		// Relative to config
-		sw.defaultParams().shp = "../shp/dilutionArea.shp";
-		sw.defaultParams().mapCenter = "11.89,48.91";
-		sw.defaultParams().mapZoomLevel = 11d;
-		sw.sampleSize = sample.getSample();
+		sw.defaultParams().setShp(Path.of("input/shp/dilutionArea.shp").toAbsolutePath().toString());
+		sw.defaultParams().setMapCenter("11.89,48.91");
+		sw.defaultParams().setMapZoomLevel(11d);
+		sw.setSampleSize(sample.getSample());
 
 		if (intermodal) {
 			ConfigUtils.addOrGetModule(config, PtIntermodalRoutingModesConfigGroup.class);
 		}
 
 		if (drt) {
-			config.addModule(new MultiModeDrtConfigGroup(DrtWithExtensionsConfigGroup::new));
 
 			MultiModeDrtConfigGroup multiModeDrtConfig = ConfigUtils.addOrGetModule(config, MultiModeDrtConfigGroup.class);
+
+
+			if (multiModeDrtConfig.getModalElements().isEmpty()) {
+				multiModeDrtConfig.addDrtConfigGroup(new DrtWithExtensionsConfigGroup());
+			}
 
 			for (DrtConfigGroup drtConfigGroup : multiModeDrtConfig.getModalElements()) {
 				//only the KEXI (conventionally driven drt) should get companions
 				if (drtConfigGroup.getMode().equals(TransportMode.drt)) {
-					DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup = (DrtWithExtensionsConfigGroup) drtConfigGroup;
-					addDrtCompanionParameters(drtWithExtensionsConfigGroup);
+					if (drtConfigGroup instanceof DrtWithExtensionsConfigGroup drtWithExtensionsConfigGroup) {
+						addDrtCompanionParameters(drtWithExtensionsConfigGroup);
+					}
+
+					if (drtExpandedServiceArea) {
+						drtConfigGroup.setTransitStopFile(expandedDrtStopsFile);
+					}
+
+					if (writeDrtServiceQualityProbe) {
+						DrtServiceQualityProbeParams probeParams = drtConfigGroup.getDrtServiceQualityProbeParams()
+							.orElseGet(() -> {
+								DrtServiceQualityProbeParams params = new DrtServiceQualityProbeParams();
+								drtConfigGroup.addParameterSet(params);
+								return params;
+							});
+						probeParams.setWriteServiceQualityProbes(true);
+						probeParams.setServiceQualityProbeOutputFile("drt_service_quality_probes.csv.gz");
+						String probeTimesString = DRT_SERVICE_QUALITY_PROBE_TIMES.stream()
+							.map(String::valueOf)
+							.collect(java.util.stream.Collectors.joining(","));
+
+						probeParams.setServiceQualityProbeTimes(probeTimesString);
+						if (drtServiceQualityProbeStopPairInputFiles.isBlank()) {
+							probeParams.setServiceQualityProbeSpatialResolution(
+								DrtServiceQualityProbeParams.SpatialResolution.ZONE_TO_ZONE
+							);
+							probeParams.setServiceQualityProbeZoneCellSize(1000.);
+						} else {
+							probeParams.setServiceQualityProbeSpatialResolution(
+								DrtServiceQualityProbeParams.SpatialResolution.STOP_TO_STOP
+							);
+							probeParams.setServiceQualityProbeStopPairInputFiles(
+								drtServiceQualityProbeStopPairInputFiles
+							);
+						}
+					}
 				}
 			}
 
 			ConfigUtils.addOrGetModule(config, DvrpConfigGroup.class);
+			config.qsim().setSimStarttimeInterpretation(QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime);
 			DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.scoring(), config.routing());
 		}
 
@@ -242,14 +345,53 @@ public class RunKelheimScenario extends MATSimApplication {
 			addRunOption(config, "iter", iterations);
 
 		if (!planOrigin.isBlank()) {
-			config.plans().setInputFile(
-				config.plans().getInputFile().replace(".plans", ".plans-" + planOrigin)
-			);
+			String plans = planOrigin.strip();
+			if (isPlansFile(plans)) {
+				config.plans().setInputFile(plans);
+			} else {
+				config.plans().setInputFile(
+					config.plans().getInputFile().replace(".plans", ".plans-" + plans)
+				);
+			}
 
-			addRunOption(config, planOrigin);
+			addRunOption(config, "plans", getRunOptionLabel(plans));
+		}
+
+		if(!Objects.equals(networkChangeEvents, "")
+		){
+			config.network().setTimeVariantNetwork(true);
+			config.network().setChangeEventsInputFile("networkChangeEvents.xml");
 		}
 
 		return config;
+	}
+
+	@Override
+	protected Scenario createScenario(Config config) {
+		Scenario scenario = ScenarioUtils.createScenario(config);
+		if (drt) {
+			registerDrtRouteFactory(scenario);
+		}
+
+
+		if (!Objects.equals(networkChangeEvents, "")) {
+			Set<Id<Person>> personsToRemove = scenario.getPopulation().getPersons().values()
+				.stream()
+				.filter(x ->
+					!x.getAttributes().getAsMap().containsKey("counterfactual_immobile_target")
+						|| x.getAttributes().getAttribute("counterfactual_immobile_target") != "true")
+				.map(Identifiable::getId)
+				.collect(Collectors.toSet());
+
+
+			for (Id<Person> personId : personsToRemove) {
+				scenario.getPopulation().removePerson(personId);
+			}
+		}
+
+
+			ScenarioUtils.loadScenario(scenario);
+		return scenario;
 	}
 
 	@Override
@@ -268,10 +410,33 @@ public class RunKelheimScenario extends MATSimApplication {
 		}
 
 		if (drt) {
-			scenario.getPopulation()
-				.getFactory()
-				.getRouteFactories()
-				.setRouteFactory(DrtRoute.class, new DrtRouteFactory());
+			registerDrtRouteFactory(scenario);
+
+			Geometry drtServiceArea = null;
+			if (drtExpandedServiceArea) {
+
+				// add 11km buffer around LK  to include those drt stops that are located outside of LK
+				drtServiceArea = getBufferedDrtServiceArea();
+
+				for (Link link : scenario.getNetwork().getLinks().values()) {
+					if (drtServiceArea.contains(MGC.coord2Point(link.getCoord()))) {
+
+						Set<String> updatedModes = new HashSet<>(link.getAllowedModes());
+						updatedModes.add(TransportMode.drt);
+						link.setAllowedModes(updatedModes);
+
+					}
+				}
+
+				NetworkUtils.cleanNetwork(scenario.getNetwork(), Set.of(TransportMode.drt));
+			}
+
+			if (drtFleetSize > 0) {
+				if (drtServiceArea == null) {
+					drtServiceArea = getBufferedDrtServiceArea();
+				}
+				replaceDrtFleet(scenario, drtServiceArea);
+			}
 		}
 
 		if (bikeRnd) {
@@ -300,7 +465,7 @@ public class RunKelheimScenario extends MATSimApplication {
 				install(new SimWrapperModule());
 
 				bind(AnalysisMainModeIdentifier.class).to(KelheimMainModeIdentifier.class);
-				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
+//				addControlerListenerBinding().to(ModeChoiceCoverageControlerListener.class);
 
 				/*
 				if (strategy.getModeChoice() == StrategyOptions.ModeChoice.randomSubtourMode) {
@@ -350,23 +515,25 @@ public class RunKelheimScenario extends MATSimApplication {
 			controler.addOverridingModule(new MultiModeDrtCompanionModule());
 			controler.configureQSimComponents(DvrpQSimComponents.activateAllModes(multiModeDrtConfig));
 
-			// Add speed limit to av vehicle
-			double maxSpeed = controler.getScenario()
+			boolean hasAvMode = multiModeDrtConfig.getModalElements().stream()
+				.anyMatch(drtCfg -> drtCfg.getMode().equals("av"));
+			VehicleType autonomousVehicleType = controler.getScenario()
 				.getVehicles()
 				.getVehicleTypes()
-				.get(Id.create("autonomous_vehicle", VehicleType.class))
-				.getMaximumVelocity();
-			controler.addOverridingModule(
-				new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
-					maxSpeed));
+				.get(Id.create("autonomous_vehicle", VehicleType.class));
+			if (hasAvMode && autonomousVehicleType != null) {
+				controler.addOverridingModule(
+					new DvrpModeLimitedMaxSpeedTravelTimeModule("av", config.qsim().getTimeStepSize(),
+						autonomousVehicleType.getMaximumVelocity()));
+			}
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
-				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, baseFare, surcharge));
-				if (rebalancing && drtCfg.mode.equals("av")) {
+				controler.addOverridingModule(new KelheimDrtFareModule(drtCfg, network, avFare, baseFare, surcharge, drtFareZoneShp));
+				if (rebalancing && drtCfg.getMode().equals("av")) {
 					controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
 				} else {
 					// No rebalancing strategy
-					controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.mode) {
+					controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.getMode()) {
 						@Override
 						public void install() {
 							bindModal(RebalancingStrategy.class).to(NoRebalancingStrategy.class).asEagerSingleton();
@@ -381,5 +548,132 @@ public class RunKelheimScenario extends MATSimApplication {
 			//estimatorConfig.addParameterSet(new DrtEstimatorConfigGroup("av"));
 
 		}
+	}
+
+	private Geometry getBufferedDrtServiceArea() {
+		return new ShpOptions(drtServiceAreaShp, null, null)
+			.getGeometry()
+			.buffer(11000);
+	}
+
+	private static boolean isPlansFile(String plans) {
+		String lowerCasePlans = plans.toLowerCase();
+		return Path.of(plans).isAbsolute()
+			|| lowerCasePlans.endsWith(".xml")
+			|| lowerCasePlans.endsWith(".xml.gz")
+			|| lowerCasePlans.endsWith(".xml.zst");
+	}
+
+	private static String getRunOptionLabel(String plans) {
+		String fileName = isPlansFile(plans) ? Path.of(plans).getFileName().toString() : plans;
+		String label = fileName
+			.replaceAll("\\.xml(\\.gz|\\.zst)?$", "")
+			.replaceAll("[^A-Za-z0-9_-]+", "-")
+			.replaceAll("^-+|-+$", "");
+
+		if (label.isBlank()) {
+			return "custom";
+		}
+
+		return label;
+	}
+
+	private static void registerDrtRouteFactory(Scenario scenario) {
+		scenario.getPopulation()
+			.getFactory()
+			.getRouteFactories()
+			.setRouteFactory(DrtRoute.class, new DrtRouteFactory());
+	}
+
+	private void replaceDrtFleet(Scenario scenario, Geometry serviceArea) {
+		Vehicles vehicles = scenario.getVehicles();
+		VehicleType vehicleType = vehicles.getVehicleTypes().get(Id.create(DRT_VEHICLE_TYPE, VehicleType.class));
+		if (vehicleType == null) {
+			throw new IllegalStateException("Cannot generate DRT fleet: vehicle type '" + DRT_VEHICLE_TYPE + "' is missing.");
+		}
+
+		vehicleType.getCapacity().setSeats(DRT_VEHICLE_SEATS);
+
+		List<Id<Vehicle>> oldDrtVehicles = vehicles.getVehicles().values().stream()
+			.filter(vehicle -> TransportMode.drt.equals(vehicle.getAttributes().getAttribute("dvrpMode")))
+			.map(Vehicle::getId)
+			.toList();
+		oldDrtVehicles.forEach(vehicles::removeVehicle);
+
+		List<Link> eligibleStartLinks = scenario.getNetwork().getLinks().values().stream()
+			.map(link -> (Link)link)
+			.filter(link -> link.getAllowedModes().contains(TransportMode.drt))
+			.filter(link -> serviceArea.contains(MGC.coord2Point(link.getCoord())))
+			.sorted(Comparator.comparing(link -> link.getId().toString()))
+			.toList();
+
+		if (eligibleStartLinks.isEmpty()) {
+			throw new IllegalStateException("Cannot generate DRT fleet: no DRT links found in the configured service area.");
+		}
+
+		List<WeightedStartLink> startLinks = drtFleetStartLinkWeights.isBlank()
+			? eligibleStartLinks.stream().map(link -> new WeightedStartLink(link, 1.)).toList()
+			: readWeightedStartLinks(drtFleetStartLinkWeights, eligibleStartLinks);
+		double totalWeight = startLinks.stream().mapToDouble(WeightedStartLink::weight).sum();
+		// This generator is deliberately independent of MatsimRandom, so fleet placement does not shift any global RNG stream.
+		SplittableRandom random = new SplittableRandom(randomSeed);
+		for (int i = 0; i < drtFleetSize; i++) {
+			Link startLink = drawStartLink(startLinks, totalWeight, random);
+			Vehicle vehicle = vehicles.getFactory()
+				.createVehicle(Id.createVehicleId("KEXI-" + (i + 1)), vehicleType);
+			vehicle.getAttributes().putAttribute("dvrpMode", TransportMode.drt);
+			vehicle.getAttributes().putAttribute("startLink", startLink.getId().toString());
+			vehicle.getAttributes().putAttribute("serviceBeginTime", DRT_SERVICE_BEGIN_TIME);
+			vehicle.getAttributes().putAttribute("serviceEndTime", DRT_SERVICE_END_TIME);
+			vehicles.addVehicle(vehicle);
+		}
+	}
+
+	private static List<WeightedStartLink> readWeightedStartLinks(String csvFile, List<Link> eligibleStartLinks) {
+		Map<Id<Link>, Link> eligibleById = new LinkedHashMap<>();
+		eligibleStartLinks.forEach(link -> eligibleById.put(link.getId(), link));
+		CSVFormat format = CSVFormat.DEFAULT.builder().setDelimiter(';').setHeader().setSkipHeaderRecord(true).build();
+		try (CSVParser parser = new CSVParser(IOUtils.getBufferedReader(csvFile), format)) {
+			Map<Id<Link>, WeightedStartLink> weightedLinks = new LinkedHashMap<>();
+			for (CSVRecord record : parser) {
+				Id<Link> linkId = Id.createLinkId(record.get("linkId"));
+				Link link = eligibleById.get(linkId);
+				if (link == null) {
+					throw new IllegalArgumentException("DRT fleet start-link weight references an ineligible or missing link: " + linkId);
+				}
+				double weight = Double.parseDouble(record.get("weight"));
+				if (!Double.isFinite(weight) || weight < 0) {
+					throw new IllegalArgumentException("Invalid DRT fleet start-link weight for " + linkId + ": " + weight);
+				}
+				if (weightedLinks.put(linkId, new WeightedStartLink(link, weight)) != null) {
+					throw new IllegalArgumentException("Duplicate DRT fleet start-link weight for " + linkId);
+				}
+			}
+			List<WeightedStartLink> result = weightedLinks.values().stream()
+				.filter(weightedLink -> weightedLink.weight() > 0)
+				.sorted(Comparator.comparing(weightedLink -> weightedLink.link().getId().toString()))
+				.toList();
+			if (result.isEmpty()) {
+				throw new IllegalArgumentException("No positive DRT fleet start-link weights found in " + csvFile);
+			}
+			return result;
+		} catch (IOException e) {
+			throw new RuntimeException("Could not read DRT fleet start-link weights from " + csvFile, e);
+		}
+	}
+
+	private static Link drawStartLink(List<WeightedStartLink> startLinks, double totalWeight, SplittableRandom random) {
+		double draw = random.nextDouble(totalWeight);
+		double cumulativeWeight = 0;
+		for (WeightedStartLink startLink : startLinks) {
+			cumulativeWeight += startLink.weight();
+			if (draw < cumulativeWeight) {
+				return startLink.link();
+			}
+		}
+		return startLinks.getLast().link();
+	}
+
+	private record WeightedStartLink(Link link, double weight) {
 	}
 }

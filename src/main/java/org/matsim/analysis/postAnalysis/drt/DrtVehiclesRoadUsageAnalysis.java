@@ -83,7 +83,7 @@ public class DrtVehiclesRoadUsageAnalysis implements MATSimAppCommand {
 			String mode = drtCfg.getMode();
 			Path vehicleFilePath = globFile(directory, "*" + mode + "_vehicles.*");
 			FleetSpecification fleetSpecification = new FleetSpecificationImpl();
-			new FleetReader(fleetSpecification).parse(vehicleFilePath.toUri().toURL());
+			new FleetReader(fleetSpecification, null).parse(vehicleFilePath.toUri().toURL());
 			List<String> vehicleIdStrings = fleetSpecification.getVehicleSpecifications().keySet().
 					stream().map(Object::toString).collect(Collectors.toList());
 			VehicleLinkUsageRecorder vehicleLinkUsageRecorder = new VehicleLinkUsageRecorder(network, timeBinSize, TransportMode.drt, vehicleIdStrings);

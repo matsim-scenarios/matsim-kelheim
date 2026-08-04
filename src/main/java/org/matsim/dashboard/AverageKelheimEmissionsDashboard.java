@@ -65,12 +65,13 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 	/**
 	 * Produces the dashboard.
 	 */
-	public void configure(Header header, Layout layout) {
+	public void configure(Header header, Layout layout, SimWrapperConfigGroup simWrapperConfigGroup) {
+
 		header.title = "Average Air Pollution";
 		header.description = "Shows the average air pollution and spatial distribution for several simulation runs.";
 
 		String linkDescription = "Displays the emissions for each link per meter. Be aware that emission values are provided in the simulation sample size!";
-		if (pathToCsvBase != null){
+		if (pathToCsvBase != null) {
 			linkDescription += String.format("%n Base is %s", pathToCsvBase);
 		}
 		String finalLinkDescription = linkDescription;
@@ -108,7 +109,7 @@ public class AverageKelheimEmissionsDashboard implements Dashboard {
 				viz.description = finalLinkDescription;
 				viz.height = 12.0;
 				viz.center = data.context().getCenter();
-				viz.zoom = data.context().mapZoomLevel;
+				viz.zoom = data.context().getMapZoomLevel();
 				viz.setShape(new CreateAverageDashboards().copyVizNetwork(dirs, ".avro"), "id");
 				viz.addDataset("emissions_per_m", postProcess(data, "mean_emissions_per_link_per_m.csv"));
 				viz.display.lineColor.dataset = "emissions_per_m";

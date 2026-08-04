@@ -22,10 +22,7 @@ package org.matsim.dashboard;
 
 import org.matsim.analysis.postAnalysis.emissions.KelheimOfflineAirPollutionAnalysisByEngineInformation;
 import org.matsim.application.prepare.network.CreateGeoJsonNetwork;
-import org.matsim.simwrapper.Dashboard;
-import org.matsim.simwrapper.DashboardUtils;
-import org.matsim.simwrapper.Header;
-import org.matsim.simwrapper.Layout;
+import org.matsim.simwrapper.*;
 import org.matsim.simwrapper.viz.GridMap;
 import org.matsim.simwrapper.viz.Links;
 import org.matsim.simwrapper.viz.Table;
@@ -55,7 +52,7 @@ public class KelheimEmissionsDashboard implements Dashboard{
 	/**
 	 * Produces the dashboard.
 	 */
-	public void configure(Header header, Layout layout) {
+	public void configure(Header header, Layout layout, SimWrapperConfigGroup simWrapperConfigGroup) {
 
 		header.title = "Air Pollution";
 		header.description = "Shows the air pollution and spatial distribution.";

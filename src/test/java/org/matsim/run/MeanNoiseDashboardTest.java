@@ -6,6 +6,7 @@ import org.apache.avro.util.Utf8;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.analysis.postAnalysis.NoiseAverageAnalysis;
@@ -30,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Tag("remote")
 class MeanNoiseDashboardTest {
 
 	@RegisterExtension
@@ -95,7 +97,8 @@ class MeanNoiseDashboardTest {
 		}
 
 		SimWrapper sw = SimWrapper.create();
-		sw.getConfigGroup().defaultParams().mapCenter = "11.89,48.91";
+		sw.getConfigGroup().defaultParams().setMapCenter("11.89,48.91");
+
 		sw.addDashboard(Dashboard.customize(new AverageKelheimNoiseDashboard(foldersSeeded, 3)).context("noise"));
 		try {
 			sw.generate(Path.of(path), true);

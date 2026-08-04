@@ -1,0 +1,972 @@
+---
+title: "postprocess"
+output: html_document
+date: "2025-06-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+
+```{r}
+library(tidyverse)
+library(tmap)
+library(sf)
+library(RColorBrewer)
+library(scales)
+library(tmaptools)
+library(lubridate)
+library(hms)
+library(RColorBrewer)
+library(viridisLite)
+library(osmdata)
+library(xml2)
+library(xtable)
+library(patchwork)
+library(cowplot)
+
+```
+
+# INPUTS
+
+## Accessibility File
+
+
+```{r}
+# pois <- c("train_station", "logistic", "supermarket")
+pois <- c("train_station")
+```
+
+
+# WILL BE OVERWRITTEN LATER
+Set directories
+```{r}
+# input directory
+base_dir <- "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/kelheim-v3/"
+acc_dir <- paste0(base_dir,"analysis/accessibility/")
+accessibility_faux <- data.frame()
+poi_full <- data.frame()
+
+for(poi in pois){
+  
+  accessibility_faux <- rbind(accessibility_faux, read_csv(paste0(acc_dir, poi, "/accessibilities_simwrapper.csv")) %>% mutate (poi = poi))
+  poi_full  <- rbind(poi_full,st_read(paste0(acc_dir,poi,"/pois.shp")))
+  
+}
+accessibility_faux <- accessibility_faux %>% group_by(id) %>% filter(time == first(time), poi == first(poi)) %>% select(id,population, age, income)
+accessibility_faux
+```
+
+
+# REAL 
+Remember to set matsim-kelheim as working directory
+```{r}
+# input directory
+base_dir <- "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/develop/2026-07-14/demand-base__prebooking-off__fleet-100__seed-4711/"
+# sensitivity_dir <- "../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/kelheim-v3-sensitivity/"
+
+acc_dir <- paste0(base_dir,"analysis/accessibility/")
+figure_dir <-  paste0(base_dir, "figures-R/")
+dir.create(figure_dir)
+```
+
+
+
+Remember to set matsim-kelheim as working directory
+```{r}
+main_time <- "8:00"
+
+
+
+accessibility_full <- data.frame()
+# poi_full <- data.frame()
+
+
+for(poi in pois){
+  
+  accessibility_full <- rbind(accessibility_full, read_csv(paste0(acc_dir, poi, "/accessibilities.csv")) %>% mutate (poi = poi))
+  # poi_full  <- rbind(poi_full,st_read(paste0(acc_dir,poi,"/pois.shp")))
+  
+}
+
+
+accessibility_full <-  accessibility_full %>% 
+  st_as_sf(coords = c("xcoord","ycoord"), crs = "EPSG:25832") %>% 
+  mutate(time = as_hms(time)) %>% 
+  left_join(accessibility_faux)
+  
+bbox = bb(accessibility_full, ext = 1.05)
+
+```
+
+## Transport Systems
+
+### PT
+read stops
+Remember to set matsim-kelheim as working directory
+```{r}
+# read the XML file
+file <- file.path(
+  base_dir,
+  "kelheim-v3.1-25pct-kexi-iter_300.output_transitSchedule.xml.zst"
+)
+
+doc <- read_xml(pipe(sprintf("zstdcat %s", shQuote(file))))
+shp_kelheim <- st_read("input/shp/lk-kelheim/lk-kelheim.shp")
+
+# extract all stopFacility nodes
+stops <- xml_find_all(doc, ".//stopFacility")
+
+# turn into a data frame
+df <- tibble(
+  id = xml_attr(stops, "id"),
+  x  = as.numeric(xml_attr(stops, "x")),
+  y  = as.numeric(xml_attr(stops, "y")),
+  name = xml_attr(stops, "name")
+)
+
+tmap_mode("view")
+pt_stops <- df %>% st_as_sf(coords = c("x","y"), crs = "EPSG:25832") %>% st_filter(shp_kelheim)
+tm_shape(pt_stops) + tm_dots()
+
+```
+
+### CAR
+read major roads from osm
+
+```{r}
+
+
+# query OSM for highways
+q <- opq(bbox = bbox %>% st_transform(4326)) %>% 
+  add_osm_feature(key = "highway", 
+                  value = c("motorway", "trunk", "primary","secondary"))
+
+roads_osm <- osmdata_sf(q)$osm_lines
+
+tm_shape(roads_osm) + tm_lines()
+```
+
+
+### DRT
+```{r}
+
+# extract all stopFacility nodes
+drt_stops <- st_read("../public-svn/matsim/scenarios/countries/de/kelheim/drtAccessibility/_data/1_processed/drt_stops/stops_25832.shp")
+
+
+tm_shape(drt_stops) + tm_dots() + tm_shape(shp_kelheim) + tm_borders()
+
+```
+
+# ACCESSIBILITY CALCULATION
+
+Define Palettes
+
+```{r}
+col_title <-  "Color: Accessibility\n[utils]"
+# col_vals <-  c("#B2182B", "#D6604D", "#F4A582" ,"#92C5DE", "#4393C3", "#2166AC")
+
+col_vals_div <- brewer.pal(9, "RdYlBu")
+col_breaks_div <-  c(-Inf,seq(-7,7,by = 2), Inf)
+midpoint_div <- 0
+
+# "#440154FF" "#472D7BFF" "#3B528BFF" "#2C728EFF" "#21908CFF" "#27AD81FF" "#5DC863FF" "#AADC32FF" "#FDE725FF"
+col_vals_pure <- viridis(8)
+col_breaks_pure <-  c(-Inf,seq(-14,-2,by = 2), Inf)
+midpoint_pure <- -8
+
+
+
+alpha_vals <- c(0.0,0.25,0.5,1.0)
+alpha_breaks <- c(-Inf,5,50,500,Inf)
+```
+
+Function to generate accessibility map for mode, poi, time, and various styling 
+
+```{r}
+
+generate_map <- function(mode1, poi1,time1, opacity, col_vals = NULL, col_breaks = NULL, midpoint = NULL,file_name_append = NULL){
+  
+  print(paste0("POI:", poi1, " | Time:",time1," | Opacity: ",opacity, " | Mode Combo: ", paste(mode1, collapse = ",")))
+  
+  # SETUP 
+  setup <- accessibility_full %>%
+      filter(time == hm(time1)) %>%
+    filter(poi == poi1) %>% 
+    mutate(population_density = population / (0.5*0.5))
+  
+  
+  if(length(mode1)==2) {
+    
+    # label <- paste(paste(mode, collapse="-"), "Accessibility")
+    label <- "Accessibility\nDiff (util)"
+     # print(label)
+     setup <- setup %>%  mutate(
+       !!label := !!sym(paste0(mode1[[1]], "_accessibility")) -
+                               !!sym(paste0(mode1[[2]], "_accessibility")))
+     
+     col_vals <- if(is.null(col_vals)) col_vals_div else col_vals
+     
+     col_breaks <- if(is.null(col_breaks)) col_breaks_div else col_breaks
+     
+     midpoint <- if(is.null(midpoint)) midpoint_div else midpoint
+    
+  }else{
+    # label <- paste(mode, "Accessibility")
+    label <- "Accessibility\n(util)"
+    setup <- setup %>%  mutate(
+       !!label := !!sym(paste0(mode1, "_accessibility"))
+    )
+    
+     col_vals <- if(is.null(col_vals)) col_vals_pure else col_vals
+     col_breaks <- if(is.null(col_breaks)) col_breaks_pure else col_breaks
+     midpoint <- if(is.null(midpoint)) midpoint_pure else midpoint
+    
+  }
+     
+    
+    
+    # Use this expanded bbox in tm_shape
+    
+    tmap_mode("plot")
+    # https://leaflet-extras.github.io/leaflet-providers/preview/
+    
+    
+    # ADD FILL AND ALPHA TO MAP BASED ON ACCESSIBILITY
+    full_map <- tm_basemap("Esri.WorldGrayCanvas") + 
+     tm_shape(setup,bbox = bb(setup, ext = 1.05)) +
+      tm_symbols(
+        fill = label,
+        fill.scale = tm_scale_intervals(values = col_vals, breaks = col_breaks, midpoint = midpoint), 
+        fill_alpha = ifelse(opacity=="on","population_density",1.0),
+        fill_alpha.scale = tm_scale_intervals(values = alpha_vals, breaks = alpha_breaks),
+        fill_alpha.legend =  tm_legend(show=FALSE),
+        
+        size = .14,
+        shape = 15,
+        
+      )
+  
+    # ADD LEGEND FOR OPACIty
+  if(opacity == "on"){
+    full_map <- full_map +
+        tm_add_legend(
+          type = "symbol",
+          labels = c("<5", "5-50","50-500",">=500"),
+          col = "blue",  # pick a neutral or representative color
+          fill_alpha = c(0.0,0.25,0.5, 1.),
+          shape = 15,
+          title = "Pop. Density\n[person/km²]"
+        )
+  }
+    
+    
+    # ADD TRANSPORT SYSTEM
+    if(length(mode1)==1 & is.null(file_name_append)){
+      if(mode1 == "estimatedDrt") {
+        
+        
+        full_map <- full_map +
+               # DRT stops as black dots
+              tm_shape(drt_stops) +
+              tm_symbols(
+                shape = 16,
+                col = "gray40",
+                size = 0.2,
+                legend.shape.show = FALSE
+              ) 
+          
+      }
+      
+      if(mode1 == "pt") {
+        
+        
+        full_map <- full_map +
+               # DRT stops as black dots
+              tm_shape(pt_stops) +
+              tm_symbols(
+                shape = 18,       
+                col = "blue",
+                size = 0.2,
+                legend.shape.show = FALSE
+              ) 
+          
+      }
+      
+      if (mode1 == "car") {
+              full_map <- full_map + tm_shape(roads_osm) + tm_lines(col = "gray40", lwd = 1) 
+      }
+    }
+    
+    # ADD POI
+    full_map <- full_map +
+            # POIs as red triangles
+          tm_shape(poi_full %>% filter(type == poi1)) +
+          tm_symbols(
+            shape = 17,          # filled triangle
+            col = "red",
+            size = 0.2,
+            legend.shape.show = FALSE
+          )
+    
+    
+    
+  
+    # ADD LEGEND ENTRY 
+    if(length(mode1)==2 | !is.null(file_name_append)) {
+            full_map <- full_map +
+            tm_add_legend(
+            type = "symbol",
+            labels = c("Opportunity"),
+            col = c( "red"),
+            shape = c(17),
+            size = 0.5,
+            title = "Location"
+          ) 
+    }else{
+    
+      full_map <- full_map +
+            tm_add_legend(
+            type = "symbol",
+            labels = c("DRT Stop", "PT Stop","Major Roads","Opportunity"),
+            col = c("gray40","blue","gray40", "red"),
+            shape = c(16,18,3,17),
+            size = 0.5,
+            title = "Location"
+          ) 
+          # tm_scale_bar(position = c("left","bottom")) +
+          # tm_compass(position = c("right","top"))
+    }
+    # add layout
+      full_map <- full_map +  
+            tm_layout(
+              legend.position = tm_pos_out("right","center"),
+              inner.margins = c(0,0,0,0),
+              outer.margins = 0
+              )
+      
+      
+    # file_name <- paste0(figure_dir,ifelse(opacity == "on", "opacity_",""),paste(mode1,collapse="-"),"_",poi1,"_",time1,ifelse(is.null(file_name_append),"",file_name_append), ".pdf")
+    # tmap_save(full_map, filename = file_name,   width = 8, height = 6, units = "cm") # ,asp = 0
+    
+
+
+    return(full_map)
+    
+}
+
+
+```
+
+for manual legend
+```{r}
+
+
+build_legend_col <- function(acc_breaks,acc_colors,acc_mid, text) {
+  
+
+
+legend_df <- data.frame(
+  x = acc_mid,
+  y = 1
+)
+
+legend_plot <- ggplot(legend_df, aes(x = x, y = y, fill = x)) +
+
+  geom_tile(height = 0.8, width = 4) +
+
+  scale_fill_stepsn(
+    colours = acc_colors,
+    breaks = acc_breaks,
+    limits = c(min(acc_mid)-1, max(acc_mid) + 1),
+    name = text,
+    guide = guide_colorbar(
+      direction = "horizontal",
+      barwidth  = unit(90, "mm"),  # ← makes bins wider
+      barheight = unit(5, "mm")
+  )
+  ) +  scale_color_identity(guide = "legend") + theme_void() +
+  theme(
+    legend.position = "top",
+    legend.box = "vertical",
+    text = element_text(size = 14)
+  )
+
+return(get_legend(legend_plot))
+}
+
+build_legend_col <- function(acc_breaks, acc_colors, acc_mid, text) {
+
+  # Create a discrete legend dataframe
+  legend_df <- data.frame(
+    x = factor(acc_mid, levels = acc_mid),  # treat midpoints as discrete
+    y = 1
+  )
+
+  # Create the plot
+  p <- ggplot(legend_df, aes(x = x, y = y, fill = x)) +
+    geom_tile(height = 0.8, width = 4) +
+    
+    # Manual fill to force exact colors
+    scale_fill_manual(
+      values = setNames(acc_colors, acc_mid),  # map each midpoint to a color
+      name = text,
+      guide = guide_legend(
+        direction = "horizontal",
+        title.position = "top",
+        keywidth = unit(10, "mm"),   # width of each legend box
+        keyheight = unit(5, "mm")
+      )
+    ) +
+    
+    # Minimal theme for a clean legend
+    theme_void() +
+    theme(
+      legend.position = "top",
+      legend.box = "vertical",
+      text = element_text(size = 14)
+    )
+
+  # Extract the legend only
+  return(get_legend(p))
+}
+
+build_legend_loc <- function() {
+  legend_plot <- ggplot() +
+
+  # ---- Location legend ----
+  geom_point(aes(x = 0, y = 0, shape = "DRT Stop", color = "DRT Stop")) +
+  geom_point(aes(x = 0, y = 0, shape = "PT Stop", color = "PT Stop")) +
+  geom_point(aes(x = 0, y = 0, shape = "Major Roads", color = "Major Roads")) +
+  geom_point(aes(x = 0, y = 0, shape = "Opportunity", color = "Opportunity")) +
+
+  scale_shape_manual(
+    name = "Location:",
+    values = c(
+      "DRT Stop" = 16,
+      "PT Stop" = 18,
+      "Major Roads" = 3,
+      "Opportunity" = 17
+    ),
+  ) +
+  scale_color_manual(
+    name = "Location:",
+    values = c(
+      "DRT Stop" = "gray40",
+      "PT Stop" = "blue",
+      "Major Roads" = "gray40",
+      "Opportunity" = "red"
+    ),
+  ) +
+
+  theme_void() +
+  theme(
+    legend.position = "top",
+    legend.box = "vertical",
+    text = element_text(size = 14)
+  )
+
+return(get_legend(legend_plot))
+}
+
+```
+
+## Run Accessibility Calculation
+,"logistic","supermarket"
+```{r}
+
+# pure
+count <- 1
+subfigs = c("a","b","c","d","e","f","g","h","i")
+for(poi1 in c("train_station")){ 
+  for(mode1 in c("car","pt","estimatedDrt")) {
+    full_map <- generate_map(mode1,poi1,main_time,"off")
+    file_name <- paste0(figure_dir,"fig3",subfigs[count],"_",mode1,"_",poi1,".pdf")
+    tmap_save(full_map + tm_layout(legend.show = FALSE), filename = file_name,   width = 6,units = "cm") # ,asp = 0
+    count <- count + 1
+    
+  }
+}
+
+legend_loc <- build_legend_loc()
+ggsave(legend_loc , filename = paste0(figure_dir,"fig3x_legend_loc.pdf"),width = 16,
+  height = 1,
+  units = "cm")
+
+
+legend3 <- build_legend_col(col_breaks_pure,c(col_vals_pure,"#FDE725FF"),seq(-15,-1,2),"Accessibility (utils):") 
+plot(legend3)
+ggsave(legend3 , filename = paste0(figure_dir,"fig3x_legend.pdf"),width = 16,
+  height = 1,
+  units = "cm")
+ 
+ 
+
+
+# temporal (difference plots DRT - PT)
+count <- 1
+for(poi in c("train_station")){
+  for(time1 in times <- c(main_time,"9:00","21:00")){
+    full_map <- generate_map(c("estimatedDrt","pt"), poi, time1, "off")
+    file_name <- paste0(figure_dir,"fig4",subfigs[count],"_",paste(mode1,collapse="-"),"_",poi1,"_",time1, ".pdf")
+    tmap_save(full_map + tm_layout(legend.show = FALSE), filename = file_name,  width = 6, units = "cm") # ,asp = 0
+    count <- count + 1
+  }
+ }
+  
+  legend4 <- build_legend_col(col_breaks_div,col_vals_div,seq(-8,8,2),"Accessibility Diff (utils):") 
+  plot(legend4)
+  ggsave(legend4 , filename = paste0(figure_dir,"fig4x_legend.pdf"),width = 15,
+  height = 1,
+  units = "cm")
+  
+  
+full_map <- generate_map(c("estimatedDrt","pt"), "train_station", main_time, "off")
+ tmap_save(full_map + tm_layout(legend.show = FALSE), filename = paste0(figure_dir,"xxx_fig4.png"),  width = 6, units = "cm") # ,asp = 0
+
+```
+
+
+Summary Plot Spatiotemporal
+```{r}
+temporal_plot <- accessibility_full %>% 
+  mutate(population = population * 4) %>% 
+  st_drop_geometry() %>% pivot_longer(ends_with("accessibility"),values_to = "accessibility",names_to = "mode") %>% 
+  mutate(mode = str_replace(mode, "_accessibility","")) %>% 
+  mutate(mode = factor(mode,levels = c("car","estimatedDrt","pt","teleportedWalk"), labels = c("Car","DRT","PT","Walk"))) %>% 
+  mutate(poi = factor(poi, levels = c("train_station","logistic","supermarket"), labels = c("Train Station","Logistic","Supermarket"))) %>% 
+  group_by(time,poi,mode) %>% summarise(accessibility = sum(accessibility * population)/sum(population)) %>% 
+  ggplot() +
+  geom_point(aes(time,accessibility, col = mode), size = .5) +
+  facet_wrap(~poi) +
+  scale_x_time(labels = scales::label_time("%H"),breaks = scales::breaks_width("6 hour"))+
+  theme_minimal(base_size = 14)+
+  theme(legend.position = "bottom") +
+  labs(x = "Time", y = "Accessibility (utils)")
+temporal_plot
+ggsave(temporal_plot, file = paste0(figure_dir,"fig4_5_temporal.pdf"),width = 20, height = 10, units = "cm", dpi = 300, device = cairo_pdf)
+
+
+# PER POID
+
+prep <- accessibility_full %>% 
+  mutate(population = population * 4) %>% 
+  st_drop_geometry() %>% pivot_longer(ends_with("accessibility"),values_to = "accessibility",names_to = "mode") %>% 
+  mutate(mode = str_replace(mode, "_accessibility","")) %>% 
+  mutate(mode = factor(mode,levels = c("car","estimatedDrt","pt","teleportedWalk"), labels = c("Car","DRT","PT","Walk"))) %>% 
+  mutate(poi = factor(poi, levels = c("train_station","logistic","supermarket"), labels = c("Train Station","Logistic","Supermarket"))) %>% 
+  group_by(time,poi,mode) %>% summarise(accessibility = sum(accessibility * population)/sum(population))
+
+temporal_train <- prep %>% 
+  filter(poi == "Train Station") %>% 
+  ggplot() +
+  geom_point(aes(time,accessibility, col = mode), size = .5) +
+  # facet_wrap(~poi) +
+  scale_x_time(labels = scales::label_time("%H"),breaks = scales::breaks_width("6 hour"))+
+  theme_minimal(base_size = 14)+
+  coord_cartesian(ylim = c(-32,0))+
+  theme(legend.position = "bottom") +
+  labs(x = "Time", y = "Accessibility (utils)")
+
+temporal_logistic <- prep %>% 
+  filter(poi == "Logistic") %>% 
+  ggplot() +
+  geom_point(aes(time,accessibility, col = mode), size = .5) +
+  # facet_wrap(~poi) +
+  scale_x_time(labels = scales::label_time("%H"),breaks = scales::breaks_width("6 hour"))+
+  theme_minimal(base_size = 14)+
+  coord_cartesian(ylim = c(-32,0))+
+  theme(legend.position = "bottom") +
+  labs(x = "Time", y = "Accessibility (utils)")
+
+
+temporal_supermarket <- prep %>% 
+  filter(poi == "Supermarket") %>% 
+  ggplot() +
+  geom_point(aes(time,accessibility, col = mode), size = .5) +
+  # facet_wrap(~poi) +
+  scale_x_time(labels = scales::label_time("%H"),breaks = scales::breaks_width("6 hour"))+
+  theme_minimal(base_size = 14)+
+  coord_cartesian(ylim = c(-32,0))+
+  theme(legend.position = "bottom") +
+  labs(x = "Time", y = "Accessibility (utils)")
+
+ggsave(temporal_train  +   theme(legend.position = "none"), file = paste0(figure_dir,"fig4_5_temporal_train.pdf"), width = 9,height = 11,units = "cm", dpi = 300, device = cairo_pdf)
+
+ggsave(temporal_logistic +   theme(legend.position = "none"), file = paste0(figure_dir,"fig4_5_temporal_logisitic.pdf"), width = 9, height = 11,units = "cm", dpi = 300, device = cairo_pdf)
+
+
+ggsave(temporal_supermarket +   theme(legend.position = "none"), file = paste0(figure_dir,"fig4_5_temporal_supermarket.pdf"), width = 9,height = 11,units = "cm", dpi = 300, device = cairo_pdf)
+
+
+ggsave(get_legend(temporal_train),file = paste0(figure_dir,"fig4_5_temporal_legend.pdf"),width = 10,height = 1,units = "cm")
+
+
+
+
+
+  
+```
+
+
+# EQUITY CALCULATION
+
+Prep
+
+```{r}
+
+# We scale up population from 25% scenario to 100% by multiplying by 4
+accessibility_processed <- accessibility_full %>% 
+  filter(time != hm("8:30") & time !=hm("7:00")) %>% 
+  mutate(population = population * 4) %>% 
+  mutate(population_density = population / (0.5*0.5))
+
+
+
+```
+
+
+## ECDF Plot
+```{r}
+
+# Prepare max_with_drt and max_without_drt vlaues
+equity_distribution_supermarket_730 <- accessibility_processed %>% 
+  filter(poi == "supermarket") %>% 
+  filter(time == hm("7:30")) %>% 
+  st_drop_geometry() %>% 
+  mutate(max_with_drt = pmax(pmax(pt_accessibility,estimatedDrt_accessibility),teleportedWalk_accessibility)) %>%
+  mutate(max_without_drt = pmax(pt_accessibility,teleportedWalk_accessibility)) %>% 
+  select(population,`With DRT` = max_with_drt,`No DRT` = max_without_drt) %>%
+  uncount(population) %>% 
+  pivot_longer(everything(), names_to = "scenario",values_to = "value")
+
+
+# some values used for paper
+equity_distribution_supermarket_730  %>% mutate(below6 = value < -6, below3 = value < -3) %>% group_by(scenario) %>% summarise(below6 = sum(below6)/n(),below3 = sum(below3)/n())
+  
+
+# calculate the percentiles, and create labels used for ecdf
+lines_and_labels <- equity_distribution_supermarket_730 %>%
+  group_by(scenario) %>%
+  summarise(
+    q10    = quantile(value, 0.10, na.rm = TRUE),
+    q25    = quantile(value, 0.25, na.rm = TRUE),
+    q50 = median(value, na.rm = TRUE),
+    q75    = quantile(value, 0.75, na.rm = TRUE),
+    q90 = quantile(value, 0.90, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  select(-scenario) %>% data.table::transpose(keep.names = "variable") %>% 
+  mutate(y1 = as.numeric(str_replace(variable,"q","0."))) %>% 
+  mutate(y2 = y1) %>% 
+  select(x1=V1, x2=V2, y1,y2) %>% 
+  mutate(diff = round(x2-x1,2))
+  
+# also calculate mean
+means <- equity_distribution_supermarket_730 %>% group_by(scenario) %>% summarise(mean = mean(value)) %>% pull(mean)
+
+# plug together plot
+plot_ecdf <- ggplot(lines_and_labels) +
+  geom_segment(aes(x = -20, xend = x1, y = y1, yend = y2), color = "gray30", linetype = "dashed", lwd = 0.3) +
+  geom_segment(aes(x = x1, xend = x2, y = y1, yend = y2), color = "gray30") +
+  geom_text(aes(x = x1 - 0.5, y= y2+.05, label = paste0("Δ = ", diff)),hjust=1, inherit.aes = FALSE, size = 4)+
+  stat_ecdf(data = equity_distribution_supermarket_730, mapping =  aes(value, col = scenario), linewidth = 1) +
+  scale_color_manual(values = c(`No DRT` = "#1b9e77",`With DRT` = "purple")) +
+  labs(x = "Accessibility (utils)", y = "Cumulative Share (≤ x)")+
+  theme_minimal(base_size = 14)+ 
+  theme(legend.position = "bottom") +
+  # theme( panel.grid.minor.y = element_blank())+
+  coord_cartesian(xlim = c(-15, 1))+
+  
+  scale_y_continuous(
+    limits = c(0, 1),
+    breaks = seq(0, 1, by = 0.2)
+  )+ geom_point(data = data.frame(x = means, y = c(.385,.43)), aes(x,y), col = "red", shape = "diamond", size = 3)+
+  geom_line(data = data.frame(x = means, y = c(.385,.43)), aes(x,y), col = "red") +
+  geom_text(aes(x = means[1] - .5,y = 0.415, label = paste0("Δ = ", round(means[2]-means[1],2))),hjust=1, inherit.aes = FALSE, size = 4, color = "red")
+
+plot_ecdf
+
+# save plot
+ggsave(plot_ecdf, file = paste0(figure_dir,"fig5_equity_ecdf.pdf"),width = 10, height = 10, units = "cm", dpi = 300, device = cairo_pdf)
+
+ggsave(plot_ecdf, file = paste0(figure_dir,"xxx_fig5_equity_ecdf.png"),width = 10, height = 10, units = "cm", dpi = 300)
+
+
+# ggsave(plot_ecdf, file = paste0(figure_dir,"xxx_graphical_abstract.pdf"),width = 15, height = 20, units = "cm", dpi = 300, device = cairo_pdf)
+
+```
+###V2
+```{r}
+
+percentiles <- seq(0.1, 1.0, by = 0.1)
+
+# general population
+df_percentiles <- tibble(
+  percentile = percentiles,
+  base_max_accessibility = quantile(
+    equity_distribution_supermarket_730 %>% filter(scenario == "No DRT") %>% pull(value),
+    probs = percentiles,
+    na.rm = TRUE
+  ),
+  policy_mobility_max_accessibility = quantile(
+    equity_distribution_supermarket_730 %>% filter(scenario == "With DRT") %>% pull(value),
+    probs = percentiles,
+    na.rm = TRUE
+  )
+) %>% 
+  pivot_longer(
+    cols = c(base_max_accessibility,
+             policy_mobility_max_accessibility),
+    names_to = "scenario",
+    values_to = "accessibility"
+  ) %>% 
+  mutate(scenario = factor(scenario, levels = c("base_max_accessibility", "policy_mobility_max_accessibility"), labels = c("Base Case", "Policy Mobility"))) %>% 
+  mutate(percentile = factor(percentile * 100))
+
+ggplot(df_percentiles,
+       aes(x = percentile,
+           y = accessibility,
+           fill = scenario)) +
+  geom_col(position = "dodge", width = 0.7) +
+  scale_fill_manual(values = c(
+  `Base Case` = "#B2B2B2",
+  `Policy Safety` = "#B32928",
+  `Policy Mobility` = "#468EC7",
+  `Policy Combined` = "#8422F4"
+)) +
+  labs(x = "Percentile", y = "Accessibility (utils)") +
+  theme_minimal(base_size = 14)
+
+
+```
+
+## Smoothed Line Chart
+```{r}
+# prep
+scatter_prep <- accessibility_processed %>% 
+  st_drop_geometry() %>% 
+  filter(poi == "supermarket") %>%
+  select(ends_with("accessibility"),population_density,time,poi) %>% 
+  pivot_longer(-c(population_density,time,poi),names_to = "mode", values_to = "accessibility") %>%
+  mutate(mode = str_replace(mode,"_accessibility","")) %>% 
+  filter(time == hm(main_time)) %>% 
+  # filter(mode == "pt" | time == hm(main_time)) %>% 
+  mutate(mode = case_when(
+    mode == "teleportedWalk" ~ "Walk",
+    mode == "estimatedDrt" ~ "DRT",
+    mode == "pt" ~ "PT",
+    mode == "car" ~ "Car",
+    .default = mode))
+
+
+# create plot
+  scatter_supermarket <- ggplot(scatter_prep, aes(population_density,accessibility,col = mode)) +
+  # geom_point(alpha = 0.1,size = .3)+
+  geom_smooth(method = "loess")+
+  scale_x_log10()+
+  coord_cartesian(xlim = c(NA, 5000))+
+  labs(x="Population Density (p/km2)", y = "Accessibility (utils)") +
+      # geom_hline(yintercept = -6.0,
+      #        linetype = "dashed",
+      #        color = "red",
+      #        size = 1) +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "bottom")
+scatter_supermarket
+
+scatter_prep %>% filter(mode == "walk")  %>% filter(population_density > 3000) %>% nrow()
+
+  # coord_cartesian(ylim = c(-50, 0))
+  
+  ggsave(filename = paste0(figure_dir,"fig6_equity_scatter.pdf"), plot = scatter_supermarket, width = 10, height = 10, units = "cm", dpi = 300)
+
+  
+  # Find some numbers for the paper
+  scatter_prep %>% filter(population_density > 0 & population_density <= 50) %>% group_by(mode) %>% summarise(mean = sum(accessibility * population_density)/sum(population_density))
+  
+  scatter_prep %>% filter(population_density >= 1000) %>% group_by(mode) %>% summarise(mean = sum(accessibility* population_density)/sum(population_density))
+
+
+```
+
+
+# Map of areas above threshold
+
+```{r}
+
+for(threshold in c(-6)){
+  supermarket_threshold <- accessibility_processed %>%
+    filter(time == hm("7:30"), poi == "supermarket") %>% 
+    filter(population_density > 5) %>% 
+    select(teleportedWalk_accessibility,pt_accessibility,estimatedDrt_accessibility,population,population_density) %>% 
+    mutate(walk = teleportedWalk_accessibility >=threshold,
+           pt = pt_accessibility >= threshold,
+           drt = estimatedDrt_accessibility >= threshold, 
+           none = !walk & !pt & !drt)
+  
+  supermarket_threshold %>% st_drop_geometry() %>% 
+    pivot_longer(c("walk","pt","drt","none"),names_to = "scenario") %>% 
+    filter(value) %>% 
+    group_by(scenario) %>% 
+    summarise(population = sum(population)) %>% mutate(scenario = factor(scenario, levels = c("walk","pt","drt","none"))) %>% arrange(scenario) %>% 
+    mutate(diff = population - lag(population))
+  
+  
+  subsume_check <- supermarket_threshold %>% 
+    mutate(pt_subsumes_walk = !walk | (walk & pt)) %>% 
+    mutate(drt_subsumes_walk = !walk | (walk & drt)) %>% 
+    mutate(drt_subsumes_pt = !pt | (pt & drt))
+  
+  
+    subsume_check %>% summarise(pt_subsumes_walk =  n()- sum(pt_subsumes_walk), drt_subsumes_walk = n() - sum(drt_subsumes_walk),drt_subsumes_pt =  n() -sum(drt_subsumes_pt))
+    
+  
+  
+  equity_map <- tm_basemap("Esri.WorldGrayCanvas") +
+    tm_shape(bbox = bb(supermarket_threshold, ext = 1.05)) +
+    tm_shape(supermarket_threshold %>% filter(drt)) +
+    tm_dots(fill = "purple") +
+    tm_shape(supermarket_threshold %>% filter(pt)) +
+    tm_dots(fill = "#1b9e77") +
+    tm_shape(supermarket_threshold %>% filter(walk)) +
+    tm_dots(fill = "yellow") +
+    tm_shape(supermarket_threshold %>% filter(none)) +
+    tm_dots(fill = "red") 
+  
+    file_name <- paste0(figure_dir,"fig7",ifelse(threshold == -6, "a","b"),"_equity_map_",threshold,".pdf")
+    tmap_save(equity_map, filename = file_name, units = "cm") # ,asp = 0
+    
+}
+
+
+legend_only <- tm_add_legend(
+  type = "symbol",
+  labels = c("Walk","PT", "DRT", "No Access"),
+  fill = c("yellow","#1b9e77","purple", "red"),
+  lwd = 0,
+  size = .4,
+  title = "Mode",
+  orientation = "horizontal"
+) +
+  tm_layout(
+    legend.only = TRUE,
+    frame = FALSE,
+    asp = 0,    
+    outer.margins = 0,
+    inner.margins = 0,
+    legend.text.size = 0.9,
+    legend.title.size = 1
+  )
+
+ file_name <- paste0(figure_dir,"fig7c_equity_map_legend.pdf")
+tmap_save(
+  legend_only,
+  filename = file_name,
+  width = 2.3,
+  height = 2,
+  units = "cm"
+)
+
+
+
+```
+
+
+# SENSITIVITY ANALYSIS
+
+```{r}
+
+
+# prepare reference data
+ref_data <- accessibility_full %>% 
+  filter(time == hm(main_time)) %>% 
+  filter(poi == "train_station") %>% 
+  summarize(pt = sum(pt_accessibility * population)  / sum(population), 
+            car = sum(car_accessibility*population)  / sum(population), 
+            drt = sum(estimatedDrt_accessibility*population)  / sum(population)) %>%
+  st_drop_geometry() %>% 
+ 
+  pivot_longer(cols = -c(),names_to = "mode",values_to = "accessibility") %>% 
+  mutate(scenario = mode) %>%
+  select(scenario, accessibility) %>%
+  mutate(scenario = factor(scenario,levels = c("car","drt","pt"),labels = c("Car","DRT","PT")))
+  
+# grab a column with the populatin, scale up from 25% scenario to 100% scenario
+pop_col <- accessibility_full %>% 
+  filter(time == hm(main_time)) %>% 
+  filter(poi == "train_station") %>% 
+  st_drop_geometry() %>% 
+  transmute(population = population * 4)
+
+
+scenarios <- c("a-1","a-2","a-3","b-1","b-2","b-3","c-1","c-2","c-3")
+
+sensitivity_data_raw <- map_dfr(scenarios, function(scenario) {
+  path <- paste0(
+    sensitivity_dir,
+    scenario,
+    "/analysis/accessibility/train_station/accessibilities.csv"
+  )
+
+  read_csv(path) %>%
+    filter(time == hm(main_time)) %>%
+    cbind(pop_col) %>%
+    summarize(
+      scenario = scenario,
+      accessibility = sum(estimatedDrt_accessibility * population) / sum(population)
+    )
+})
+
+sensitivity_data <- sensitivity_data_raw %>% 
+  separate(scenario, into = c("asc","los"), sep = "-") %>% 
+  mutate(los = factor(los, levels=c("3","2","1"), labels = c("poor","base","car"))) %>% 
+  mutate(asc = factor(asc, levels = c("a","b","c"), labels = c("-2.5","base","2.5"))) 
+
+
+ref_plot <- ggplot(ref_data) + 
+  geom_col(aes(scenario,accessibility), fill = "gray70")+
+  labs(x= "Ref Mode", y = "Accessibility")+
+  theme_minimal(base_size = 14)+
+  theme(
+    axis.title.x = element_text(),
+    axis.title.y = element_text(),
+    axis.text.y  = element_text(),
+    axis.text.x  = element_text(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(5, 2, 5, 5)  # remove right margin
+  ) +
+  coord_cartesian(ylim = c(0,-16))+
+  scale_x_discrete(position = "top")
+
+sensitivity_plot <- ggplot(sensitivity_data) + 
+  geom_col(aes(asc,accessibility,fill = los, group = los),position = "dodge") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y  = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(5, 5, 5, 2)
+  ) +
+  coord_cartesian(ylim = c(0,-16)) +
+  scale_x_discrete(position = "top")+
+  labs(x = "ASC for DRT", fill = "LOS of DRT")
+
+
+
+final <- (ref_plot | sensitivity_plot) +
+  plot_layout(widths = c(1, 3))
+
+final
+
+ggsave(plot = final,filename = paste0(figure_dir,"fig10_appendix_sensitivity_bar.pdf"), width = 18, height = 10, units = "cm", dpi = 300)
+
+
+  
+```
+

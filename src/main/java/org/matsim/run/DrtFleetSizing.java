@@ -149,12 +149,12 @@ public class DrtFleetSizing implements MATSimAppCommand {
 
 			for (DrtConfigGroup drtCfg : multiModeDrtConfig.getModalElements()) {
 				if (drtCfg.getMode().equals("av")) {
-					drtCfg.transitStopFile = transitStopFilePath;
+					drtCfg.setTransitStopFile(transitStopFilePath);
 					controler.addOverridingModule(new WaitingPointsBasedRebalancingModule(drtCfg, waitingPointsPath));
 				}
 
 				if (drtCfg.getMode().equals(TransportMode.drt)) {
-					controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.mode) {
+					controler.addOverridingModule(new AbstractDvrpModeModule(drtCfg.getMode()) {
 						@Override
 						public void install() {
 							bindModal(RebalancingStrategy.class).to(NoRebalancingStrategy.class).asEagerSingleton();

@@ -23,6 +23,7 @@ import org.matsim.core.utils.gis.GeoFileReader;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -137,8 +138,8 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
 	}
 
 	private Collection<SimpleFeature> getFeatures(String pathToShapeFile) {
-		log.info("Reading shape file...");
-		if (pathToShapeFile != null) {
+		if (pathToShapeFile != null && !pathToShapeFile.isBlank()) {
+			log.info("Reading shape file...");
 			Collection<SimpleFeature> features;
 			if (pathToShapeFile.startsWith("http")) {
 				URL shapeFileAsURL = null;
@@ -153,8 +154,8 @@ public class KelheimDrtFareHandler implements DrtRequestSubmittedEventHandler, P
 			}
 			return features;
 		} else {
-			log.error("Warning: Shapefile Path is null! All the trip will be charged the base price");
-			return null;
+			log.info("No DRT fare zone shapefile configured. All trips will be charged the base price.");
+			return Collections.emptyList();
 		}
 	}
 }

@@ -1,16 +1,18 @@
 package org.matsim.run.prepare;
 
-import org.matsim.analysis.postAnalysis.traffic.TrafficAnalysis;
-import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
+import org.matsim.application.prepare.scenario.CreateScenarioCutOut;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.events.EventsUtils;
+import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.network.NetworkChangeEvent;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.io.NetworkChangeEventsWriter;
-import org.matsim.core.router.util.TravelTime;
+import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
 import picocli.CommandLine;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @CommandLine.Command(
@@ -27,38 +29,50 @@ public class PrepareNetworkChangeEvents implements MATSimAppCommand {
 	@CommandLine.Option(names = "--output", description = "output path", required = true)
 	private String output;
 
+	@CommandLine.Option(names = "--interval", description = "Interval of network change events in seconds.", defaultValue = "900")
+	private double interval;
+
 	public static void main(String[] args) {
 		new PrepareNetworkChangeEvents().execute(args);
 	}
 
 	@Override
 	public Integer call() throws Exception {
-		Network network = NetworkUtils.readNetwork(networkFile);
-		TravelTime travelTime = TrafficAnalysis.analyzeTravelTimeFromEvents(network, eventsFile);
-
-		// write network change events
-		List<NetworkChangeEvent> networkChangeEvents = new ArrayList<>();
-		for (Link link : network.getLinks().values()) {
-			double freeSpeed = link.getFreespeed();
-			double previousTravelTime = Math.floor(link.getLength() / freeSpeed) + 1;
-			for (int i = 0; i < 86400; i += 900) {
-				double actualTravelTime = travelTime.getLinkTravelTime(link, i, null, null);
-				if (actualTravelTime != previousTravelTime) {
-					double actualSpeed = link.getLength() / actualTravelTime;
-					NetworkChangeEvent networkChangeEvent = new NetworkChangeEvent(i);
-					networkChangeEvent.addLink(link);
-					networkChangeEvent.setFreespeedChange(new NetworkChangeEvent.ChangeValue(
-							NetworkChangeEvent.ChangeType.ABSOLUTE_IN_SI_UNITS, actualSpeed));
-					networkChangeEvents.add(networkChangeEvent);
-					previousTravelTime = actualTravelTime;
-				}
-			}
+		if (interval <= 0) {
+			throw new IllegalArgumentException("--interval must be greater than zero");
 		}
 
-		// write network change events
-		NetworkChangeEventsWriter writer = new NetworkChangeEventsWriter();
-		writer.write(output, networkChangeEvents);
+		Network network = NetworkUtils.readNetwork(networkFile);
+
+		TravelTimeCalculator travelTimeCalculator = createTravelTimeCalculator(network);
+		LastTimeEvaluator lastTimeEvaluator = new LastTimeEvaluator();
+		EventsManager eventsManager = EventsUtils.createEventsManager();
+		eventsManager.addHandler(travelTimeCalculator);
+		eventsManager.addHandler(lastTimeEvaluator);
+		eventsManager.initProcessing();
+		EventsUtils.readEvents(eventsManager, eventsFile);
+		eventsManager.finishProcessing();
+
+		List<NetworkChangeEvent> networkChangeEvents = CreateScenarioCutOut.generateNetworkChangeEvents(
+			network, travelTimeCalculator, null, null, true, lastTimeEvaluator.lastTime, interval);
+		new NetworkChangeEventsWriter().write(output, networkChangeEvents);
 
 		return 0;
+	}
+
+	private TravelTimeCalculator createTravelTimeCalculator(Network network) {
+
+		TravelTimeCalculator.Builder ttcb = new TravelTimeCalculator.Builder(network);
+		ttcb.setTimeslice(interval);
+		return ttcb.build();
+	}
+
+	private static final class LastTimeEvaluator implements BasicEventHandler {
+		private double lastTime = -1;
+
+		@Override
+		public void handleEvent(Event event) {
+			lastTime = Math.max(lastTime, event.getTime());
+		}
 	}
 }
